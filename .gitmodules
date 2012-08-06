@@ -1,3 +1,0 @@
-[submodule "yajl"]
-	path = src/pjson_engine/yajl
-	url = git://coreos.palm.com/yajl.git

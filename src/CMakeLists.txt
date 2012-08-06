@@ -25,12 +25,6 @@ endif (NOT DEFINED PBNJSON_MICRO)
 
 set(PBNJSON_VERSION ${PBNJSON_MAJOR}.${PBNJSON_MINOR}.${PBNJSON_MICRO})
 
-# The information about the yajl version being used (include directories & whatnot)
-set(YAJL_MAJOR 1)
-set(YAJL_MINOR 0)
-set(YAJL_MICRO 7)
-set(YAJL_VERSION ${YAJL_MAJOR}.${YAJL_MINOR}.${YAJL_MICRO})
-
 macro(PICK_ENGINE_NAME VARIABLE_NAME STATIC_VALUE SHARED_VALUE STATIC_ENGINE)
     if(${STATIC_ENGINE})
         set(${VARIABLE_NAME} ${STATIC_VALUE})
@@ -46,37 +40,7 @@ set(STATIC_C_ENGINE "FALSE")
 set(CXX_ENGINE yajl)
 set(STATIC_CXX_ENGINE "FALSE")
 
-set(EXTERNAL_YAJL TRUE)
-
-if (NOT EXTERNAL_YAJL)
-	# the name of the library to link against - for now we link against the static version
-	# since no one else should be using the engine directly
-
-	# the x.y.z version of the engine
-	set(C_ENGINE_VERSION ${YAJL_VERSION})
-	# where the engine's cmake project is located
-	set(C_ENGINE_DIR pjson_engine/${C_ENGINE})
-	set(C_ENGINE_SRC_DIR ${SRC_BASE}/${C_ENGINE_DIR})
-	# where the engine will build everything (e.g. include, bin, doc, etc)
-	set(C_ENGINE_INSTALLDIR ${BUILD_SRC_BASE}/${C_ENGINE_DIR}/${C_ENGINE}-${C_ENGINE_VERSION})
-	# the include directory for the engine api
-	set(C_ENGINE_INCDIR ${C_ENGINE_INSTALLDIR}/include)
-	message("include directory is ${C_ENGINE_INCDIR}")
-	# the library search directory for the engine
-	set(C_ENGINE_LIBDIR ${C_ENGINE_INSTALLDIR}/lib)
-endif()
-PICK_ENGINE_NAME(C_ENGINE_LIBNAME ${C_ENGINE}_s ${C_ENGINE} STATIC_C_ENGINE)
-
-# the C++ equivalent of the above
-if (NOT EXTERNAL_YAJL)
-	set(CXX_ENGINE_VERSION ${YAJL_VERSION})
-	set(CXX_ENGINE_DIR pjson_engine/${CXX_ENGINE})
-	set(CXX_ENGINE_SRC_DIR ${SRC_BASE}/${CXX_ENGINE_DIR})
-	set(CXX_ENGINE_INSTALLDIR ${BUILD_SRC_BASE}/${CXX_ENGINE_DIR}/${CXX_ENGINE}-${CXX_ENGINE_VERSION})
-	set(CXX_ENGINE_INCDIR ${CXX_ENGINE_INSTALLDIR}/include)
-	set(CXX_ENGINE_LIBDIR ${CXX_ENGINE_INSTALLDIR}/lib)
-	add_subdirectory(pjson_engine/${C_ENGINE})
-endif ()
+PICK_ENGINE_NAME(C_ENGINE_LIBNAME STATIC_C_ENGINE ${C_ENGINE}_s ${C_ENGINE} STATIC_C_ENGINE)
 PICK_ENGINE_NAME(CXX_ENGINE_LIBNAME ${CXX_ENGINE}_s ${CXX_ENGINE} STATIC_CXX_ENGINE)
 
 ########## CONFIGURE THE COMPILERS FOR THE LIBRARIES ############################
