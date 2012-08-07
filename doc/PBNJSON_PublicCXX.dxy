@@ -463,15 +463,15 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  =  @CMAKE_CURRENT_SOURCE_DIR@/api/pbnjson.hpp @CMAKE_CURRENT_SOURCE_DIR@/api/pbnjson/cxx \
-	@CMAKE_CURRENT_SOURCE_DIR@/api/pbnjson/c/jconversion.h \
-	@CMAKE_CURRENT_SOURCE_DIR@/api/pbnjson/c/jcallbacks.h \
-	@CMAKE_CURRENT_SOURCE_DIR@/api/pbnjson/c/jdom_types.h \
-	@CMAKE_CURRENT_SOURCE_DIR@/api/pbnjson/c/jgen_types.h \
-	@CMAKE_CURRENT_SOURCE_DIR@/api/pbnjson/c/jparse_types.h \
-	@CMAKE_CURRENT_SOURCE_DIR@/api/pbnjson/c/jsax_types.h \
-	@CMAKE_CURRENT_SOURCE_DIR@/api/pbnjson/c/jschema_types.h \
-	@CMAKE_CURRENT_SOURCE_DIR@/api/pbnjson/c/jtypes.h
+INPUT                  =  @API_HEADERS@/pbnjson.hpp @API_HEADERS@/pbnjson/cxx \
+	@API_HEADERS@/pbnjson/c/jconversion.h \
+	@API_HEADERS@/pbnjson/c/jcallbacks.h \
+	@API_HEADERS@/pbnjson/c/jdom_types.h \
+	@API_HEADERS@/pbnjson/c/jgen_types.h \
+	@API_HEADERS@/pbnjson/c/jparse_types.h \
+	@API_HEADERS@/pbnjson/c/jsax_types.h \
+	@API_HEADERS@/pbnjson/c/jschema_types.h \
+	@API_HEADERS@/pbnjson/c/jtypes.h
 
 
 # This tag can be used to specify the character encoding of the source files that 
@@ -1022,7 +1022,7 @@ SEARCH_INCLUDES        = YES
 # contain include files that are not input files but should be processed by 
 # the preprocessor.
 
-INCLUDE_PATH           = @CMAKE_CURRENT_SOURCE_DIR@/api
+INCLUDE_PATH           = @API_HEADERS@
 
 # You can use the INCLUDE_FILE_PATTERNS tag to specify one or more wildcard 
 # patterns (like *.h and *.hpp) to filter out the header-files in the 

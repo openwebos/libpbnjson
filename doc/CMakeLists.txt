@@ -1,5 +1,12 @@
 FIND_PACKAGE(Doxygen REQUIRED)
-    
+
+set(WITH_DOCS ${DOXYGEN_FOUND} CACHE BOOL "Generate documentation when building")
+if (DEFINED DONT_PREPARE_DOCS)
+	# Variable compatibility with existing build scripts
+	# Deprecated in favour of WITH_DOCS
+	set(WITH_DOCS NOT ${DONT_PREPARE_DOCS} CACHE BOOL "Generate documentation when building" FORCE)
+endif()
+
 IF(NOT TARGET doc-api)
     ADD_CUSTOM_TARGET(doc-api)
 ENDIF(NOT TARGET doc-api)
@@ -52,7 +59,10 @@ ELSE (DOXYGEN_FOUND)
 ENDIF (DOXYGEN_FOUND)
 
 IF(NOT TARGET doc)
-    ADD_CUSTOM_TARGET(doc)
+    ADD_CUSTOM_TARGET(doc ALL)
 ENDIF(NOT TARGET doc)
 
 ADD_DEPENDENCIES(doc doc-api)
+IF(TARGET doc-src)
+    ADD_DEPENDENCIES(doc doc-src)
+ENDIF(TARGET doc-src)

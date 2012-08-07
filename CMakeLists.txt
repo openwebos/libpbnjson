@@ -18,5 +18,27 @@
 
 cmake_minimum_required(VERSION 2.8.7)
 project(pbnjson) 
+
+if (NOT DEFINED PBNJSON_MAJOR)
+	set(PBNJSON_MAJOR 1)
+endif (NOT DEFINED PBNJSON_MAJOR)
+
+if (NOT DEFINED PBNJSON_MINOR)
+	set(PBNJSON_MINOR 1)
+endif (NOT DEFINED PBNJSON_MINOR)
+
+if (NOT DEFINED PBNJSON_MICRO)
+	set(PBNJSON_MICRO 0)
+endif (NOT DEFINED PBNJSON_MICRO)
+
+set(PBNJSON_VERSION ${PBNJSON_MAJOR}.${PBNJSON_MINOR}.${PBNJSON_MICRO})
+
+set(API_HEADERS ${CMAKE_SOURCE_DIR}/include/public)
+
 add_subdirectory(src)
 
+if (WITH_DOCS)
+	add_subdirectory(doc)
+else()
+	message(STATUS "Skipping document generation")
+endif ()

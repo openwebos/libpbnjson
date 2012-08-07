@@ -6,23 +6,7 @@ if (APPLE)
 endif ()
 
 # Project-wide information for the language bindings to find common directories
-set(API_HEADERS ${CMAKE_SOURCE_DIR}/include/public)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/src/CMakeModules/" ${CMAKE_MODULE_PATH})
-
-if (NOT DEFINED PBNJSON_MAJOR)
-	set(PBNJSON_MAJOR 1)
-endif (NOT DEFINED PBNJSON_MAJOR)
-
-if (NOT DEFINED PBNJSON_MINOR)
-	set(PBNJSON_MINOR 1)
-endif (NOT DEFINED PBNJSON_MINOR)
-
-if (NOT DEFINED PBNJSON_MICRO)
-	set(PBNJSON_MICRO 0)
-endif (NOT DEFINED PBNJSON_MICRO)
-
-set(PBNJSON_VERSION ${PBNJSON_MAJOR}.${PBNJSON_MINOR}.${PBNJSON_MICRO})
-
 macro(PICK_ENGINE_NAME VARIABLE_NAME STATIC_VALUE SHARED_VALUE STATIC_ENGINE)
     if(${STATIC_ENGINE})
         set(${VARIABLE_NAME} ${STATIC_VALUE})
@@ -77,18 +61,6 @@ else(CMAKE_COMPILER_IS_GNUCXX)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_BSD_SOURCE")
 endif(CMAKE_COMPILER_IS_GNUCXX)
 ########## CONFIGURE THE COMPILERS FOR THE LIBRARIES ############################
-
-set(WITH_DOCS ${DOXYGEN_FOUND} CACHE BOOL "Generate documentation when building")
-if (DEFINED DONT_PREPARE_DOCS)
-	# Variable compatibility with existing build scripts
-	# Deprecated in favour of WITH_DOCS
-	set(WITH_DOCS NOT ${DONT_PREPARE_DOCS} CACHE BOOL "Generate documentation when building" FORCE)
-endif()
-if (WITH_DOCS)
-	INCLUDE(PBNJSONDoc.cmake)
-else()
-	message(STATUS "Skipping document generation")
-endif ()
 
 # build the JSON engine for the C library
 
