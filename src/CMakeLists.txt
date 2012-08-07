@@ -5,10 +5,8 @@ if (APPLE)
 	set(CMAKE_OSX_ARCHITECTURES i386 x86_64)
 endif ()
 
-# Project-wide information for the language bindings to find comon directories
-set(SRC_BASE ${PROJECT_SOURCE_DIR})
-set(BUILD_SRC_BASE ${CMAKE_BINARY_DIR})
-set(API_HEADERS ${SRC_BASE}/api)
+# Project-wide information for the language bindings to find common directories
+set(API_HEADERS ${CMAKE_SOURCE_DIR}/include/public)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/src/CMakeModules/" ${CMAKE_MODULE_PATH})
 
 if (NOT DEFINED PBNJSON_MAJOR)
