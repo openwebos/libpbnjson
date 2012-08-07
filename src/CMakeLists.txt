@@ -130,21 +130,9 @@ endif()
 set(WITH_VERBOSE_DEBUG FALSE CACHE BOOL "Enable verbose debug logging")
 set(WITH_VERBOSE_TRACE FALSE CACHE BOOL "Enable tracing debug logging")
 
-if (DEFINED WITH_V8)
-	if (WITH_V8)
-		find_package(V8 REQUIRED)
-	endif ()
-else ()
-	find_package(V8 QUIET)
-endif ()
-set(WITH_V8 ${V8_FOUND} CACHE BOOL "Build v8 javascript bindings")
-
 # build the language bindings
 add_subdirectory(pjson_c)
 add_subdirectory(pjson_cxx)
-if (V8_FOUND)
-	add_subdirectory(pjson_v8)
-endif()
 
 if (WITH_TESTS)
     set(WITH_QTCREATOR FALSE CACHE BOOL "Enable better Qt Creator integration")
