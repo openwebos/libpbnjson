@@ -25,7 +25,7 @@ LICENSE@@@ */
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-#include "../pjson_c/liblog.h"
+#include "../pbnjson_c/liblog.h"
 
 #include <pbnjson.h>
 

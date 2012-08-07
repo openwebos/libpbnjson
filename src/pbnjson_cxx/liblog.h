@@ -19,6 +19,6 @@ LICENSE@@@ */
 #ifndef LIBLOG_CPP_H_
 #define LIBLOG_CPP_H_
 
-#include "../pjson_c/liblog.h"
+#include "../pbnjson_c/liblog.h"
 
 #endif /* LIBLOG_CPP_H_ */
