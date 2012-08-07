@@ -15,7 +15,7 @@ set(SHARED_SOURCE
     JSchemaFile.cpp
     JSchemaFragment.cpp
     JResolver.cpp
-    ../pjson_c/debugging.c
+    ../pbnjson_c/debugging.c
     )
     
 if(WITH_VERBOSE_DEBUG)
