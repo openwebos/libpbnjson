@@ -50,18 +50,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/strnlen.h.cmake ${CMAKE_CURRENT_BINAR
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/isatty.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/isatty.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/assert_compat.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/assert_compat.h)
 
-set(SHARED_SOURCE
-    jgen_stream.c 
-    jobject.c
-    jschema.c
-    jvalue/value.c
-    jvalue/object.c
-    jvalue/array.c
-    jvalue/number.c
-    jvalue/num_conversion.c
-    jparse_stream.c
-    debugging.c
-    )
+file(GLOB SHARED_SOURCE "./*.c" "./jvalue/*.c")
 
 set(STATIC_SOURCE ${SHARED_SOURCE})
     
