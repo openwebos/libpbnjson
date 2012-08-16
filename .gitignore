@@ -1,44 +1,35 @@
-build/
-.DS_Store
-*~
-.*.swp
-Testing/
-.cproject
-.project
-src/CMakeCache.txt
-src/CMakeFiles/
-src/Makefile
-src/cmake_install.cmake
-src/deps/yajl/CMakeCache.txt
-src/deps/yajl/CMakeFiles/
-src/deps/yajl/cmake_install.cmake
-src/deps/yajl/install_manifest.txt
-src/deps/yajl/reformatter/CMakeFiles/
-src/deps/yajl/reformatter/cmake_install.cmake
-src/deps/yajl/reformatter/json_reformat
-src/deps/yajl/src/CMakeFiles/
-src/deps/yajl/src/cmake_install.cmake
-src/deps/yajl/test/CMakeFiles/
-src/deps/yajl/test/cmake_install.cmake
-src/deps/yajl/test/yajl_test
-src/deps/yajl/verify/CMakeFiles/
-src/deps/yajl/verify/cmake_install.cmake
-src/deps/yajl/verify/json_verify
-src/deps/yajl/yajl-1.0.7/
-src/install_manifest.txt
-src/pjson_c/CMakeFiles/
-src/pjson_c/Makefile
-src/pjson_c/assert_compat.h
-src/pjson_c/cmake_install.cmake
-src/pjson_c/isatty.h
-src/pjson_c/libpbnjson_c.so
-src/pjson_c/libpbnjson_c_s.a
-src/pjson_c/pjson_syslog.h
-src/pjson_c/regexp.h
-src/pjson_c/strnlen.h
-src/pjson_c/sys_malloc.h
-src/pjson_cxx/CMakeFiles/
-src/pjson_cxx/Makefile
-src/pjson_cxx/cmake_install.cmake
-src/pjson_cxx/libpbnjson_cpp.so
+# @@@LICENSE
+#
+#      Copyright (c) 2012 Hewlett-Packard Development Company, L.P.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# LICENSE@@@
 
+# .gitignore for components that enforce "out-of-source" builds, (e.g. ones that
+# use "cmake-modules-webos")
+#
+# @@@VERSION
+# r3
+# VERSION@@@
+
+# Common Eclipse project files
+.project
+.cproject
+
+# Directory created by OpenEmbedded
+patches/
+
+# Ignore all build directories and their trees. This should exclude all
+# build artifacts.
+BUILD*/
