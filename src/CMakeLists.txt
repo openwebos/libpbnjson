@@ -112,13 +112,6 @@ else()
 	message(STATUS "Skipping all unit tests")
 endif()
 
-set(WITH_BENCHMARKS ${WITH_TESTS} CACHE BOOL "Build benchmarks to compare various implementations")
-if (WITH_BENCHMARKS)
-	add_subdirectory(benchmarks)
-else()
-	message(STATUS "Skipping benchmarks")
-endif()
-
 add_custom_target (deb 
 	dpkg-buildpackage "-rfakeroot")
 
