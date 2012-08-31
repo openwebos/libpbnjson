@@ -287,9 +287,9 @@ JStreamRef jstreamInternal(jschema_ref schema, TopLevelType type)
 		pjso_internal_free,
 		NULL,
 	};
-	stream->handle = yajl_gen_alloc(NULL, &allocators);
+	stream->handle = yajl_gen_alloc(&allocators);
 #else
-	stream->handle = yajl_gen_alloc(NULL, NULL);
+	stream->handle = yajl_gen_alloc(NULL);
 #endif
 	stream->opened = type;
 
