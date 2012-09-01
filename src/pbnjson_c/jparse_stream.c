@@ -499,10 +499,10 @@ typedef int(* 	pj_yajl_null )(void *ctx);
 typedef int(* 	pj_yajl_boolean )(void *ctx, int boolVal);
 typedef int(* 	pj_yajl_integer )(void *ctx, long integerVal);
 typedef int(* 	pj_yajl_double )(void *ctx, double doubleVal);
-typedef int(* 	pj_yajl_number )(void *ctx, const char *numberVal, unsigned int numberLen);
-typedef int(* 	pj_yajl_string )(void *ctx, const unsigned char *stringVal, unsigned int stringLen);
+typedef int(* 	pj_yajl_number )(void *ctx, const char *numberVal, size_t numberLen);
+typedef int(* 	pj_yajl_string )(void *ctx, const unsigned char *stringVal, size_t stringLen);
 typedef int(* 	pj_yajl_start_map )(void *ctx);
-typedef int(* 	pj_yajl_map_key )(void *ctx, const unsigned char *key, unsigned int stringLen);
+typedef int(* 	pj_yajl_map_key )(void *ctx, const unsigned char *key, size_t stringLen);
 typedef int(* 	pj_yajl_end_map )(void *ctx);
 typedef int(* 	pj_yajl_start_array )(void *ctx);
 typedef int(* 	pj_yajl_end_array )(void *ctx);
@@ -544,7 +544,7 @@ static int my_bounce_start_map(void *ctxt)
 	DEREF_CALLBACK(spring->m_handlers->yajl_start_map, ctxt);
 }
 
-static int my_bounce_map_key(void *ctxt, const unsigned char *str, unsigned int strLen)
+static int my_bounce_map_key(void *ctxt, const unsigned char *str, size_t strLen)
 {
 	bounce_breakpoint();
 	PJ_LOG_TRACE("%.*s", strLen, str);
@@ -624,7 +624,7 @@ static int my_bounce_end_array(void *ctxt)
 	DEREF_CALLBACK(spring->m_handlers->yajl_end_array, ctxt);
 }
 
-static int my_bounce_string(void *ctxt, const unsigned char *str, unsigned int strLen)
+static int my_bounce_string(void *ctxt, const unsigned char *str, size_t strLen)
 {
 	bounce_breakpoint();
 	PJ_LOG_TRACE("%.*s", strLen, str);
@@ -644,7 +644,7 @@ static int my_bounce_string(void *ctxt, const unsigned char *str, unsigned int s
 	DEREF_CALLBACK(spring->m_handlers->yajl_string, ctxt, str, strLen);
 }
 
-static int my_bounce_number(void *ctxt, const char *numberVal, unsigned int numberLen)
+static int my_bounce_number(void *ctxt, const char *numberVal, size_t numberLen)
 {
 	bounce_breakpoint(numberVal);
 	PJ_LOG_TRACE("%.*s", numberLen, numberVal);
@@ -755,17 +755,12 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 		NULL, // yajl_integer
 		NULL, // yajl_double
 		(pj_yajl_number)parser->m_number, // yajl_number
-		(pj_yajl_string)parser->m_string, // yajl_stirng
+		(pj_yajl_string)parser->m_string, // yajl_string
 		(pj_yajl_start_map)parser->m_objStart, // yajl_start_map
 		(pj_yajl_map_key)parser->m_objKey, // yajl_map_key
 		(pj_yajl_end_map)parser->m_objEnd, // yajl_end_map
 		(pj_yajl_start_array)parser->m_arrStart, // yajl_start_array
 		(pj_yajl_end_array)parser->m_arrEnd, // yajl_end_array
-	};
-
-	yajl_parser_config yajl_opts = {
-		comments, // comments are not allowed
-		0, // currently only UTF-8 will be supported for input.
 	};
 
 	PJSAXContext internalCtxt = {
@@ -782,7 +777,7 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 	}
 #endif
 
-	yajl_handle handle = yajl_alloc(&my_bounce, &yajl_opts, NULL, &internalCtxt);
+	yajl_handle handle = yajl_alloc(&my_bounce, NULL, &internalCtxt);
 
 	parseResult = yajl_parse(handle, (unsigned char *)input.m_str, input.m_len);
 	if (ctxt != NULL) *ctxt = jsax_getContext(&internalCtxt);
@@ -794,11 +789,6 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 			if (ERR_HANDLER_FAILED(schemaInfo->m_errHandler, m_unknown, &internalCtxt))
 				goto parse_failure;
 			PJ_LOG_WARN("Client claims they handled an unknown error in '%.*s'", (int)input.m_len, input.m_str);
-			break;
-		case yajl_status_insufficient_data:
-			if (ERR_HANDLER_FAILED(schemaInfo->m_errHandler, m_parser, &internalCtxt))
-				goto parse_failure;
-			PJ_LOG_WARN("Client claims they handled incomplete JSON input provided '%.*s'", (int)input.m_len, input.m_str);
 			break;
 		case yajl_status_error:
 		default:
@@ -822,7 +812,7 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 
 parse_failure:
 	if (UNLIKELY(logError)) {
-		unsigned char *errMsg = yajl_get_error_ex(handle, 1, (unsigned char *)input.m_str, input.m_len, "        ");
+		unsigned char *errMsg = yajl_get_error(handle, 1, (unsigned char *)input.m_str, input.m_len);
 		PJ_LOG_WARN("Parser reason for failure:\n'%s'", errMsg);
 		yajl_free_error(handle, errMsg);
 	}

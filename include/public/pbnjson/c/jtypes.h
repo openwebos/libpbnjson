@@ -49,7 +49,7 @@ typedef enum {
  */
 typedef struct {
 	const char *m_str;
-	long m_len;	/// this MUST be the number of characters in m_str not including any terminating nulls.
+	size_t m_len;	/// this MUST be the number of characters in m_str not including any terminating nulls.
 } raw_buffer;
 
 /**

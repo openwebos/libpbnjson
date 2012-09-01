@@ -148,7 +148,7 @@ static ActualStream* val_dbl(ActualStream* __stream, double number)
 	yajl_gen_number(__stream->handle, f, len);
 #ifdef _DEBUG
 	const unsigned char *buffer;
-	unsigned int bufLen;
+	size_t bufLen;
 	yajl_gen_get_buf(__stream->handle, &buffer, &bufLen);
 #endif
 	return __stream;
@@ -199,7 +199,7 @@ static StreamStatus convert_error_code(yajl_gen_status raw_code)
 static char* finish_stream(ActualStream* __stream, StreamStatus *error_code)
 {
 	char *buf = NULL;
-	unsigned int len;
+	size_t len;
 	yajl_gen_status result;
 
 	SANITY_CHECK_POINTER(__stream);
@@ -287,9 +287,9 @@ JStreamRef jstreamInternal(jschema_ref schema, TopLevelType type)
 		pjso_internal_free,
 		NULL,
 	};
-	stream->handle = yajl_gen_alloc(NULL, &allocators);
+	stream->handle = yajl_gen_alloc(&allocators);
 #else
-	stream->handle = yajl_gen_alloc(NULL, NULL);
+	stream->handle = yajl_gen_alloc(NULL);
 #endif
 	stream->opened = type;
 
