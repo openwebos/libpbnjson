@@ -35,6 +35,8 @@ set(PBNJSON_VERSION ${PBNJSON_MAJOR}.${PBNJSON_MINOR}.${PBNJSON_MICRO})
 
 set(API_HEADERS ${CMAKE_SOURCE_DIR}/include/public)
 
+include(FindPkgConfig)
+
 add_subdirectory(src)
 
 if (WITH_DOCS)

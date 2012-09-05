@@ -25,15 +25,11 @@ check_cxx_source_compiles(
 	}"
 	HAVE_GCC_ATOMICS)
 
-if (WITH_PCRE)
-	if (NOT LOCAL_PCRE)
-	    find_package(PCRE)
-	    if (PCRE_FOUND)
+if(WITH_PCRE)
+	pkg_check_modules(PCRE libpcre)
+	if(PCRE_FOUND)
 		set(HAVE_PCRE 1)
-	    else (PCRE_FOUND)
-		set(PCRE_LIBRARIES "")
-	    endif (PCRE_FOUND)
-	endif (NOT LOCAL_PCRE)
+	endif()
 endif()
 
 STRING(TOUPPER ${C_ENGINE} C_ENGINE_PKG)
@@ -55,15 +51,15 @@ file(GLOB SHARED_SOURCE "./*.c" "./jvalue/*.c")
 set(STATIC_SOURCE ${SHARED_SOURCE})
     
 add_library(pbnjson_c SHARED ${SHARED_SOURCE})
-target_link_libraries(pbnjson_c ${C_ENGINE_LIBNAME} ${PCRE_LIBRARIES})
+target_link_libraries(pbnjson_c ${C_ENGINE_LIBNAME} ${PCRE_LDFLAGS})
 set_target_properties(pbnjson_c PROPERTIES DEFINE_SYMBOL PJSON_SHARED)
 
 if (WITH_STATIC)
 	add_library(pbnjson_c_s STATIC ${STATIC_SOURCE})
-	target_link_libraries(pbnjson_c_s ${C_ENGINE_LIBNAME} ${PCRE_LIBRARIES})
+	target_link_libraries(pbnjson_c_s ${C_ENGINE_LIBNAME} ${PCRE_LDFLAGS})
 endif ()
 
-include_directories(${API_HEADERS} ${API_HEADERS}/pbnjson ${API_HEADERS}/pbnjson/c ${C_ENGINE_INCDIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${API_HEADERS} ${API_HEADERS}/pbnjson ${API_HEADERS}/pbnjson/c ${C_ENGINE_INCDIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${PCRE_INCLUDE_DIRS})
 if (C_ENGINE_LIBDIR)
 	link_directories(${C_ENGINE_LIBDIR})
 endif ()

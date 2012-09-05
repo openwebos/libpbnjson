@@ -82,14 +82,6 @@ if (WITH_PCRE AND NOT WITH_SCHEMA)
 	message(FATAL_ERROR "Conflicting option: set WITH_PCRE but schemas aren't enabled")
 endif()
 
-if (WITH_PCRE)
-	if (EXISTS pjson_engine/pcre)
-		add_subdirectory(pjson_engine/pcre)
-		set(PCRE_LIBRARIES "pcre" "pcreposix")
-		set(LOCAL_PCRE true)
-	endif (EXISTS pjson_engine/pcre)
-endif()
-
 # Variable compatibility with existing build scripts
 # Deprecated in favour of WITH_TESTS
 set(WITH_TESTS FALSE CACHE BOOL "Control building of unit tests")
