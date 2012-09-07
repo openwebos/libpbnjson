@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-# Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+#      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,21 +16,11 @@
 #
 # LICENSE@@@
 
-cmake_minimum_required(VERSION 2.8.7)
-project(pbnjson) 
+libdir=@WEBOS_INSTALL_LIBDIR@
+includedir=@WEBOS_INSTALL_INCLUDEDIR@
 
-include(webOS/webOS)
-webos_modules_init(1 0 0 QUALIFIER RC3)
-webos_component(1 2 0)
-
-include(FindPkgConfig)
-
-set(API_HEADERS ${CMAKE_SOURCE_DIR}/include/public)
-
-add_subdirectory(src)
-
-if(WITH_DOCS)
-	add_subdirectory(doc)
-else()
-	message(STATUS "Skipping document generation")
-endif()
+Name: libpbnjson C++ library
+Description: @WEBOS_PROJECT_SUMMARY@ (C++ edition)
+Version: @WEBOS_COMPONENT_VERSION@
+Libs: -L${libdir} -lpbnjson_cpp
+Cflags: -I${includedir}

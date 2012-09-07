@@ -103,4 +103,4 @@ else()
 endif()
 
 webos_build_library(NAME pbnjson_c)
-
+webos_build_pkgconfig(files/pkgconfig/pbnjson_c)

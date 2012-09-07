@@ -53,6 +53,6 @@ if(CXX_ENGINE_LIBDIR)
 	link_directories(${CXX_ENGINE_LIBDIR})
 endif()
 
-# Headers are installed by pbnjson_c
+# All of the headers are installed by pbnjson_c
 webos_build_library(NAME pbnjson_cpp NOHEADERS)
-
+webos_build_pkgconfig(files/pkgconfig/pbnjson_cpp)
