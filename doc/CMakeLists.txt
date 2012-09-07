@@ -29,12 +29,12 @@ foreach(DOC_OUTPUT_DIR ${PJ_DOC_C_API_OUT} ${PJ_DOC_CXX_API_OUT} ${PJ_DOC_C_SRC_
 	file(MAKE_DIRECTORY ${DOC_OUTPUT_DIR})
 endforeach()
 
-macro(doc_target CUSTOM_TARGET LANG DOXY_FILENAME)
-	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${DOXY_FILENAME} ${CMAKE_CURRENT_BINARY_DIR}/${DOXY_FILENAME} @ONLY)
-	add_custom_target(pbnjson-doc-${CUSTOM_TARGET}_${LANG}
-	                  doxygen ${DOXY_FILENAME}
+macro(doc_target custom_target lang doxy_filename)
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${doxy_filename} ${CMAKE_CURRENT_BINARY_DIR}/${doxy_filename} @ONLY)
+	add_custom_target(pbnjson-doc-${custom_target}_${lang}
+	                  doxygen ${doxy_filename}
 	                  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-	                  COMMENT "Generating ${CUSTOM_TARGET} documentation for ${LANG}")
+	                  COMMENT "Generating ${custom_target} documentation for ${lang}")
 endmacro()
 
 add_custom_target(doc-api)

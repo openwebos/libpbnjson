@@ -27,7 +27,7 @@ file(GLOB SHARED_SOURCE "./*.cpp" "../pbnjson_c/debugging.c")
 
 if(WITH_VERBOSE_DEBUG)
 	add_definitions(-DPJSON_LOG_DBG=1)
-endif ()
+endif()
 if(WITH_VERBOSE_TRACE)
 	add_definitions(-DPJSON_LOG_TRACE=1)
 	add_definitions(-DPJSON_SCHEMA_TRACE=3)

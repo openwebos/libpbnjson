@@ -18,7 +18,7 @@
 
 if(NOT QT_FOUND)
 	message(WARNING "Qt not found - skipping building many tests for C api")
-endif ()
+endif()
 
 include_directories(${API_HEADERS})
 
