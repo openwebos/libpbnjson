@@ -43,11 +43,18 @@ check_cxx_source_compiles(
 	}"
 	HAVE_GCC_ATOMICS)
 
+
+if(NOT WITH_SCHEMA)
+	message(STATUS "Compiling without schema support: WITH_SCHEMA=${WITH_SCHEMA}")
+	add_definitions(-DBYPASS_SCHEMA=1)
+else()
+	message(STATUS "Compiling with schema support: WITH_SCHEMA=${WITH_SCHEMA}")
+	add_definitions(-DBYPASS_SCHEMA=0)
+endif()
+
 if(WITH_PCRE)
-	pkg_check_modules(PCRE libpcre)
-	if(PCRE_FOUND)
-		set(HAVE_PCRE 1)
-	endif()
+	pkg_check_modules(PCRE REQUIRED libpcre)
+	set(HAVE_PCRE 1)
 endif()
 
 string(TOUPPER ${C_ENGINE} C_ENGINE_PKG)
@@ -88,14 +95,6 @@ if(WITH_VERBOSE_TRACE)
 endif()
 add_definitions(-DLIBRARY_NAME=pbnjson_c)
 add_definitions(-DPJSON_EXPORT)
-
-if(NOT WITH_SCHEMA)
-	message(STATUS "Compiling without schema support: WITH_SCHEMA=${WITH_SCHEMA}")
-	add_definitions(-DBYPASS_SCHEMA=1)
-else()
-	message(STATUS "Compiling with schema support: WITH_SCHEMA=${WITH_SCHEMA}")
-	add_definitions(-DBYPASS_SCHEMA=0)
-endif()
 
 webos_build_library(NAME pbnjson_c)
 webos_build_pkgconfig(files/pkgconfig/pbnjson_c)

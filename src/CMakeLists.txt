@@ -74,6 +74,7 @@ if(DEFINED CXX_ENGINE AND NOT ${C_ENGINE} STREQUAL ${CXX_ENGINE})
 	add_subdirectory(pjson_engine/${CXX_ENGINE})
 endif()
 
+# Note that the default is WITH_SCHEMA enabled
 set(WITH_SCHEMA TRUE CACHE BOOL "Build with schema support.  If built without, no input will fail schema validation.")
 if(WITH_SCHEMA)
 	set(WITH_PCRE TRUE CACHE BOOL "Build with PCRE support in schemas")
@@ -82,7 +83,7 @@ else()
 endif()
 
 if(WITH_PCRE AND NOT WITH_SCHEMA)
-	message(FATAL_ERROR "Conflicting option: WITH_PCRE set but WITH_SCHEMA ins't")
+	message(FATAL_ERROR "Conflicting option: WITH_PCRE set but WITH_SCHEMA isn't")
 endif()
 
 # XXX The tests don't compile
