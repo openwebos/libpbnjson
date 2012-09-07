@@ -150,10 +150,10 @@ static void log_v(int priority, const char *fullPath, int line, const char *mess
 #endif
 	}
 
-#define LOG_PREAMBLE "%s PJSON %s:%d :: "
+#define LOG_PREAMBLE "%s PBNJSON %s:%d :: "
 
 	char *pathCopy = strdup(fullPath);
-	char *path = strstr(pathCopy, "src/pjson_c");
+	char *path = strstr(pathCopy, "src/pbnjson_c");
 	if (!path)
 		path = pathCopy;
 	// TODO: memoize the program name string length
