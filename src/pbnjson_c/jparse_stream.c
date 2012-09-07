@@ -822,7 +822,7 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 
 parse_failure:
 	if (UNLIKELY(logError)) {
-		unsigned char *errMsg = yajl_get_error_ex(handle, 1, (unsigned char *)input.m_str, input.m_len, "        ");
+		unsigned char *errMsg = yajl_get_error(handle, 1, (unsigned char *)input.m_str, input.m_len);
 		PJ_LOG_WARN("Parser reason for failure:\n'%s'", errMsg);
 		yajl_free_error(handle, errMsg);
 	}

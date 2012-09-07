@@ -21,7 +21,7 @@ project(pbnjson)
 
 include(webOS/webOS)
 webos_modules_init(1 0 0 QUALIFIER RC3)
-webos_component(1 2 0)
+webos_component(1 3 0)
 
 include(FindPkgConfig)
 
