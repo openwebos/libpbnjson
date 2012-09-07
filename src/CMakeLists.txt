@@ -74,7 +74,6 @@ if(DEFINED CXX_ENGINE AND NOT ${C_ENGINE} STREQUAL ${CXX_ENGINE})
 	add_subdirectory(pjson_engine/${CXX_ENGINE})
 endif()
 
-set(WITH_STATIC TRUE CACHE BOOL "Build with static pbnjson library")
 set(WITH_SCHEMA TRUE CACHE BOOL "Build with schema support.  If built without, no input will fail schema validation.")
 if(WITH_SCHEMA)
 	set(WITH_PCRE TRUE CACHE BOOL "Build with PCRE support in schemas")
