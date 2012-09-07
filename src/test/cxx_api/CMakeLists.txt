@@ -1,36 +1,52 @@
-if (NOT QT_FOUND)
-    message(STATUS "Qt not found - skipping building many tests for C++ api")
-endif ()
+# @@@LICENSE
+#
+# Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# LICENSE@@@
+
+if(NOT QT_FOUND)
+	message(STATUS "Qt not found - skipping building many tests for C++ api")
+endif()
 
 src(smoketest_mem
-    SmokeTestMemLeak.cpp
+	SmokeTestMemLeak.cpp
 )
 
-include_directories(
-    ${API_HEADERS}
-)
+include_directories(${API_HEADERS})
 
 set(TEST_LIBRARIES pbnjson_cpp)
 ######################### THE UNIT TESTS ############################
 # TestDOM test
 qt_hdrs(test_cppdom
-    TestDOM.h
+	TestDOM.h
 )
 
 src(test_cppdom
-    TestDOM.cpp
+	TestDOM.cpp
 )
 
 qt_hdrs(test_cppsax
-    TestSAX.h
+	TestSAX.h
 )
 
 src(test_cppsax
-    TestSAX.cpp
+	TestSAX.cpp
 )
 
 src(test_yajl
-    TestYAJL.cpp
+	TestYAJL.cpp
 )
 
 qt_hdrs(test_cppschema

@@ -1,43 +1,57 @@
-if (NOT QT_FOUND)
-    message(WARNING "Qt not found - skipping building many tests for C api")
+# @@@LICENSE
+#
+# Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# LICENSE@@@
+
+if(NOT QT_FOUND)
+	message(WARNING "Qt not found - skipping building many tests for C api")
 endif ()
 
-include_directories(
-    ${API_HEADERS}
-)
+include_directories(${API_HEADERS})
 
 # Find CJSON for comparison benchmarks
 find_package(CJSON)
-if (NOT CJSON_FOUND)
-    set(CJSON_INCLUDE_DIR "")
-    set(CJSON_LIBRARY "")
-    set(HAVE_CJSON false)
-endif (NOT CJSON_FOUND)
+if(NOT CJSON_FOUND)
+	set(CJSON_INCLUDE_DIR "")
+	set(CJSON_LIBRARY "")
+	set(HAVE_CJSON false)
+endif()
 
 find_package(YAJL)
-if (NOT YAJL_FOUND)
-    set (YAJL_INCLUDE_DIRS "")
-    set (YAJL_LIBRARIES "")
-    set (FOUND_YAJL false)
-endif (NOT YAJL_FOUND)
+if(NOT YAJL_FOUND)
+	set(YAJL_INCLUDE_DIRS "")
+	set(YAJL_LIBRARIES "")
+	set(FOUND_YAJL false)
+endif()
 
 ######################### TEST CONFIGURATION ########################
 set(TEST_LIBRARIES pbnjson_c ${CJSON_LIBRARY} ${YAJL_LIBRARIES})
 
 include(CheckSymbolExists)
-if (CJSON_FOUND)
+if(CJSON_FOUND)
 	check_symbol_exists("json_object_new_object" "json_object.h" HAVE_CJSON)
-endif ()
+endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cjson.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/cjson.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/yajl.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/yajl.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${YAJL_INCLUDE_DIRS} ${CJSON_INCLUDE_DIRS})
 
-list(APPEND TEST_PARSE_FILES
-	file_parse_test
-)
+list(APPEND TEST_PARSE_FILES file_parse_test)
 
-foreach (i ${TEST_PARSE_FILES})
+foreach(i ${TEST_PARSE_FILES})
 	configure_file(${i}.json ${i}.json COPYONLY)
 	configure_file(${i}.schema ${i}.schema COPYONLY)
 endforeach()
@@ -47,11 +61,11 @@ endforeach()
 ######################### THE UNIT TESTS ############################
 # TestDOM test
 qt_hdrs(test_dom
-    TestDOM.h
+	TestDOM.h
 )
 
 src(test_dom
-    TestDOM.cpp
+	TestDOM.cpp
 )
 
 qt_hdrs(test_parse
@@ -62,36 +76,36 @@ src(test_parse
 	TestParse.cpp)
 
 qt_hdrs(test_sax
-    TestSAX.h
+	TestSAX.h
 )
 
 src(test_sax
-    TestSAX.cpp
-    JSXMLConverter.cpp
+	TestSAX.cpp
+	JSXMLConverter.cpp
 )
 
 qt_hdrs(test_yajl
-    TestYAJL.h
+	TestYAJL.h
 )
   
 src(test_yajl
-    TestYAJL.cpp
+	TestYAJL.cpp
 )
 
 qt_hdrs(test_perf
-    TestPerformance.h
+	TestPerformance.h
 )
 
 src(test_perf
-    TestPerformance.cpp
+	TestPerformance.cpp
 )
 
 qt_hdrs(test_schema
-    TestSchema.h
+	TestSchema.h
 )
 
 src(test_schema
-    TestSchema.cpp
+	TestSchema.cpp
 )
 qt_hdrs(test_schema2
 	TestSchemaSanity.h
@@ -102,7 +116,7 @@ src(test_schema2
 )
 
 src(smoketest_mem_badinput
-    SmokeTestMemLeakBadInput.cpp
+	SmokeTestMemLeakBadInput.cpp
 )
 
 include_directories(${C_ENGINE_INCDIR})
@@ -150,16 +164,16 @@ add_qt_test(test_sax "SAX API")
 add_qt_test(test_schema2 "Schema sanity checks")
 add_regular_test(smoketest_mem_badinput "C memory leak smoke test for parsing invalid input")
 
-if (WITH_PERFORMANCE_TESTS)
-    if (WITH_VALGRIND)
-        set(_OLD_VALGRIND_TOOL ${VALGRIND_TOOL})
-        set(VALGRIND_TOOL "callgrind")
-        add_qt_test(test_perf "Performance test" -callgrind)
-        set(VALGRIND_TOOL ${_OLD_VALGRIND_TOOL})
-    else ()
-        add_qt_test(test_perf "Performance test")
-    endif ()
-endif ()
+if(WITH_PERFORMANCE_TESTS)
+	if(WITH_VALGRIND)
+		set(_OLD_VALGRIND_TOOL ${VALGRIND_TOOL})
+		set(VALGRIND_TOOL "callgrind")
+		add_qt_test(test_perf "Performance test" -callgrind)
+		set(VALGRIND_TOOL ${_OLD_VALGRIND_TOOL})
+	else()
+		add_qt_test(test_perf "Performance test")
+	endif()
+endif()
 
 add_schema_test(test_schema "Number sanity check" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/sanity/ SimpleNumber)
 add_schema_test(test_schema "Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/contact/ Contact)

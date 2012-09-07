@@ -1,68 +1,55 @@
-FIND_PACKAGE(Doxygen REQUIRED)
+# @@@LICENSE
+#
+#      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License looks.
+#
+# LICENSE@@@
 
-set(WITH_DOCS ${DOXYGEN_FOUND} CACHE BOOL "Generate documentation when building")
-if (DEFINED DONT_PREPARE_DOCS)
-	# Variable compatibility with existing build scripts
-	# Deprecated in favour of WITH_DOCS
-	set(WITH_DOCS NOT ${DONT_PREPARE_DOCS} CACHE BOOL "Generate documentation when building" FORCE)
-endif()
+set(DOC_DIRNAME pbnjson-${WEBOS_API_VERSION})
+set(PJ_DOC_OUTPUT ${WEBOS_BINARY_DOCUMENTATION_DIR}/${CMAKE_PROJECT_NAME}/html)
+set(PJ_DOC_C_API_OUT ${PJ_DOC_OUTPUT}/c_api)
+set(PJ_DOC_CXX_API_OUT ${PJ_DOC_OUTPUT}/cxx_api)
+set(PJ_DOC_C_SRC_OUT ${PJ_DOC_OUTPUT}/c_internal)
+set(PJ_DOC_CXX_SRC_OUT ${PJ_DOC_OUTPUT}/cxx_internal)
 
-IF(NOT TARGET doc-api)
-    ADD_CUSTOM_TARGET(doc-api)
-ENDIF(NOT TARGET doc-api)
+message(STATUS "** documentation output to: ${PJ_DOC_OUTPUT}")
 
-IF (DOXYGEN_FOUND)
-	SET(DOC_DIRNAME pbnjson-${PBNJSON_VERSION})
-	SET(PJ_DOC_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${DOC_DIRNAME}/share/doc/${DOC_DIRNAME}")
-	SET(PJ_DOC_C_API_OUT "${PJ_DOC_OUTPUT}/c_api")
-	SET(PJ_DOC_CXX_API_OUT "${PJ_DOC_OUTPUT}/cxx_api")
-	SET(PJ_DOC_C_SRC_OUT "${PJ_DOC_OUTPUT}/c_internal")
-	SET(PJ_DOC_CXX_SRC_OUT "${PJ_DOC_OUTPUT}/cxx_internal")
-	
-	MESSAGE(STATUS "** doxygen: ${DOXYGEN_PATH}")
-	MESSAGE(STATUS "** documentation output to: ${PJ_DOC_OUTPUT}")
-	
-    MACRO(DOC_TARGET CUSTOM_TARGET LANG DOXY_FILENAME)
-        CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/${DOXY_FILENAME} ${CMAKE_CURRENT_BINARY_DIR}/${DOXY_FILENAME} @ONLY)
+foreach(DOC_OUTPUT_DIR ${PJ_DOC_C_API_OUT} ${PJ_DOC_CXX_API_OUT} ${PJ_DOC_C_SRC_OUT} ${PJ_DOC_CXX_SRC_OUT})
+	file(MAKE_DIRECTORY ${DOC_OUTPUT_DIR})
+endforeach()
 
-        ADD_CUSTOM_TARGET(pbnjson-doc-${CUSTOM_TARGET}_${LANG}
-            ${DOXYGEN_EXECUTABLE} ${DOXY_FILENAME}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            COMMENT "Compiling ${CUSTOM_TARGET} documentation for ${LANG}")
-    ENDMACRO(DOC_TARGET DOXY_FILENAME)
+macro(doc_target CUSTOM_TARGET LANG DOXY_FILENAME)
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${DOXY_FILENAME} ${CMAKE_CURRENT_BINARY_DIR}/${DOXY_FILENAME} @ONLY)
+	add_custom_target(pbnjson-doc-${CUSTOM_TARGET}_${LANG}
+	                  doxygen ${DOXY_FILENAME}
+	                  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+	                  COMMENT "Generating ${CUSTOM_TARGET} documentation for ${LANG}")
+endmacro()
 
-    #ADD_CUSTOM_TARGET(pbnjson-doc-api ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/PBNJSON_Public.dxy WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    #ADD_CUSTOM_TARGET(pbnjson-doc-src ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/PBNSJON_Internal.dxy WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    
-    IF(NOT TARGET doc-src)
-        ADD_CUSTOM_TARGET(doc-src)
-    ENDIF(NOT TARGET doc-src)
-    
-    DOC_TARGET(src c PBNJSON_InternalC.dxy)
-    DOC_TARGET(src cxx PBNJSON_InternalCXX.dxy)
-    DOC_TARGET(api c PBNJSON_PublicC.dxy)
-    DOC_TARGET(api cxx PBNJSON_PublicCXX.dxy)
-    
-    ADD_DEPENDENCIES(doc-api pbnjson-doc-api_c pbnjson-doc-api_cxx)
-    ADD_DEPENDENCIES(doc-src pbnjson-doc-src_c pbnjson-doc-src_cxx)
-    ADD_DEPENDENCIES(pbnjson-doc-src_c pbnjson-doc-api_c)
-    ADD_DEPENDENCIES(pbnjson-doc-src_cxx pbnjson-doc-api_cxx)
-    
-    FOREACH(DOC_OUTPUT_DIR ${PJ_DOC_C_API_OUT} ${PJ_DOC_CXX_API_OUT} ${PJ_DOC_C_SRC_OUT} ${PJ_DOC_CXX_SRC_OUT})
-	    FILE(MAKE_DIRECTORY "${DOC_OUTPUT_DIR}")
-	ENDFOREACH(DOC_OUTPUT_DIR)
+add_custom_target(doc-api)
+add_custom_target(doc-src)
 
-ELSE (DOXYGEN_FOUND)
-	MESSAGE(STATUS "!! doxygen not found, not generating documentation")     
-	ADD_CUSTOM_TARGET(pbnjson-doc echo "doxygen not installed, no documentation")
-	ADD_DEPENDENCIES(doc-api pbnjson-doc)
-ENDIF (DOXYGEN_FOUND)
+doc_target(src c PBNJSON_InternalC.dxy)
+doc_target(src cxx PBNJSON_InternalCXX.dxy)
+doc_target(api c PBNJSON_PublicC.dxy)
+doc_target(api cxx PBNJSON_PublicCXX.dxy)
 
-IF(NOT TARGET doc)
-    ADD_CUSTOM_TARGET(doc ALL)
-ENDIF(NOT TARGET doc)
+add_dependencies(doc-api pbnjson-doc-api_c pbnjson-doc-api_cxx)
+add_dependencies(doc-src pbnjson-doc-src_c pbnjson-doc-src_cxx)
+add_dependencies(pbnjson-doc-src_c pbnjson-doc-api_c)
+add_dependencies(pbnjson-doc-src_cxx pbnjson-doc-api_cxx)
 
-ADD_DEPENDENCIES(doc doc-api)
-IF(TARGET doc-src)
-    ADD_DEPENDENCIES(doc doc-src)
-ENDIF(TARGET doc-src)
+add_custom_target(docs ALL)
+
+add_dependencies(docs doc-api doc-src)
