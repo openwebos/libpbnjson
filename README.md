@@ -7,8 +7,8 @@ Palm's Better Native JSON library
 
 Description
 -----------
-The JSON engine implemented as a libraries with APIs for easier C and C++ abstraction 
-over the core PBNJSON library written in C.
+A JSON engine, implemented as a pair of libraries with APIs for easier C and 
+C++ abstraction over the core PBNJSON library.
 
 Dependencies
 ============
