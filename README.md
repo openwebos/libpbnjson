@@ -21,7 +21,7 @@ Below are the tools and libraries (and their minimum versions) required to build
 - make (any version)
 - openwebos/cmake-modules-webos 1.0.0 RC3
 - pkg-config 0.26
-- yajl 1.0.12
+- yajl 1.0.12 (2.0.x not supported)
 
 How to Build on Linux
 =====================
