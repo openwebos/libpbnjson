@@ -32,6 +32,7 @@
 #include <utility>
 
 #include <stdint.h>
+#include <unistd.h>	// for ssize_t
 
 #define PBNJSON_ZERO_COPY_STL_STR 0
 

@@ -22,7 +22,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include <unistd.h>	// for long
+#include <unistd.h>	// for ssize_t
 #include <assert.h>
 #include <string.h>
 
