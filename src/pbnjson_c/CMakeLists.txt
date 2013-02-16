@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-#      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+#      Copyright (c) 2009-2013 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,7 +62,8 @@ set(${C_ENGINE_PKG}_STATIC ${STATIC_C_ENGINE})
 find_package(${C_ENGINE_PKG} REQUIRED)
 set(C_ENGINE_INCDIR ${${C_ENGINE_PKG}_INCLUDE_DIRS})
 set(C_ENGINE_LIBNAME ${${C_ENGINE_PKG}_LIBRARIES})
-message(STATUS "pbnjson_c: ${C_ENGINE} include directory ${C_ENGINE_INCDIR}, library ${C_ENGINE_LIBNAME}")
+set(C_ENGINE_DEFINITIONS ${${C_ENGINE_PKG}_DEFINITIONS})
+message(STATUS "pbnjson_c: ${C_ENGINE} include directory ${C_ENGINE_INCDIR}, library ${C_ENGINE_LIBNAME}, definitions ${C_ENGINE_DEFINITIONS}")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/sys_malloc.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/sys_malloc.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pjson_syslog.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/pjson_syslog.h)
@@ -71,7 +72,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/strnlen.h.cmake ${CMAKE_CURRENT_BINAR
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/isatty.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/isatty.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/assert_compat.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/assert_compat.h)
 
-webos_add_compiler_flags(ALL -std=c99)
+webos_add_compiler_flags(ALL -std=c99 ${C_ENGINE_DEFINITIONS})
 
 file(GLOB SHARED_SOURCE "./*.c" "./jvalue/*.c")
 

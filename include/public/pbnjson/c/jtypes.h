@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+//      Copyright (c) 2009-2013 Hewlett-Packard Development Company, L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ typedef enum {
  */
 typedef struct {
 	const char *m_str;
-	long m_len;	/// this MUST be the number of characters in m_str not including any terminating nulls.
+	size_t m_len;	/// this MUST be the number of characters in m_str not including any terminating nulls.
 } raw_buffer;
 
 /**

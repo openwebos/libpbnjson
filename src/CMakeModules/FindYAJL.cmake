@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-#      Copyright (c) 2012 Hewlett-Packard Development Company, L.P.
+#      Copyright (c) 2012-2013 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 # YAJL_FOUND - system has yajl
 # YAJL_INCLUDE_DIRS - include directories necessary to compile w/ yajl
 # YAJL_LIBRARIES - libraries necessary to link to to get yajl
+# YAJL_DEFINITIONS - compiler switches required for using yajl
 #
 # If YAJL_STATIC is set, find the static library; otherwise, find the shared library.
 #
@@ -28,6 +29,13 @@ include(FindPackageHandleStandardArgs)
 
 # Find the include directories
 find_path(YAJL_INCLUDE_DIRS NAMES yajl/yajl_parse.h yajl/yajl_gen.h yajl/yajl_common.h)
+
+# Check if we have 2.0+ version or lower
+if(EXISTS "${YAJL_INCLUDE_DIRS}/yajl/yajl_version.h")
+    set(YAJL_DEFINITIONS "-DHAVE_YAJL_VERSION_H")
+else()
+    MESSAGE(STATUS "Detected old version of yajl (below 2.0). Consider upgrade.")
+endif()
 
 # Find the library
 if(YAJL_STATIC)
