@@ -1254,6 +1254,8 @@ bool jschema_obj_end(JSAXContextRef sax, ValidationStateRef parseState)
 							raw_buffer keyStr UNUSED_VAR;
 							keyStr = jstring_get_fast(property.key);
 							PJ_SCHEMA_INFO("Key %.*s isn't optional but it is missing", RB_PRINTF(keyStr));
+							sax->m_errorstate->m_type = MISSING_REQUIRED_KEY;
+							sax->m_errorstate->m_reason = jstring_create_copy(keyStr);
 							goto schema_failure;
 						}
 						if (!jsax_parse_inject(sax, property.key, defaultVal)) {

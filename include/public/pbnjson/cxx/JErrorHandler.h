@@ -35,6 +35,7 @@ public:
 
 	enum SchemaError {
 		ERR_SCHEMA_GENERIC = 40,
+		ERR_SCHEMA_MISSING_REQUIRED_KEY,
 	};
 
 	enum BadObject {

@@ -21,6 +21,7 @@
 
 #include "jparse_types.h"
 #include "jgen_types.h"
+#include <yajl/yajl_parse.h>
 
 typedef enum {
 	ST_STR = 1,
@@ -87,6 +88,16 @@ typedef struct ValidationState {
 #endif
 } * ValidationStateRef;
 
+typedef enum ErrorType {
+	NONE = 0,
+	MISSING_REQUIRED_KEY,
+} ErrorType;
+
+typedef struct ErrorState {
+	ErrorType m_type;
+	jvalue_ref m_reason;
+} * ErrorStateRef;
+
 typedef void (*GeneratorInjector)(jvalue_ref valueToInject);
 
 typedef enum InjectorType {
@@ -101,5 +112,13 @@ typedef struct SAXInjector {
 	} m_injector;
 	InjectorType m_type;	/// the type used to generate
 } SAXInjector;
+
+struct __JSAXContext {
+        void *ctxt;
+        yajl_callbacks *m_handlers;
+        ValidationStateRef m_validation;
+        JErrorCallbacksRef m_errors;
+        ErrorStateRef m_errorstate;
+};
 
 #endif /* JSCHEMA_TYPES_INTERNAL_H_ */

@@ -478,13 +478,6 @@ errno_parse_failure:
 	goto return_result;
 }
 
-struct __JSAXContext {
-	void *ctxt;
-	yajl_callbacks *m_handlers;
-	ValidationStateRef m_validation;
-	JErrorCallbacksRef m_errors;
-};
-
 void jsax_changeContext(JSAXContextRef saxCtxt, void *userCtxt)
 {
 	saxCtxt->ctxt = userCtxt;
@@ -722,6 +715,30 @@ static yajl_callbacks my_bounce = {
 
 static struct JErrorCallbacks null_err_handler = { 0 };
 
+static ErrorStateRef jsax_error_init()
+{
+	ErrorStateRef errorstate = (ErrorStateRef) malloc(sizeof(struct ErrorState));
+	CHECK_POINTER_RETURN_NULL(errorstate);
+
+	errorstate->m_type = NONE;
+	errorstate->m_reason = jnull();
+
+	return errorstate;
+}
+
+static void jsax_error_release(ErrorStateRef *statePtr)
+{
+	assert(statePtr != NULL);
+
+	ErrorStateRef state = *statePtr;
+	SANITY_CHECK_POINTER(state);
+
+	j_release(&state->m_reason);
+	free(state);
+
+	SANITY_KILL_POINTER(*statePtr);
+}
+
 static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchemaInfoRef schemaInfo, void **ctxt, bool logError, bool comments)
 {
 	yajl_status parseResult;
@@ -779,6 +796,12 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 	}
 #endif
 
+	internalCtxt.m_errorstate = jsax_error_init();
+	if (internalCtxt.m_errorstate == NULL) {
+		PJ_LOG_WARN("Failed to initialize error state");
+		return false;
+	}
+
 #if YAJL_VERSION < 20000
         yajl_parser_config yajl_opts = {
                 comments,
@@ -825,6 +848,7 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 #if !BYPASS_SCHEMA
 	jschema_state_release(&internalCtxt.m_validation);
 #endif
+	jsax_error_release(&internalCtxt.m_errorstate);
 
 #ifndef NDEBUG
 	assert(yajl_get_error(handle, 0, NULL, 0) == NULL);
@@ -843,6 +867,7 @@ parse_failure:
 #if !BYPASS_SCHEMA
 	jschema_state_release(&internalCtxt.m_validation);
 #endif
+	jsax_error_release(&internalCtxt.m_errorstate);
 	yajl_free(handle);
 	return false;
 }
