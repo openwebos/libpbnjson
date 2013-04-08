@@ -1,6 +1,7 @@
 // @@@LICENSE
 //
 //      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+//      Copyright (c) 2013 LG Electronics
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -224,7 +225,9 @@ bool JValue::operator==(const JValue& other) const
 			if (jobj_iter_deref(i, &value)) {
 				if (!jobject_get_exists(other.m_jval, jstring_get_fast(value.key), &tmpVal))
 					return false;
-				if (JValue(value.value) != JValue(tmpVal))
+				//tmpVal is owned by 'other'
+				//value is already a copy, but it goes out of scope, as does tmpVal
+				if (JValue(jvalue_copy(value.value)) != JValue(jvalue_copy(tmpVal)))
 					return false;
 			} else {
 				assert(false);
