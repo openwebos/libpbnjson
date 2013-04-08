@@ -232,8 +232,8 @@ bool JValue::operator==(const JValue& other) const
 			} else {
 				assert(false);
 			}
-			return false;
 		}
+		return true;
 	} else if (isArray()) {
 		if (!other.isArray())
 			return false;
@@ -253,14 +253,14 @@ bool JValue::operator==(const JValue& other) const
 		double myNumber, otherNumber;
 
 		ConversionResultFlags myError = asNumber(myNumber);
-		ConversionResultFlags otherError = asNumber(otherNumber);
+		ConversionResultFlags otherError = other.asNumber(otherNumber);
 
-		return myError == otherError && myNumber == otherNumber;
+		return myError == CONV_OK && otherError == CONV_OK && myNumber == otherNumber;
 	}
 	ConversionResultFlags isBool, otherIsBool;
 	bool myVal, otherVal;
 	isBool = asBool(myVal);
-	otherIsBool = asBool(otherVal);
+	otherIsBool = other.asBool(otherVal);
 
 	return isBool == CONV_OK && otherIsBool == CONV_OK && myVal == otherVal;
 }
