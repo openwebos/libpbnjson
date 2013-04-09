@@ -850,10 +850,6 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 #endif
 	jsax_error_release(&internalCtxt.m_errorstate);
 
-#ifndef NDEBUG
-	assert(yajl_get_error(handle, 0, NULL, 0) == NULL);
-#endif
-
 	yajl_free(handle);
 	return true;
 
