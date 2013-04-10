@@ -474,8 +474,6 @@ static bool jobject_insert_internal (jvalue_ref object, jkey_value_array *table,
 	assert(DEREF_OBJ(object).m_start.entry.key == NULL);
 	assert(DEREF_OBJ(object).m_start.entry.value == NULL);
 	assert(DEREF_OBJ(object).m_start.list.next != NULL);
-	assert(DEREF_OBJ(object).m_start.list.prev == &table->m_bucket[bucket].list);
-	assert(&DEREF_OBJ(object).m_start.list == table->m_bucket[bucket].list.next);
 
 	return true;
 }
