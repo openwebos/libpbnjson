@@ -21,6 +21,8 @@
 
 #include "japi.h"
 
+#include <string>
+
 namespace pbnjson {
 
 class JParser;

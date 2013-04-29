@@ -168,5 +168,6 @@
 #include "pbnjson/cxx/JSchemaFile.h"
 #include "pbnjson/cxx/JSchemaFragment.h"
 #include "pbnjson/cxx/JResolver.h"
+#include "pbnjson/cxx/JErrorHandler.h"
 
 #endif /* PJSONCXX_H_ */
