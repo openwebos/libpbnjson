@@ -973,7 +973,6 @@ static inline bool jsax_parse_inject_internal(JSAXContextRef ctxt, jvalue_ref ke
 bool jsax_parse_inject(JSAXContextRef ctxt, jvalue_ref key, jvalue_ref value)
 {
 	assert (jis_string(key));
-	assert (jis_object(value));
 
 	return jsax_parse_inject_internal(ctxt, key, value);
 }

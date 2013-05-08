@@ -1164,33 +1164,10 @@ schema_failure:
 #endif
 }
 
-#if !BYPASS_SCHEMA
-static bool is_required_key_present(jvalue_ref seenKeys, jvalue_ref requiredKey, jvalue_ref actualKey) NON_NULL(1, 2, 3);
-static bool is_required_key_present(jvalue_ref seenKeys, jvalue_ref requiredKey, jvalue_ref actualKey)
-{
-	assert(jis_object(seenKeys));
-	assert(jis_string(requiredKey));
-	assert(jis_string(actualKey));
-
-	if (!jobject_containskey2(seenKeys, requiredKey)) {
-#if !PJSON_NO_LOGGING
-		raw_buffer propKey = jstring_get_fast(actualKey);
-		raw_buffer expectedKey = jstring_get_fast(requiredKey);
-		PJ_SCHEMA_WARN("Key %.*s is required by %.*s but was not encountered",
-				(int)propKey.m_len, propKey.m_str,
-				(int)expectedKey.m_len, expectedKey.m_str);
-#endif /* PJSON_NO_LOGGING */
-		return false;
-	}
-
-	return true;
-}
-#endif
-
 /**
  * On object end here are the things we check:
- *    have we seen all the keys that are non-optional
- *    have we seen all the keys that other keys might require
+ *    have we seen all the keys that have a "default" value
+ *    have we seen all the keys that is specified in "required" list
  */
 bool jschema_obj_end(JSAXContextRef sax, ValidationStateRef parseState)
 {
@@ -1219,12 +1196,13 @@ bool jschema_obj_end(JSAXContextRef sax, ValidationStateRef parseState)
 		jvalue_ref schemaToValidate = jarray_get(toMatch->m_schema->m_validation, i);
 		assert(jis_object(schemaToValidate));
 
+		jvalue_ref required_list = jobject_get(schemaToValidate, J_CSTR_TO_BUF(SK_REQUIRED));
+
 		// TODO: Determine if there is a bug here if `properties' is ommitted in the schema,
 		//  but `additionalProperties' isn't.
 		jvalue_ref propertiesList = jobject_get(schemaToValidate, J_CSTR_TO_BUF(SK_PROPS));
 		if (!jis_null(propertiesList)) {
 			jobject_key_value property;
-			jvalue_ref value;
 
 			for (jobject_iter i = jobj_iter_init(propertiesList); jobj_iter_is_valid(i); i = jobj_iter_next(i)) {
 				if (!jobj_iter_deref(i, &property)) {
@@ -1232,64 +1210,32 @@ bool jschema_obj_end(JSAXContextRef sax, ValidationStateRef parseState)
 					goto schema_failure;
 				}
 				if (!jobject_containskey2(toMatch->m_seenKeys, property.key)) {
-					// we haven't seen the key from the list of keys
-					// we have schemas for.  is it optional?
-					bool optional;
 
-					assert(jis_object(property.value));
-
-					jvalue_ref isOptional = jobject_get(property.value, J_CSTR_TO_BUF(SK_OPTIONAL));
-					assert(jis_null(isOptional) || jis_boolean(isOptional));
-					if (jis_null(isOptional))
-						optional = false;
-					else
-						optional = jboolean_deref(isOptional);
-
-
-					if (!optional) {
-						// we have a required key in the schema but not in the input - does it provide
-						// a default value we can use?
-						jvalue_ref defaultVal;
-						if (!jobject_get_exists(property.value, J_CSTR_TO_BUF(SK_DEFAULT), &defaultVal)) {
-							raw_buffer keyStr UNUSED_VAR;
-							keyStr = jstring_get_fast(property.key);
-							PJ_SCHEMA_INFO("Key %.*s isn't optional but it is missing", RB_PRINTF(keyStr));
-							sax->m_errorstate->m_type = MISSING_REQUIRED_KEY;
-							sax->m_errorstate->m_reason = jstring_create_copy(keyStr);
-							goto schema_failure;
-						}
+					// if we have a default value then inject that.
+					jvalue_ref defaultVal;
+					if (jobject_get_exists(property.value, J_CSTR_TO_BUF(SK_DEFAULT), &defaultVal)) {
 						if (!jsax_parse_inject(sax, property.key, defaultVal)) {
-							raw_buffer keyStr UNUSED_VAR;
-							keyStr = jstring_get_fast(property.key);
-							PJ_SCHEMA_INFO("The default value for key '%.*s' violates the schema", RB_PRINTF(keyStr));
+							PJ_SCHEMA_INFO("The default value for key '%.*s' violates the schema", RB_PRINTF(jstring_get_fast(property.key)));
 							goto schema_failure;
 						}
-					}
-
-					// the key is optional and we haven't seen it
-					// not a problem
-				} else {
-					// we encountered a key - does it require any keys to be present?
-					if (!jis_null(value = jobject_get(property.value, J_CSTR_TO_BUF(SK_REQUIRED)))) {
-						// EXTENSION: required can be a value or a list of values
-						if (jis_string(value)) {
-							if (!is_required_key_present(toMatch->m_seenKeys, value, property.key))
-								goto schema_failure;
-						} else {
-							assert(jis_array(value));
-							jvalue_ref requiredKey;
-
-							for (ssize_t i = jarray_size(property.value) - 1; i >= 0; i--) {
-								requiredKey = jarray_get(property.value, i);
-								if (!is_required_key_present(toMatch->m_seenKeys, requiredKey, property.key))
+						//PJ_SCHEMA_INFO("%.*s has default value",RB_PRINTF(jstring_get_fast(property.key)));
+					}else {
+						// does it require any keys to be present?
+						if (!jis_null(required_list)) {
+							for (ssize_t i = jarray_size(required_list) - 1; i >= 0; i--) {
+								jvalue_ref requiredKey = jarray_get(required_list, i);
+								if (jstring_equal(property.key, requiredKey)) {
+									raw_buffer keyStr UNUSED_VAR;
+									keyStr = jstring_get_fast(requiredKey);
+									sax->m_errorstate->m_type = MISSING_REQUIRED_KEY;
+									sax->m_errorstate->m_reason = jstring_create_copy(keyStr);
 									goto schema_failure;
+								}
 							}
 						}
 					}
 				}
 			}
-		} else {
-			// no properties list - any logic here is handled by the key validator
 		}
 	}
 

@@ -37,7 +37,6 @@
 #define SK_MAX_LEN			"maxLength"
 #define SK_MIN_LEN			"minLength"
 #define SK_REGEXP			"pattern"
-#define SK_OPTIONAL			"optional"
 #define SK_REQUIRED			"required"
 #define SK_DEFAULT			"default"
 #define SK_ITEMS			"items"
