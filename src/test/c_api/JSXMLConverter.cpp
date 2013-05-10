@@ -1,6 +1,7 @@
 // @@@LICENSE
 //
 //      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+//      Copyright (c) 2013 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -193,7 +194,7 @@ static void serializeObject(QDomNode &out, jvalue_ref jobj, const Namespace &ns,
 static void serializeArray(QDomNode &out, jvalue_ref jarr, const Namespace &ns, const QXmlAttributes &additionalAttributes)
 {
 	QDomElement arrElement = addElement(out, "array", ns);
-	setAttribute(apply(arrElement, additionalAttributes), nsArr, "length", (int64_t)jarray_size(jarr));
+	setAttribute(apply(arrElement, additionalAttributes), nsArr, "length", (long long)jarray_size(jarr));
 
 	for (ssize_t i = 0; i < jarray_size(jarr); i++) {
 		QXmlAttributes valueAttributes;

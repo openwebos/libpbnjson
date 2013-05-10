@@ -1,6 +1,7 @@
 # @@@LICENSE
 #
 #      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+#      Copyright (c) 2013 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,11 +52,14 @@ if(VALGRIND_FOUND AND VALGRIND_TOOL)
 			)
 		endmacro()
 	endif()
+else()
+	macro(conf_valgrind_env test_name)
+	endmacro()
 endif()
 
 # Locate Qt for testing
 # Qt4 preamble
-find_package(Qt4 4.5 COMPONENTS QtCore QtTestLib)
+find_package(Qt4 4.5 COMPONENTS QtCore QtTest)
 
 # You'd think that if I asked a minimum Qt version, it wouldn't
 # set QT_FOUND if that minimum version wasn't found.
@@ -67,7 +71,7 @@ if(NOT QT_VERSION)
 	message(WARNING "QT_VERSION not found - manually constructed as ${QT_VERSION}")
 endif()
 
-if("4.5.0" VERSION_GREATER "${QT_VERSION}")exe_name
+if("4.5.0" VERSION_GREATER "${QT_VERSION}")
 	message(STATUS "Found Qt version ${QT_VERSION} is too old for unit tests - pbnjson tests will not be built")
 	set(QT_FOUND FALSE)
 endif()
@@ -116,9 +120,9 @@ endmacro()
 # Deprecated in favour of setting WITH_PERFORMANCE_TESTS
 if(DEFINED ADD_PERFORMANCE_TEST)
 	set(WITH_PERFORMANCE_TESTS ${ADD_PERFORMANCE_TEST} CACHE BOOL "Include performance unit tests")
-else )
+else()
 	set(WITH_PERFORMANCE_TESTS FALSE CACHE BOOL "Include performance unit tests")
-endif )
+endif()
 
 macro(conf_valgrind_prefix)
 	if (NOT VALGRIND_FOUND AND VALGRIND_TOOL)

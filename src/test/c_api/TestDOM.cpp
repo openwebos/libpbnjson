@@ -1,6 +1,7 @@
 // @@@LICENSE
 //
 //      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+//      Copyright (c) 2013 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -549,7 +550,7 @@ void TestDOM::testStringDealloc()
 	QCOMPARE(sizeof(str), (size_t)45);
 	QCOMPARE(strlen(str), (size_t)44);
 	raw_buffer srcString = J_CSTR_TO_BUF(str);
-	QCOMPARE(srcString.m_len, (long)44);
+	QCOMPARE(srcString.m_len, (unsigned long)44);
 
 	char *dynstr = (char *)calloc(srcString.m_len + 1, sizeof(char));
 	ptrdiff_t dynstrlen = strlen(strncpy(dynstr, srcString.m_str, srcString.m_len));
