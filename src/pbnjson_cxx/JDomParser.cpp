@@ -36,6 +36,7 @@ static JErrorHandler::SchemaError ErrorToSchemaError(ErrorType type)
 	switch(type)
 	{
 	case MISSING_REQUIRED_KEY: return JErrorHandler::ERR_SCHEMA_MISSING_REQUIRED_KEY;
+	case UNEXPECTED_TYPE: return JErrorHandler::ERR_SCHEMA_UNEXPECTED_TYPE;
 	default: break;
 	}
 

@@ -633,6 +633,32 @@ static SchemaType parseType(raw_buffer input)
 	PJ_LOG_WARN("Ignoring unsupported type %.*s", (int)input.m_len, input.m_str);
 	return ST_ANY;
 }
+static const char* parseTypeToStr(SchemaType input)
+{
+	switch (input) {
+	case ST_ANY:
+		return "any";
+	case ST_NULL:
+		return "null";
+	case ST_ARR:
+		return "array";
+	case ST_OBJ:
+		return "object";
+	case ST_STR:
+		return "string";
+	case ST_NUM:
+		return "number";
+	case ST_INT:
+		return "integer";
+	case ST_BOOL:
+		return "boolean";
+	case ST_ERR:
+		return "error";
+	}
+	PJ_LOG_WARN("Ignoring unsupported type %d", input);
+
+	return "unknown";
+}
 
 static SchemaTypeBitField determinePossibilities_internal(SchemaTypeBitField field, jvalue_ref schemaType)
 {
@@ -1142,8 +1168,11 @@ bool jschema_obj(JSAXContextRef sax, ValidationStateRef parseState)
 	// only support 1 state at a time currently
 	// more will require careful thought about how to properly manage them
 	SchemaStateRef toMatch = getNextState(parseState, ST_OBJ);
-	if (toMatch == NULL)
+	if (toMatch == NULL){
+		sax->m_errorstate->m_type = UNEXPECTED_TYPE;
+		sax->m_errorstate->m_reason = jstring_create(parseTypeToStr(ST_OBJ));
 		goto schema_failure;
+	}
 
 	assert(jis_null(toMatch->m_seenKeys));
 	// use object instead of array for hash-based lookup which will
@@ -1273,8 +1302,11 @@ bool jschema_arr(JSAXContextRef sax, ValidationStateRef parseState)
 
 	SANITY_CHECK_POINTER(parseState);
 	SchemaStateRef toMatch = getNextState(parseState, ST_ARR);
-	if (toMatch == NULL)
+	if (toMatch == NULL){
+		sax->m_errorstate->m_type = UNEXPECTED_TYPE;
+		sax->m_errorstate->m_reason = jstring_create(parseTypeToStr(ST_ARR));
 		goto schema_failure;
+	}
 
 	toMatch->m_arrayOpened = true;
 
@@ -1466,7 +1498,9 @@ bool jschema_str(JSAXContextRef sax, ValidationStateRef parseState, raw_buffer s
 	schema_breakpoint("string");
 
 	SchemaStateRef toMatch = getNextState(parseState, ST_STR);
-	if (toMatch == NULL) {
+	if (toMatch == NULL){
+		sax->m_errorstate->m_type = UNEXPECTED_TYPE;
+		sax->m_errorstate->m_reason = jstring_create(parseTypeToStr(ST_STR));
 		goto schema_failure;
 	}
 
@@ -1737,8 +1771,11 @@ bool jschema_bool(JSAXContextRef sax, ValidationStateRef parseState, bool truth)
 	schema_breakpoint("bool");
 
 	SchemaStateRef toMatch = getNextState(parseState, ST_BOOL);
-	if (toMatch == NULL)
+	if (toMatch == NULL){
+		sax->m_errorstate->m_type = UNEXPECTED_TYPE;
+		sax->m_errorstate->m_reason = jstring_create(parseTypeToStr(ST_BOOL));
 		goto schema_failure;
+	}
 
 	ssize_t numSchemas = jarray_size(toMatch->m_schema->m_validation);
 	jvalue_ref schema;
@@ -1789,8 +1826,11 @@ bool jschema_null(JSAXContextRef sax, ValidationStateRef parseState)
 	schema_breakpoint("null");
 
 	SchemaStateRef toMatch = getNextState(parseState, ST_NULL);
-	if (toMatch == NULL)
+	if (toMatch == NULL){
+		sax->m_errorstate->m_type = UNEXPECTED_TYPE;
+		sax->m_errorstate->m_reason = jstring_create(parseTypeToStr(ST_NULL));
 		goto schema_failure;
+	}
 
 	ssize_t numSchemas = jarray_size(toMatch->m_schema->m_validation);
 	jvalue_ref schema;

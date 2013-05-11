@@ -91,6 +91,7 @@ typedef struct ValidationState {
 typedef enum ErrorType {
 	NONE = 0,
 	MISSING_REQUIRED_KEY,
+	UNEXPECTED_TYPE,
 } ErrorType;
 
 typedef struct ErrorState {
