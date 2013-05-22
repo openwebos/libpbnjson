@@ -37,6 +37,7 @@ typedef enum {
 } StreamStatus;
 
 typedef JStreamRef (*jObjectBegin)(JStreamRef stream);
+typedef JStreamRef (*jObjectKey)(JStreamRef stream, raw_buffer str);
 typedef JStreamRef (*jObjectEnd)(JStreamRef stream);
 typedef JStreamRef (*jArrayBegin)(JStreamRef stream);
 typedef JStreamRef (*jArrayEnd)(JStreamRef stream);
@@ -51,6 +52,7 @@ typedef char* (*jFinish)(JStreamRef stream, StreamStatus *errorCode);
 // Efficient & clean object creation
 struct __JStream {
 	jObjectBegin o_begin;
+	jObjectKey o_key;
 	jObjectEnd o_end;
 	jArrayBegin a_begin;
 	jArrayEnd a_end;

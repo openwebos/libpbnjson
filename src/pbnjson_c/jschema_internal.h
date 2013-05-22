@@ -25,6 +25,8 @@
 #include "jschema_types_internal.h"
 #include <jcallbacks.h>
 
+#include <compiler/nonnull_attribute.h>
+
 /*
  * Ownership is transferred to the state returned.  If you want to share a schema between multiple states, make sure you
  * retain a reference before-hand.
@@ -55,5 +57,7 @@ PJSON_LOCAL bool jis_null_schema(SchemaWrapperRef schema);
 PJSON_LOCAL bool jis_empty_schema(SchemaWrapperRef schema);
 
 PJSON_LOCAL JSchemaResolverRef jget_garbage_resolver();
+
+PJSON_LOCAL void validation_destroy(ValidationStateRef *schema);
 
 #endif /* JSCHEMA_INTERNAL_H_ */

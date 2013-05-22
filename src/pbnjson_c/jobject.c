@@ -97,13 +97,13 @@ static jvalue JEMPTY_STR = {
 };
 
 static const char *jvalue_tostring_internal (jvalue_ref val, jschema_ref schema, bool schemaNecessary);
-static void jvalue_to_string_append (jvalue_ref jref, JStreamRef generating);
-static void jobject_to_string_append (jvalue_ref jref, JStreamRef generating);
-static void jarray_to_string_append (jvalue_ref jref, JStreamRef generating);
-static void jnumber_to_string_append (jvalue_ref jref, JStreamRef generating);
+static bool jvalue_to_string_append (jvalue_ref jref, JStreamRef generating);
+static bool jobject_to_string_append (jvalue_ref jref, JStreamRef generating);
+static bool jarray_to_string_append (jvalue_ref jref, JStreamRef generating);
+static bool jnumber_to_string_append (jvalue_ref jref, JStreamRef generating);
 static jvalue_ref jnumber_duplicate (jvalue_ref num) NON_NULL(1);
-static inline void jstring_to_string_append (jvalue_ref jref, JStreamRef generating);
-static inline void jboolean_to_string_append (jvalue_ref jref, JStreamRef generating);
+static inline bool jstring_to_string_append (jvalue_ref jref, JStreamRef generating);
+static inline bool jboolean_to_string_append (jvalue_ref jref, JStreamRef generating);
 
 static inline jobject_iter JO_ITER (struct list_head *p)
 {
@@ -116,34 +116,46 @@ bool jbuffer_equal(raw_buffer buffer1, raw_buffer buffer2)
 			memcmp(buffer1.m_str, buffer2.m_str, buffer1.m_len) == 0;
 }
 
-static void jvalue_to_string_append (jvalue_ref jref, JStreamRef generating)
+static bool jvalue_to_string_append (jvalue_ref jref, JStreamRef generating)
 {
 	SANITY_CHECK_POINTER(jref);
 	if (jref == NULL) {
 		PJ_LOG_ERR("Internal error.  Using NULL pointer instead of reference to NULL JSON object");
 		jref = &JNULL;
 	}
-	CHECK_POINTER_MSG(generating, "Internal problem due to buffer to append to being null");
+
+	CHECK_POINTER_MSG_RETURN_VALUE(generating, false, "Internal problem due to buffer to append to being null");
+
+	bool success = false;
+
 	switch (jref->m_type) {
 		case JV_NULL:
-			generating->null_value (generating);
+			success = (generating->null_value (generating) != NULL);
+			if (UNLIKELY(!success)) {
+				PJ_LOG_ERR("Schema validation error, null value not accepted");
+			}
 			break;
 		case JV_OBJECT:
-			jobject_to_string_append (jref, generating);
+			success = jobject_to_string_append (jref, generating);
 			break;
 		case JV_ARRAY:
-			jarray_to_string_append (jref, generating);
+			success = jarray_to_string_append (jref, generating);
 			break;
 		case JV_NUM:
-			jnumber_to_string_append (jref, generating);
+			success = jnumber_to_string_append (jref, generating);
 			break;
 		case JV_STR:
-			jstring_to_string_append (jref, generating);
+			success = jstring_to_string_append (jref, generating);
 			break;
 		case JV_BOOL:
-			jboolean_to_string_append (jref, generating);
+			success = jboolean_to_string_append (jref, generating);
+			break;
+		default:
+			PJ_LOG_ERR("Internal error. Unknown jvalue type");
 			break;
 	}
+
+	return success;
 }
 
 /**
@@ -366,12 +378,16 @@ static const char *jvalue_tostring_internal (jvalue_ref val, jschema_ref schema,
 	}
 
 	if (!val->m_toString) {
+		bool parseok = false;
 		StreamStatus error;
 		JStreamRef generating = jstreamInternal (schema, TOP_None);
-		jvalue_to_string_append (val, generating);
+		parseok = jvalue_to_string_append (val, generating);
 		val->m_toString = generating->finish (generating, &error);
 		val->m_toStringDealloc = free;
 		assert (val->m_toString != NULL);
+		if(!parseok) {
+			return NULL;
+		}
 	}
 
 	return val->m_toString;
@@ -382,7 +398,14 @@ const char * jvalue_tostring (jvalue_ref val, const jschema_ref schema)
 	if (val->m_toStringDealloc)
 		val->m_toStringDealloc(val->m_toString);
 	val->m_toString = NULL;
-	return jvalue_tostring_internal (val, schema, true);
+
+	const char* result = jvalue_tostring_internal (val, schema, true);
+
+	if (result == NULL) {
+		PJ_LOG_ERR("Failed to generate string from jvalue. Error location: %s", val->m_toString);
+	}
+
+	return result;
 }
 
 /************************* JSON OBJECT API **************************************/
@@ -478,31 +501,64 @@ static bool jobject_insert_internal (jvalue_ref object, jkey_value_array *table,
 	return true;
 }
 
-static void jobject_to_string_append (jvalue_ref jref, JStreamRef generating)
+//Helper function for jobject_to_string_append()
+static bool key_value_to_string_append (jobject_key_value key_value, JStreamRef generating)
+{
+	//jvalue_to_string_append is enough for the key if schema validation isn't needed.
+	//->o_key is called for validation.
+	//jvalue_to_string_append (key_value.key, generating);
+
+	if(generating->o_key(generating, key_value.key->value.val_str.m_data))
+	{
+		//Key was OK - now process the value.
+		if(UNLIKELY(!jvalue_to_string_append (key_value.value, generating)))
+		{
+			return false;
+		}
+	}
+	else
+	{
+		PJ_LOG_ERR("Schema validation error with key: '%s'", key_value.key->value.val_str.m_data.m_str);
+		return false;
+	}
+	return true;
+}
+
+static bool jobject_to_string_append (jvalue_ref jref, JStreamRef generating)
 {
 	SANITY_CHECK_POINTER(jref);
 
-	generating->o_begin (generating);
+	if (UNLIKELY(!generating->o_begin (generating))) {
+		PJ_LOG_ERR("Schema validation error, objects are not allowed.");
+		return false;
+	}
 	if (!jis_object (jref)) {
 		const char *asStr = jvalue_tostring_internal (jref, NULL, false);
 		generating->string (generating, J_CSTR_TO_BUF("Internal error - not an object"));
 		generating->string (generating, j_cstr_to_buffer(asStr));
 		// create invalid JSON on purpose
-		return;
+		return false;
 	}
 
 	for (jobject_iter i = jobj_iter_init (jref); jobj_iter_is_valid (i); i = jobj_iter_next (i)) {
 		jobject_key_value key_value;
 		if (!jobj_iter_deref (i, &key_value)) {
 			generating->string (generating, J_CSTR_TO_BUF("failed to dereference"));
-			return;
+			return false;
 		}
 		assert(jis_string(key_value.key));
-		jvalue_to_string_append (key_value.key, generating);
-		jvalue_to_string_append (key_value.value, generating);
+		if(UNLIKELY(!key_value_to_string_append(key_value, generating)))
+		{
+			return false;
+		}
 	}
 
-	generating->o_end (generating);
+	if (UNLIKELY(!generating->o_end (generating))) {
+		PJ_LOG_ERR("Schema validation error, object did not validate against schema");
+		return false;
+	}
+
+	return true;
 }
 
 jvalue_ref jobject_create_var (jobject_key_value item, ...)
@@ -934,30 +990,40 @@ static void j_destroy_array (jvalue_ref arr)
 	SANITY_FREE(free, jvalue_ref *, DEREF_ARR(arr).m_bigBucket, DEREF_ARR(arr).m_capacity - ARRAY_BUCKET_SIZE);
 }
 
-static void jarray_to_string_append (jvalue_ref jref, JStreamRef generating)
+static bool jarray_to_string_append (jvalue_ref jref, JStreamRef generating)
 {
 	ssize_t i;
 	assert(jis_array(jref));
 
 	if (UNLIKELY(!generating)) {
 		PJ_LOG_ERR("Cannot append string value to NULL output stream");
-		return;
+		return false;
 	}
 
 	SANITY_CHECK_POINTER(jref);
 	if (UNLIKELY(jis_null(jref))) {
 		PJ_LOG_ERR("INTERNAL ERROR!!!!!!!!!! - used internal API for array --> string for JSON null");
 		generating->null_value (generating);
-		return;
+		return false;
 	}
 
-	generating->a_begin (generating);
+	if (UNLIKELY(!generating->a_begin (generating))) {
+		PJ_LOG_ERR("Schema validation error, arrays are not allowed");
+		return false;
+	}
 	for (i = 0; i < jarray_size (jref); i++) {
 		jvalue_ref toAppend = jarray_get (jref, i);
 		SANITY_CHECK_POINTER(toAppend);
-		jvalue_to_string_append (toAppend, generating);
+		if (UNLIKELY(!jvalue_to_string_append (toAppend, generating))) {
+			return false;
+		}
 	}
-	generating->a_end (generating);
+	if (UNLIKELY(!generating->a_end (generating))) {
+		PJ_LOG_ERR("Schema validation error, array did not validate against schema");
+		return false;
+	}
+
+	return true;
 }
 
 jvalue_ref jarray_create (jarray_opts opts)
@@ -1390,9 +1456,13 @@ bool jarray_splice_append (jvalue_ref array, jvalue_ref arrayToAppend, JSpliceOw
 		SANITY_CHECK_POINTER(DEREF_STR(jval).m_dealloc);	\
 	} while (0)
 
-static inline void jstring_to_string_append (jvalue_ref jref, JStreamRef generating)
+static inline bool jstring_to_string_append (jvalue_ref jref, JStreamRef generating)
 {
-	generating->string (generating, DEREF_STR(jref).m_data);
+	bool result = (generating->string (generating, DEREF_STR(jref).m_data) != NULL);
+	if (UNLIKELY(!result)) {
+		PJ_LOG_ERR("Schema validation error, string '%s' did not validate against schema", DEREF_STR(jref).m_data.m_str);
+	}
+	return result;
 }
 
 static void j_destroy_string (jvalue_ref str)
@@ -1613,23 +1683,24 @@ static void j_destroy_number (jvalue_ref num)
 	SANITY_CLEAR_VAR(DEREF_NUM(num).value.raw.m_len, 0);
 }
 
-static void jnumber_to_string_append (jvalue_ref jref, JStreamRef generating)
+static bool jnumber_to_string_append (jvalue_ref jref, JStreamRef generating)
 {
 	SANITY_CHECK_POINTER(jref);
 	if (DEREF_NUM(jref).m_error) {
 		PJ_LOG_WARN("converting a number that has an error (%d) set to a string", DEREF_NUM(jref).m_error);
 	}
 
+	bool ok = false;
 	switch (DEREF_NUM(jref).m_type) {
 		case NUM_RAW:
 			assert(DEREF_NUM(jref).value.raw.m_len != 0);
-			generating->number (generating, DEREF_NUM(jref).value.raw);
+			ok = (generating->number (generating, DEREF_NUM(jref).value.raw) != NULL);
 			break;
 		case NUM_FLOAT:
-			generating->floating (generating, DEREF_NUM(jref).value.floating);
+			ok = (generating->floating (generating, DEREF_NUM(jref).value.floating) != NULL);
 			break;
 		case NUM_INT:
-			generating->integer (generating, DEREF_NUM(jref).value.integer);
+			ok = (generating->integer (generating, DEREF_NUM(jref).value.integer) != NULL);
 			break;
 		default:
 			// mismatched on purpose so that generation yields an error
@@ -1640,6 +1711,8 @@ static void jnumber_to_string_append (jvalue_ref jref, JStreamRef generating)
 			generating->integer (generating, jref->value.val_num.m_type);
 			break;
 	}
+
+	return ok;
 }
 
 jvalue_ref jnumber_duplicate (jvalue_ref num)
@@ -2011,9 +2084,13 @@ static inline void j_destroy_boolean (jvalue_ref boolean)
 {
 }
 
-static inline void jboolean_to_string_append (jvalue_ref jref, JStreamRef generating)
+static inline bool jboolean_to_string_append (jvalue_ref jref, JStreamRef generating)
 {
-	generating->boolean (generating, DEREF_BOOL(jref).value);
+	bool result = (generating->boolean (generating, DEREF_BOOL(jref).value) != NULL);
+	if (UNLIKELY(!result)) {
+		PJ_LOG_ERR("Schema validation error, bool did not validate against schema");
+	}
+	return result;
 }
 
 bool jis_boolean (jvalue_ref jval)

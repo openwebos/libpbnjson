@@ -458,7 +458,9 @@ static jvalue_ref jschema_parse_internal(raw_buffer input, JSchemaOptimizationFl
 {
 	START_TRACKING_SCHEMA_INTERNAL;
 	jvalue_ref rawSchema = jdom_parse_ex(input, inputOpt, validationInfo, true);
+
 	END_TRACKING_SCHEMA_INTERNAL;
+
 	if (jis_null(rawSchema) || !jis_object(rawSchema)) {
 		PJ_SCHEMA_ERR("Not a valid schema - accepting no inputs: %.*s", (int)input.m_len, input.m_str);
 		j_release_wrapper(&rawSchema);
@@ -663,7 +665,9 @@ static const char* parseTypeToStr(SchemaType input)
 static SchemaTypeBitField determinePossibilities_internal(SchemaTypeBitField field, jvalue_ref schemaType)
 {
 	if ((field & ST_ANY) == ST_ANY)
+	{
 		return field;
+	}
 
 	if (jis_null(schemaType)) {
 		return ST_ANY;
@@ -677,6 +681,7 @@ static SchemaTypeBitField determinePossibilities_internal(SchemaTypeBitField fie
 		return field;
 	}
 	PJ_LOG_WARN("Schema type/disallowed field contains an unsupported JSON type: %u", schemaType->m_type);
+
 	return ST_ANY;
 }
 
@@ -715,7 +720,6 @@ static void determinePossibilities(SchemaStateRef state)
 			// update with the current value (which may have restricted the types allowed further)
 			state->m_allowedTypes = parsed;
 		}
-
 		if (!jis_null(typeParameter = jobject_get(parent, J_CSTR_TO_BUF(SK_DISALLLOWED)))) {
 			if ((parsed & state->m_disallowedTypes) != state->m_disallowedTypes) {
 				// if the child doesn't specify at least all of its parent disallowed types, then it can allow more
@@ -732,7 +736,26 @@ static void determinePossibilities(SchemaStateRef state)
 	}
 }
 
-static void validation_destroy(ValidationStateRef *statePtr)
+static JSchemaResolutionResult noop_bad_resolver(JSchemaResolverRef resolver,
+		jschema_ref *resolvedSchema)
+{
+	PJ_LOG_ERR("Attempted to use external ref in schema without providing a resolver");
+	return SCHEMA_GENERIC_ERROR;
+}
+
+static void assert_valid_schema(SchemaWrapperRef schema)
+{
+	assert(schema->m_refCnt > 0);
+	assert(!jis_null(schema->m_validation));
+	assert(schema->m_validation->m_refCnt > 0);
+#if ALLOW_LOCAL_REFS
+	assert(!jis_null(schema->m_top));
+	assert(schema->m_top > 0);
+#endif
+}
+#endif
+
+void validation_destroy(ValidationStateRef *statePtr)
 {
 	ValidationStateRef state;
 
@@ -754,24 +777,6 @@ static void validation_destroy(ValidationStateRef *statePtr)
 	SANITY_KILL_POINTER(*statePtr);
 }
 
-static JSchemaResolutionResult noop_bad_resolver(JSchemaResolverRef resolver,
-		jschema_ref *resolvedSchema)
-{
-	PJ_LOG_ERR("Attempted to use external ref in schema without providing a resolver");
-	return SCHEMA_GENERIC_ERROR;
-}
-
-static void assert_valid_schema(SchemaWrapperRef schema)
-{
-	assert(schema->m_refCnt > 0);
-	assert(!jis_null(schema->m_validation));
-	assert(schema->m_validation->m_refCnt > 0);
-#if ALLOW_LOCAL_REFS
-	assert(!jis_null(schema->m_top));
-	assert(schema->m_top > 0);
-#endif
-}
-#endif
 
 ValidationStateRef jschema_init(JSchemaInfoRef schemaInfo)
 {
@@ -1106,15 +1111,29 @@ static SchemaStateRef getNextStateSimple(ValidationStateRef parseState)
 	SANITY_CHECK_POINTER(parseState);
 	assert(parseState != NULL);
 
+	if(parseState->m_state == NULL)
+	{
+#if ALLOW_LOCAL_REFS
+		SchemaWrapperRef tmp = jschema_wrap_prepare(parseState->m_state->m_schema->m_top);
+#else
+		SchemaWrapperRef tmp = jschema_wrap_prepare(NULL);
+#endif
+		bool success = push_new_state(parseState, tmp);
+		jschema_release_internal(&tmp);
+
+		if(!success)
+		{
+			return NULL;
+		}
+	}
+
 	SchemaStateRef toMatch = parseState->m_state;
 	if ((toMatch->m_allowedTypes & ST_ARR) == ST_ARR) {
 		if (toMatch->m_arrayOpened) {
 			increment_num_items_unsafe(toMatch);
-
 			if (!push_next_array_state(parseState)) {
 				return NULL;
 			}
-
 			assert(toMatch != parseState->m_state);
 			assert(toMatch == parseState->m_state->m_parent);
 			toMatch = parseState->m_state;
@@ -1130,17 +1149,14 @@ static SchemaStateRef getNextState(ValidationStateRef parseState, SchemaType typ
 	SchemaStateRef toMatch = getNextStateSimple(parseState);
 	if (toMatch == NULL)
 		return NULL;
-
 	if ((toMatch->m_disallowedTypes & type) == type) {
 		PJ_SCHEMA_INFO("Pruning schema - disallowed type %d matched disallowed types %d", type, toMatch->m_disallowedTypes);
 		return NULL;
 	}
-
 	if ((toMatch->m_allowedTypes & type) != type) {
 		PJ_SCHEMA_INFO("Pruning schema - type %d didn't match allowed types with %d", type, toMatch->m_allowedTypes);
 		return NULL;
 	}
-
 	toMatch->m_allowedTypes = type;
 
 	return toMatch;
@@ -1173,12 +1189,10 @@ bool jschema_obj(JSAXContextRef sax, ValidationStateRef parseState)
 		sax->m_errorstate->m_reason = jstring_create(parseTypeToStr(ST_OBJ));
 		goto schema_failure;
 	}
-
 	assert(jis_null(toMatch->m_seenKeys));
 	// use object instead of array for hash-based lookup which will
 	// help us on object end
 	toMatch->m_seenKeys = jobject_create();
-
 	// we managed to validate something against the schema - really???
 	return true;
 
@@ -1408,23 +1422,18 @@ bool jschema_key(JSAXContextRef sax, ValidationStateRef parseState, raw_buffer o
 
 	SchemaStateRef toMatch = parseState->m_state;
 	jvalue_ref schemaToValidate, specificSchema;
-
 	assert(toMatch->m_allowedTypes == ST_OBJ);
 	assert(toMatch->m_arrayOpened == false);
-
 #if ALLOW_LOCAL_REFS
 	SchemaWrapperRef valueSchema = jschema_wrap_prepare(toMatch->m_schema->m_top);
 #else
 	SchemaWrapperRef valueSchema = jschema_wrap_prepare(NULL);
 #endif
-
 	jobject_put(toMatch->m_seenKeys, jstring_create_copy(objKey), jnull());
-
 	ssize_t numSchemas = jarray_size(toMatch->m_schema->m_validation);
 	for (ssize_t i = 0; i < numSchemas; i++) {
 		schemaToValidate = jarray_get(toMatch->m_schema->m_validation, i);
 		assert(jis_object(schemaToValidate));
-
 		specificSchema = jobject_get(schemaToValidate, J_CSTR_TO_BUF(SK_PROPS));
 		if (!jis_null(specificSchema)) {
 			assert(jis_object(specificSchema));
@@ -1436,7 +1445,6 @@ bool jschema_key(JSAXContextRef sax, ValidationStateRef parseState, raw_buffer o
 			PJ_SCHEMA_ERR("Schema problem - schema for instance key %.*s is null instead of object",
 					(int)objKey.m_len, objKey.m_str);
 		}
-
 		// properties field either didn't contain the key or didn't exist
 		// let's use additionalProperties if it exists
 		specificSchema = jobject_get(schemaToValidate, J_CSTR_TO_BUF(SK_MORE_PROPS));
@@ -1478,7 +1486,6 @@ append_schema:
 		goto schema_failure;
 
 	jschema_release_internal(&valueSchema);
-
 	return true;
 
 schema_failure:
@@ -1496,103 +1503,92 @@ bool jschema_str(JSAXContextRef sax, ValidationStateRef parseState, raw_buffer s
 {
 #if !BYPASS_SCHEMA
 	schema_breakpoint("string");
-
 	SchemaStateRef toMatch = getNextState(parseState, ST_STR);
 	if (toMatch == NULL){
 		sax->m_errorstate->m_type = UNEXPECTED_TYPE;
 		sax->m_errorstate->m_reason = jstring_create(parseTypeToStr(ST_STR));
 		goto schema_failure;
 	}
-
 	// check the min string length
 	// check the max string length
 	// we do this by building up the range of valid values
 	int64_t minLength = -1;
 	int64_t maxLength = -1; // count on overflow semantics
+	jvalue_ref property;
+	jvalue_ref schemaToCheck;
+	ssize_t arrayLen = jarray_size(toMatch->m_schema->m_validation);
+	int64_t specifiedLen;
 
-	{
-		jvalue_ref property;
-		jvalue_ref schemaToCheck;
-		ssize_t arrayLen = jarray_size(toMatch->m_schema->m_validation);
-		int64_t specifiedLen;
-
-		for (ssize_t i = 0; i < arrayLen; i++) {
-			schemaToCheck = jarray_get(toMatch->m_schema->m_validation, i);
-			property = jobject_get(schemaToCheck, J_CSTR_TO_BUF(SK_MIN_LEN));
-
-			if (!jis_null(property)) {
-				if (CONV_OK != jnumber_get_i64(property, &specifiedLen)) {
-					PJ_SCHEMA_WARN("String length min limit is out of bounds - clamping");
-					specifiedLen = 0;
-				}
-				if (minLength == -1)
-					minLength = specifiedLen;
-				else if (specifiedLen > minLength) {
-					assert(false);
-					PJ_SCHEMA_ERR("Schema is invalid - inherited schema has length bounds outside of its parent");
-					goto schema_failure;
-				}
-
-				if (str.m_len < specifiedLen) {
-					PJ_SCHEMA_ERR("String '%.*s' doesn't meet the minimum length of %"PRId64,
-							RB_PRINTF(str), specifiedLen);
-				}
+	for (ssize_t i = 0; i < arrayLen; i++) {
+		schemaToCheck = jarray_get(toMatch->m_schema->m_validation, i);
+		property = jobject_get(schemaToCheck, J_CSTR_TO_BUF(SK_MIN_LEN));
+		if (!jis_null(property)) {
+			if (CONV_OK != jnumber_get_i64(property, &specifiedLen)) {
+				PJ_SCHEMA_WARN("String length min limit is out of bounds - clamping");
+				specifiedLen = 0;
 			}
-
-			property = jobject_get(schemaToCheck, J_CSTR_TO_BUF(SK_MAX_LEN));
-			if (!jis_null(property)) {
-				if (CONV_OK != jnumber_get_i64(property, &specifiedLen)) {
-					PJ_SCHEMA_WARN("String length max limit is out of bounds - clamping");
-					specifiedLen = INT64_MAX;
-				}
-				if (maxLength == -1)
-					maxLength = specifiedLen;
-				else if (specifiedLen < maxLength) {
-					assert(false);
-					PJ_SCHEMA_ERR("Schema is invalid - inherited schema has length bounds outside of its parent");
-					goto schema_failure;
-				}
-
-				if (str.m_len > specifiedLen) {
-					PJ_SCHEMA_ERR("String '%.*s' doesn't meet the minimum length of %"PRId64,
-							RB_PRINTF(str), specifiedLen);
-				}
+			if (minLength == -1)
+				minLength = specifiedLen;
+			else if (specifiedLen > minLength) {
+				assert(false);
+				PJ_SCHEMA_ERR("Schema is invalid - inherited schema has length bounds outside of its parent");
+				goto schema_failure;
 			}
-
-			property = jobject_get(schemaToCheck, J_CSTR_TO_BUF(SK_ENUM));
-			if (!jis_null(property)) {
-				if (jis_array(property)) {
-					jvalue_ref enumValue;
-					for (ssize_t i = jarray_size(property) - 1; i >= 0; i--) {
-						enumValue = jarray_get(property, i);
-						if (jis_string(enumValue) && jstring_equal2(enumValue, str))
-							goto matched_enum;
-					}
-
-					PJ_SCHEMA_WARN("Enums specified but string '%.*s' failed to match against '%s",
-							(int) str.m_len, str.m_str, jvalue_tostring(property, jschema_all()));
-					goto schema_failure;
-				} else {
-					PJ_SCHEMA_ERR("Invalid enum type %d", property->m_type);
-					goto schema_failure;
-				}
-			}
-
-matched_enum:
-			property = jobject_get(schemaToCheck, J_CSTR_TO_BUF(SK_REGEXP));
-			if (!jis_null(property)) {
-				if (!jis_string(property)) {
-					PJ_SCHEMA_ERR("Invalid regexp type %d", property->m_type);
-					goto schema_failure;
-				}
-
-				// TODO: test regexp
+			if (str.m_len < specifiedLen) {
+				PJ_SCHEMA_ERR("String '%.*s' doesn't meet the minimum length of %"PRId64,
+						RB_PRINTF(str), specifiedLen);
 			}
 		}
+		property = jobject_get(schemaToCheck, J_CSTR_TO_BUF(SK_MAX_LEN));
+		if (!jis_null(property)) {
+			if (CONV_OK != jnumber_get_i64(property, &specifiedLen)) {
+				PJ_SCHEMA_WARN("String length max limit is out of bounds - clamping");
+				specifiedLen = INT64_MAX;
+			}
+			if (maxLength == -1)
+				maxLength = specifiedLen;
+			else if (specifiedLen < maxLength) {
+				assert(false);
+				PJ_SCHEMA_ERR("Schema is invalid - inherited schema has length bounds outside of its parent");
+				goto schema_failure;
+			}
+
+			if (str.m_len > specifiedLen) {
+				PJ_SCHEMA_ERR("String '%.*s' doesn't meet the minimum length of %"PRId64,
+						RB_PRINTF(str), specifiedLen);
+			}
+		}
+		property = jobject_get(schemaToCheck, J_CSTR_TO_BUF(SK_ENUM));
+		if (!jis_null(property)) {
+			if (jis_array(property)) {
+				jvalue_ref enumValue;
+				for (ssize_t i = jarray_size(property) - 1; i >= 0; i--) {
+					enumValue = jarray_get(property, i);
+					if (jis_string(enumValue) && jstring_equal2(enumValue, str))
+						goto matched_enum;
+				}
+
+				PJ_SCHEMA_WARN("Enums specified but string '%.*s' failed to match against '%s",
+						(int) str.m_len, str.m_str, jvalue_tostring(property, jschema_all()));
+				goto schema_failure;
+			} else {
+				PJ_SCHEMA_ERR("Invalid enum type %d", property->m_type);
+				goto schema_failure;
+			}
+		}
+
+matched_enum:
+		property = jobject_get(schemaToCheck, J_CSTR_TO_BUF(SK_REGEXP));
+		if (!jis_null(property)) {
+			if (!jis_string(property)) {
+				PJ_SCHEMA_ERR("Invalid regexp type %d", property->m_type);
+				goto schema_failure;
+			}
+
+			// TODO: test regexp
+		}
 	}
-
 	parseState->m_state = destroy_state(&(parseState->m_state));
-
 	return true;
 
 schema_failure:
@@ -1609,13 +1605,11 @@ bool jschema_num(JSAXContextRef sax, ValidationStateRef parseState, raw_buffer n
 {
 #if !BYPASS_SCHEMA
 	schema_breakpoint("number");
-
 	SchemaStateRef toMatch = getNextStateSimple(parseState);
 	jvalue_ref numValue = NULL;
 
 	if (toMatch == NULL)
 		goto schema_failure;
-
 	PJ_SCHEMA_TRACIER("1. Number: Using schema state\n%s\nwithin\n%s",
 		jvalue_tostring(parseState->m_state->m_schema->m_validation, jschema_all()),
 		jvalue_tostring(parseState->m_state->m_parent->m_schema->m_validation, jschema_all()));
@@ -1625,7 +1619,6 @@ bool jschema_num(JSAXContextRef sax, ValidationStateRef parseState, raw_buffer n
 	assert (__builtin_popcount(ST_INT) == 1); // 1 bits set
 	assert (__builtin_popcount(ST_NUM) == 2); // 2 bit set
 #endif
-
 	if ((toMatch->m_disallowedTypes & ST_NUM) != 0) {
 		// if integer or number were specified
 		if ((toMatch->m_disallowedTypes & ST_NUM) == ST_INT)
@@ -1634,21 +1627,17 @@ bool jschema_num(JSAXContextRef sax, ValidationStateRef parseState, raw_buffer n
 		PJ_SCHEMA_INFO("Got a number but it's not allowed according to the schema");
 		goto schema_failure;
 	}
-
 	if ((toMatch->m_allowedTypes & ST_INT) == 0) {
 		PJ_SCHEMA_INFO("A number is not in the allowed types at this position");
 		goto schema_failure;
 	}
-
 	if ((toMatch->m_allowedTypes & ST_NUM) == ST_INT) {
 		int64_t integerPortion, exponentPortion, decimalPortion, leadingZeros;
 		ConversionResultFlags conversion = parseJSONNumber(&num, &integerPortion, &exponentPortion, &decimalPortion, &leadingZeros);
-
 		if (conversion != CONV_OK) {
 			PJ_SCHEMA_WARN("Number %.*s isn't actually a number or is too big.  Errors: %x", (int)num.m_len, num.m_str, conversion);
 			goto schema_failure;
 		}
-
 		if (decimalPortion != 0 || exponentPortion != 0 || leadingZeros != 0) {
 			// TODO: do we need to support this?
 			//       the assumption is that an integer must be a simple integer
@@ -1657,7 +1646,6 @@ bool jschema_num(JSAXContextRef sax, ValidationStateRef parseState, raw_buffer n
 			goto schema_failure;
 		}
 	}
-
 	jvalue_ref arraySchema;
 	jvalue_ref limit;
 	jvalue_ref minimumSoFar = NULL;
@@ -1745,11 +1733,9 @@ enum_found:
 			;
 		}
 	}
-
 	PJ_SCHEMA_TRACIER("2. Number: Going from schema state\n%s\nto\n%s",
 		jvalue_tostring(parseState->m_state->m_schema->m_validation, jschema_all()),
 		jvalue_tostring(parseState->m_state->m_parent->m_schema->m_validation, jschema_all()));
-
 	parseState->m_state = destroy_state(&parseState->m_state);
 	j_release(&numValue);
 	return true;
@@ -1806,7 +1792,6 @@ enum_found:
 	PJ_SCHEMA_TRACIER("Boolean: Going from schema state\n%s\nto\n%s",
 		jvalue_tostring(parseState->m_state->m_schema->m_validation, jschema_all()),
 		jvalue_tostring(parseState->m_state->m_parent->m_schema->m_validation, jschema_all()));
-
 	parseState->m_state = destroy_state(&parseState->m_state);
 	return true;
 

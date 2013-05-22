@@ -34,22 +34,6 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 
-typedef struct DomInfo {
-	JDOMOptimization m_optInformation;
-	/**
-	 * This cannot be null unless we are in a top-level object or array.
-	 * m_prev->m_value is the object or array that is our parent.
-	 */
-	struct DomInfo *m_prev;
-
-	/**
-	 * If we are setting the value for an object key, this is the key (string-type).
-	 * If we are parsing the key for an object, this is NULL
-	 * If we are parsing an element within an array this is NULL.
-	 */
-	jvalue_ref m_value;
-} DomInfo;
-
 static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchemaInfoRef schemaInfo, void **ctxt, bool logError, bool comments);
 
 static bool file_size(int fd, off_t *s)
@@ -86,7 +70,7 @@ static inline void changeDOMContext(JSAXContextRef ctxt, DomInfo *domCtxt)
 	jsax_changeContext(ctxt, domCtxt);
 }
 
-static int dom_null(JSAXContextRef ctxt)
+int dom_null(JSAXContextRef ctxt)
 {
 	DomInfo *data = getDOMContext(ctxt);
 	// no handle to the context
@@ -112,7 +96,7 @@ static int dom_null(JSAXContextRef ctxt)
 	return 1;
 }
 
-static int dom_boolean(JSAXContextRef ctxt, bool value)
+int dom_boolean(JSAXContextRef ctxt, bool value)
 {
 	DomInfo *data = getDOMContext(ctxt);
 	CHECK_CONDITION_RETURN_VALUE(data == NULL, 0, "boolean encountered without any context");
@@ -133,7 +117,7 @@ static int dom_boolean(JSAXContextRef ctxt, bool value)
 	return 1;
 }
 
-static int dom_number(JSAXContextRef ctxt, const char *number, size_t numberLen)
+int dom_number(JSAXContextRef ctxt, const char *number, size_t numberLen)
 {
 	DomInfo *data = getDOMContext(ctxt);
 	jvalue_ref jnum;
@@ -168,7 +152,7 @@ static int dom_number(JSAXContextRef ctxt, const char *number, size_t numberLen)
 	return 1;
 }
 
-static int dom_string(JSAXContextRef ctxt, const char *string, size_t stringLen)
+int dom_string(JSAXContextRef ctxt, const char *string, size_t stringLen)
 {
 	DomInfo *data = getDOMContext(ctxt);
 	CHECK_CONDITION_RETURN_VALUE(data == NULL, 0, "string encountered without any context");
@@ -199,15 +183,17 @@ static int dom_string(JSAXContextRef ctxt, const char *string, size_t stringLen)
 	return 1;
 }
 
-static int dom_object_start(JSAXContextRef ctxt)
+int dom_object_start(JSAXContextRef ctxt)
 {
 	DomInfo *data = getDOMContext(ctxt);
 	jvalue_ref newParent;
 	DomInfo *newChild;
+
 	CHECK_CONDITION_RETURN_VALUE(data == NULL, 0, "object encountered without any context");
 
 	newParent = jobject_create();
 	newChild = calloc(1, sizeof(DomInfo));
+
 	if (UNLIKELY(newChild == NULL || jis_null(newParent))) {
 		PJ_LOG_ERR("Failed to allocate space for new object");
 		j_release(&newParent);
@@ -235,7 +221,7 @@ static int dom_object_start(JSAXContextRef ctxt)
 	return 1;
 }
 
-static int dom_object_key(JSAXContextRef ctxt, const char *key, size_t keyLen)
+int dom_object_key(JSAXContextRef ctxt, const char *key, size_t keyLen)
 {
 	DomInfo *data = getDOMContext(ctxt);
 	CHECK_CONDITION_RETURN_VALUE(data == NULL, 0, "object key encountered without any context");
@@ -254,7 +240,7 @@ static int dom_object_key(JSAXContextRef ctxt, const char *key, size_t keyLen)
 	return 1;
 }
 
-static int dom_object_end(JSAXContextRef ctxt)
+int dom_object_end(JSAXContextRef ctxt)
 {
 	DomInfo *data = getDOMContext(ctxt);
 	CHECK_CONDITION_RETURN_VALUE(data == NULL, 0, "object end encountered without any context");
@@ -270,7 +256,7 @@ static int dom_object_end(JSAXContextRef ctxt)
 	return 1;
 }
 
-static int dom_array_start(JSAXContextRef ctxt)
+int dom_array_start(JSAXContextRef ctxt)
 {
 	DomInfo *data = getDOMContext(ctxt);
 	jvalue_ref newParent;
@@ -310,7 +296,7 @@ static int dom_array_start(JSAXContextRef ctxt)
 	return 1;
 }
 
-static int dom_array_end(JSAXContextRef ctxt)
+int dom_array_end(JSAXContextRef ctxt)
 {
 	DomInfo *data = getDOMContext(ctxt);
 	CHECK_CONDITION_RETURN_VALUE(data == NULL, 0, "array end encountered without any context");
@@ -345,7 +331,6 @@ jvalue_ref jdom_parse_ex(raw_buffer input, JDOMOptimizationFlags optimizationMod
 	DomInfo *topLevelContext = calloc(1, sizeof(struct DomInfo));
 	CHECK_POINTER_RETURN_NULL(topLevelContext);
 	void *domCtxt = topLevelContext;
-
 	bool parsedOK = jsax_parse_internal(&callbacks, input, schemaInfo, &domCtxt, false /* don't log errors*/, allowComments);
 
 	result = topLevelContext->m_value;
@@ -490,18 +475,6 @@ void* jsax_getContext(JSAXContextRef saxCtxt)
 
 typedef struct __JSAXContext PJSAXContext;
 
-typedef int(* 	pj_yajl_null )(void *ctx);
-typedef int(* 	pj_yajl_boolean )(void *ctx, int boolVal);
-typedef int(* 	pj_yajl_integer )(void *ctx, long integerVal);
-typedef int(* 	pj_yajl_double )(void *ctx, double doubleVal);
-typedef int(* 	pj_yajl_number )(void *ctx, const char *numberVal, yajl_size_t numberLen);
-typedef int(* 	pj_yajl_string )(void *ctx, const unsigned char *stringVal, yajl_size_t stringLen);
-typedef int(* 	pj_yajl_start_map )(void *ctx);
-typedef int(* 	pj_yajl_map_key )(void *ctx, const unsigned char *key, yajl_size_t stringLen);
-typedef int(* 	pj_yajl_end_map )(void *ctx);
-typedef int(* 	pj_yajl_start_array )(void *ctx);
-typedef int(* 	pj_yajl_end_array )(void *ctx);
-
 static PJSAXCallbacks no_callbacks = { 0 };
 
 static void bounce_breakpoint()
@@ -519,7 +492,7 @@ static void bounce_breakpoint()
 
 #define SCHEMA_HANDLER_FAILED(ctxt) ERR_HANDLER_FAILED((ctxt)->m_errors, m_schema, (ctxt))
 
-static int my_bounce_start_map(void *ctxt)
+int my_bounce_start_map(void *ctxt)
 {
 	bounce_breakpoint();
 	PJ_LOG_TRACE("{");
@@ -539,7 +512,7 @@ static int my_bounce_start_map(void *ctxt)
 	DEREF_CALLBACK(spring->m_handlers->yajl_start_map, ctxt);
 }
 
-static int my_bounce_map_key(void *ctxt, const unsigned char *str, yajl_size_t strLen)
+int my_bounce_map_key(void *ctxt, const unsigned char *str, yajl_size_t strLen)
 {
 	bounce_breakpoint();
 	PJ_LOG_TRACE("%.*s", strLen, str);
@@ -559,7 +532,7 @@ static int my_bounce_map_key(void *ctxt, const unsigned char *str, yajl_size_t s
 	DEREF_CALLBACK(spring->m_handlers->yajl_map_key, ctxt, str, strLen);
 }
 
-static int my_bounce_end_map(void *ctxt)
+int my_bounce_end_map(void *ctxt)
 {
 	bounce_breakpoint();
 	PJ_LOG_TRACE("}");
@@ -579,7 +552,7 @@ static int my_bounce_end_map(void *ctxt)
 	DEREF_CALLBACK(spring->m_handlers->yajl_end_map, ctxt);
 }
 
-static int my_bounce_start_array(void *ctxt)
+int my_bounce_start_array(void *ctxt)
 {
 	bounce_breakpoint();
 	PJ_LOG_TRACE("[");
@@ -599,7 +572,7 @@ static int my_bounce_start_array(void *ctxt)
 	DEREF_CALLBACK(spring->m_handlers->yajl_start_array, ctxt);
 }
 
-static int my_bounce_end_array(void *ctxt)
+int my_bounce_end_array(void *ctxt)
 {
 	bounce_breakpoint();
 	PJ_LOG_TRACE("]");
@@ -619,7 +592,7 @@ static int my_bounce_end_array(void *ctxt)
 	DEREF_CALLBACK(spring->m_handlers->yajl_end_array, ctxt);
 }
 
-static int my_bounce_string(void *ctxt, const unsigned char *str, yajl_size_t strLen)
+int my_bounce_string(void *ctxt, const unsigned char *str, yajl_size_t strLen)
 {
 	bounce_breakpoint();
 	PJ_LOG_TRACE("%.*s", strLen, str);
@@ -632,14 +605,16 @@ static int my_bounce_string(void *ctxt, const unsigned char *str, yajl_size_t st
 	{
 		if (!jschema_str(spring, spring->m_validation, j_str_to_buffer((char *)str, strLen))) {
 			if (SCHEMA_HANDLER_FAILED(spring))
+			{
 				return 0;
+			}
 		}
 	}
 #endif
 	DEREF_CALLBACK(spring->m_handlers->yajl_string, ctxt, str, strLen);
 }
 
-static int my_bounce_number(void *ctxt, const char *numberVal, yajl_size_t numberLen)
+int my_bounce_number(void *ctxt, const char *numberVal, yajl_size_t numberLen)
 {
 	bounce_breakpoint(numberVal);
 	PJ_LOG_TRACE("%.*s", numberLen, numberVal);
@@ -652,14 +627,16 @@ static int my_bounce_number(void *ctxt, const char *numberVal, yajl_size_t numbe
 	{
 		if (!jschema_num(spring, spring->m_validation, j_str_to_buffer((char *)numberVal, numberLen))) {
 			if (SCHEMA_HANDLER_FAILED(spring))
+			{
 				return 0;
+			}
 		}
 	}
 #endif
 	DEREF_CALLBACK(spring->m_handlers->yajl_number, ctxt, numberVal, numberLen);
 }
 
-static int my_bounce_boolean(void *ctxt, int boolVal)
+int my_bounce_boolean(void *ctxt, int boolVal)
 {
 	bounce_breakpoint();
 	PJ_LOG_TRACE("%s", (boolVal ? "true" : "false"));
@@ -679,7 +656,7 @@ static int my_bounce_boolean(void *ctxt, int boolVal)
 	DEREF_CALLBACK(spring->m_handlers->yajl_boolean, ctxt, boolVal);
 }
 
-static int my_bounce_null(void *ctxt)
+int my_bounce_null(void *ctxt)
 {
 	bounce_breakpoint("null");
 	PJ_LOG_TRACE("null");
@@ -715,7 +692,7 @@ static yajl_callbacks my_bounce = {
 
 static struct JErrorCallbacks null_err_handler = { 0 };
 
-static ErrorStateRef jsax_error_init()
+ErrorStateRef jsax_error_init()
 {
 	ErrorStateRef errorstate = (ErrorStateRef) malloc(sizeof(struct ErrorState));
 	CHECK_POINTER_RETURN_NULL(errorstate);
@@ -726,7 +703,7 @@ static ErrorStateRef jsax_error_init()
 	return errorstate;
 }
 
-static void jsax_error_release(ErrorStateRef *statePtr)
+void jsax_error_release(ErrorStateRef *statePtr)
 {
 	assert(statePtr != NULL);
 
@@ -747,12 +724,10 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 
 	if (parser == NULL)
 		parser = &no_callbacks;
-
 	if (jis_null_schema(schemaInfo->m_schema)) {
 		PJ_LOG_WARN("Cannot match against schema that matches nothing: Schema pointer = %p", schemaInfo->m_schema);
 		return false;
 	}
-
 	if (schemaInfo->m_schema == jschema_all()) {
 		PJ_LOG_DBG("Using default empty schema for matching");
 	} else {
@@ -760,14 +735,12 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 			PJ_LOG_DBG("No resolver specified for the schema.  Make sure %p doesn't contain any external references", schemaInfo->m_schema);
 		}
 	}
-
 	if (schemaInfo->m_errHandler == NULL)
 		schemaInfo->m_errHandler = &null_err_handler;
 
 #ifdef _DEBUG
 	logError = true;
 #endif
-
 	yajl_callbacks yajl_cb = {
 		(pj_yajl_null)parser->m_null, // yajl_null
 		(pj_yajl_boolean)parser->m_boolean, // yajl_boolean
@@ -781,13 +754,11 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 		(pj_yajl_start_array)parser->m_arrStart, // yajl_start_array
 		(pj_yajl_end_array)parser->m_arrEnd, // yajl_end_array
 	};
-
 	PJSAXContext internalCtxt = {
 		.ctxt = (ctxt != NULL ? *ctxt : NULL),
 		.m_handlers = &yajl_cb,
 		.m_errors = schemaInfo->m_errHandler,
 	};
-
 #if !BYPASS_SCHEMA
 	internalCtxt.m_validation = jschema_init(schemaInfo);
 	if (internalCtxt.m_validation == NULL) {
@@ -801,7 +772,6 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 		PJ_LOG_WARN("Failed to initialize error state");
 		return false;
 	}
-
 #if YAJL_VERSION < 20000
         yajl_parser_config yajl_opts = {
                 comments,
@@ -817,9 +787,11 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
         // currently only UTF-8 will be supported for input.
         yajl_config(handle, yajl_dont_validate_strings, 0);
 #endif
-
 	parseResult = yajl_parse(handle, (unsigned char *)input.m_str, input.m_len);
-	if (ctxt != NULL) *ctxt = jsax_getContext(&internalCtxt);
+	if (ctxt != NULL)
+	{
+		*ctxt = jsax_getContext(&internalCtxt);
+	}
 
 	switch (parseResult) {
 		case yajl_status_ok:
@@ -832,7 +804,9 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 #if YAJL_VERSION < 20000
 		case yajl_status_insufficient_data:
 			if (ERR_HANDLER_FAILED(schemaInfo->m_errHandler, m_parser, &internalCtxt))
+			{
 				goto parse_failure;
+			}
 			PJ_LOG_WARN("Client claims they handled incomplete JSON input provided '%.*s'", (int)input.m_len, input.m_str);
 			break;
 #endif
@@ -844,7 +818,6 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 			PJ_LOG_WARN("Client claims they handled an unknown error in '%.*s'", (int)input.m_len, input.m_str);
 			break;
 	}
-
 #if !BYPASS_SCHEMA
 	jschema_state_release(&internalCtxt.m_validation);
 #endif
@@ -859,7 +832,6 @@ parse_failure:
 		PJ_LOG_WARN("Parser reason for failure:\n'%s'", errMsg);
 		yajl_free_error(handle, errMsg);
 	}
-
 #if !BYPASS_SCHEMA
 	jschema_state_release(&internalCtxt.m_validation);
 #endif
