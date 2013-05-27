@@ -1,6 +1,7 @@
 // @@@LICENSE
 //
 //      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+//      Copyright (c) 2013 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -424,6 +425,40 @@ static inline int key_hash_raw (raw_buffer *str)
 	return OBJECT_BUCKET_MODULO(str->m_str[0] + str->m_len);
 }
 
+static bool check_insert_sanity(jvalue_ref parent, jvalue_ref child)
+{
+	// Sanity check that parent is object or array
+	assert(jis_object(parent) || jis_array(parent));
+
+	// Verify that the parent doesn't match the child
+	if (UNLIKELY(child == parent)) {
+		return false;
+	}
+
+	// Then check recursively child's children (if child is an array or an object)
+	if (jis_array(child)) {
+		for (int i = 0; i < jarray_size(child); i++) {
+			jvalue_ref arr_elem = jarray_get(child, i);
+			if(!check_insert_sanity(parent, arr_elem)) {
+				return false;
+			}
+		}
+	} else if (jis_object(child)) {
+		for (jobject_iter i = jobj_iter_init(child); jobj_iter_is_valid(i); i = jobj_iter_next (i)) {
+			jobject_key_value key_value;
+			if (!jobj_iter_deref (i, &key_value)) {
+				PJ_LOG_ERR("Internal error, could not dereference");
+				return false;
+			}
+			if(!check_insert_sanity(parent, key_value.value)) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
 static void j_destroy_object (jvalue_ref ref)
 {
 	jkey_value_array *toFree, *nextTable;
@@ -792,6 +827,11 @@ bool jobject_put (jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 	if (val == NULL) {
 		PJ_LOG_WARN("Please don't pass in NULL - use jnull() instead");
 		val = jnull ();
+	}
+
+	if (!check_insert_sanity(obj, val)) {
+		PJ_LOG_ERR("Error in object hierarchy. Inserting jvalue would create an illegal cyclic dependency");
+		return false;
 	}
 
 	jobject_insert_internal (obj, table, jkeyval(key, val));
@@ -1240,6 +1280,11 @@ static bool jarray_put_unsafe (jvalue_ref arr, ssize_t index, jvalue_ref val)
 	SANITY_CHECK_POINTER(arr);
 	assert(jis_array(arr));
 
+	if (!check_insert_sanity(arr, val)) {
+		PJ_LOG_ERR("Error in object hierarchy. Inserting jvalue would create an illegal cyclic dependency");
+		return false;
+	}
+
 	if (!jarray_expand_capacity_unsafe (arr, index + 1)) {
 		PJ_LOG_WARN("Failed to expand array to allocate element - memory allocation problem?");
 		return false;
@@ -1333,6 +1378,11 @@ bool jarray_insert(jvalue_ref arr, ssize_t index, jvalue_ref val)
 	CHECK_CONDITION_RETURN_VALUE(!valid_array(arr), false, "Array to insert into isn't a valid reference to a JSON DOM node: %p", arr);
 	CHECK_CONDITION_RETURN_VALUE(index < 0, false, "Invalid index - must be >= 0: %zd", index);
 
+	if (!check_insert_sanity(arr, val)) {
+		PJ_LOG_ERR("Error in object hierarchy. Inserting jvalue would create an illegal cyclic dependency");
+		return false;
+	}
+
 	{
 		jvalue_ref *toMove, *hole;
 		// we increment the size of the array
@@ -1349,6 +1399,22 @@ bool jarray_insert(jvalue_ref arr, ssize_t index, jvalue_ref val)
 		}
 
 		*hole = val;
+	}
+
+	return true;
+}
+
+// Helper function to check insert sanity for jarray_splice
+static bool jarray_splice_check_insert_sanity(jvalue_ref arr, jvalue_ref arr2)
+{
+	assert(jis_array(arr));
+	assert(jis_array(arr2));
+
+	for (int i = 0; i < jarray_size(arr2); i++) {
+		jvalue_ref arr_elem = jarray_get(arr2, i);
+		if (!check_insert_sanity(arr, arr_elem)) {
+			return false;
+		}
 	}
 
 	return true;
@@ -1372,6 +1438,11 @@ bool jarray_splice (jvalue_ref array, ssize_t index, ssize_t toRemove, jvalue_re
 	CHECK_CONDITION_RETURN_VALUE(!valid_index_bounded(array2, begin), false, "Start index is invalid for second array");
 	CHECK_CONDITION_RETURN_VALUE(!valid_index_bounded(array2, end - 1), false, "End index is invalid for second array");
 	CHECK_CONDITION_RETURN_VALUE(toRemove < 0, false, "Invalid amount %zd to remove during splice", toRemove);
+
+	if (!jarray_splice_check_insert_sanity(array, array2)) {
+		PJ_LOG_ERR("Error in object hierarchy. Splicing array would create an illegal cyclic dependency");
+		return false;
+	}
 
 	for (i = index, j = begin; removable && j < end; i++, removable--, j++) {
 		assert(valid_index_bounded(array, i));
