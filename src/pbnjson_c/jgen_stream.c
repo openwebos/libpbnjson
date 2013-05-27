@@ -570,6 +570,9 @@ JStreamRef jstreamInternal(jschema_ref schema, TopLevelType type)
 	JSchemaInfo schemaInfo;
 	jschema_info_init(&schemaInfo, schema, NULL, error_handler);
 	ctxt->m_validation = jschema_init(&schemaInfo);
+	if (ctxt->m_validation == NULL) {
+		return NULL;
+	}
 	ctxt->m_errors = error_handler;
 	ctxt->m_errorstate = jsax_error_init();
 	error_handler->m_ctxt = ctxt;

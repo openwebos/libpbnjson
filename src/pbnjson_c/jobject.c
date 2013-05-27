@@ -381,6 +381,9 @@ static const char *jvalue_tostring_internal (jvalue_ref val, jschema_ref schema,
 		bool parseok = false;
 		StreamStatus error;
 		JStreamRef generating = jstreamInternal (schema, TOP_None);
+		if (generating == NULL) {
+			return NULL;
+		}
 		parseok = jvalue_to_string_append (val, generating);
 		val->m_toString = generating->finish (generating, &error);
 		val->m_toStringDealloc = free;
