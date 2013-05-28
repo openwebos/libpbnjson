@@ -240,9 +240,12 @@ bool JValue::operator==(const JValue& other) const
 		if (jarray_size(m_jval) != jarray_size(other.m_jval))
 			return false;
 		for (ssize_t i = jarray_size(m_jval) - 1; i >= 0; i--) {
-			if (JValue(jarray_get(m_jval, i)) != JValue(jarray_get(other.m_jval, i)))
+			//Just as in the isObject() block above, these JValue constructors assume ownership of the values.
+			//Copies of the values are necessary.
+			if (JValue(jvalue_copy(jarray_get(m_jval, i))) != JValue(jvalue_copy(jarray_get(other.m_jval, i))))
 				return false;
 		}
+		return true;
 	} else if (isString()) {
 		if (!other.isString())
 			return false;
