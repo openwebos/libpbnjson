@@ -206,7 +206,7 @@ static void generate(jvalue_ref jval, JStreamRef s)
 		}
 
 		for (JObject::const_iterator i = sorted.constBegin(); i != sorted.constEnd(); i++) {
-			generate(i.key(), s);
+			s->o_key(s, jstring_get(i.key()));
 			generate(i.value(), s);
 		}
 		s->o_end(s);
@@ -508,7 +508,7 @@ void TestSAX::testGenerator()
 
 	try {
 		QDomDocument expectedXML;
-		JStreamRef generator = jstream(NULL);
+		JStreamRef generator = jstream(jschema_all());
 		generate(genInstructions, generator);
 		StreamStatus result;
 		auto_cptr<char> output(generator->finish(generator, &result));
