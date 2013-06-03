@@ -198,6 +198,16 @@ bool JParser::parse(const std::string& input, const JSchema& schema, JErrorHandl
 
 JSchemaResolutionResult JParser::resolve(JSchemaResolverRef resolver, jschema_ref *resolvedSchema)
 {
+	if (m_resolver == NULL) {
+		PJ_LOG_ERR("Parser constructed with NULL JResolver. Unable to resolve external refs");
+		return SCHEMA_GENERIC_ERROR;
+	}
+
+	if (resolver == NULL) {
+		PJ_LOG_ERR("Parameter resolver is NULL. Unable to resolve external refs");
+		return SCHEMA_GENERIC_ERROR;
+	}
+
 	JSchema::Resource *simpleResource = new JSchema::Resource(resolver->m_ctxt, JSchema::Resource::CopySchema);
 	JSchema parent(simpleResource);
 
@@ -207,7 +217,6 @@ JSchemaResolutionResult JParser::resolve(JSchemaResolverRef resolver, jschema_re
 	JSchemaResolutionResult result;
 	JSchema resolvedWrapper(m_resolver->resolve(request, result));
 
-	std::cerr << "Resolving" << resource << std::endl;
 	if (result == SCHEMA_RESOLVED) {
 		*resolvedSchema = jschema_copy(resolvedWrapper.peek());
 	} else
