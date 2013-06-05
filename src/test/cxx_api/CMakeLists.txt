@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-#      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+#      Copyright ©2009-2013 Zenith Electronics LLC, a subsidiary of LG Electronics USA, Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,6 +65,14 @@ src(test_regressions
 	TestRegression.cpp
 )
 
+qt_hdrs(test_jvalue
+	TestJValue.h
+)
+
+src(test_jvalue
+	TestJValue.cpp
+)
+
 set(test_regressions_test_list
 	testNOV99444
 )
@@ -103,3 +111,4 @@ add_regular_test(smoketest_mem "C++ Smoke Test of Memory Usage")
 add_schema_test(test_cppschema "C++ Number sanity check" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/sanity/ SimpleNumber)
 add_schema_test(test_cppschema "C++ Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/contact/ Contact)
 add_qt_test(test_regressions "Regression testing")
+add_qt_test(test_jvalue "Test JValue class")

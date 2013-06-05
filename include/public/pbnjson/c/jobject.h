@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+//      Copyright ©2009-2013 Zenith Electronics LLC, a subsidiary of LG Electronics USA, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ extern "C" {
  * NOTE: It is recommended to not call this API on the result of jnull() or jstring_empty(), although it is safe (effectively a NO-OP).
  *       Behaviour however is unspecified if there is an imbalance in jvalue_copy & j_release.
  */
-PJSON_API jvalue_ref jvalue_copy(jvalue_ref val) NON_NULL(1);
+PJSON_API jvalue_ref jvalue_copy(jvalue_ref val);
 
 /**
  * Release ownership from *val.  *val has an undefined value afterwards.  It is an error
