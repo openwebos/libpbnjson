@@ -219,6 +219,8 @@ bool JValue::operator==(const JValue& other) const
 	if (isObject()) {
 		if (!other.isObject())
 			return false;
+		if (jobject_size(m_jval) != jobject_size(other.m_jval))
+			return false;
 		jobject_key_value value;
 		jvalue_ref tmpVal;
 		for (jobject_iter i = jobj_iter_init(m_jval); jobj_iter_is_valid(i); i = jobj_iter_next(i)) {

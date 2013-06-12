@@ -261,9 +261,9 @@ static bool resolveSchema(SchemaWrapperRef schema, SchemaResolutionRef resolver)
 		SchemaWrapperRef resolvedRemote;
 
 		// need to resolve a reference
-		if (UNLIKELY(jobject_size(toResolve) != 1)) {
+		if (UNLIKELY(jobject_size_internal(toResolve) != 1)) {
 			CHECK_CONDITION_RETURN_VALUE(
-					jobject_size(toResolve) != 2 || !jobject_containskey(toResolve, J_CSTR_TO_BUF(SK_DESCRIPTION)),
+					jobject_size_internal(toResolve) != 2 || !jobject_containskey(toResolve, J_CSTR_TO_BUF(SK_DESCRIPTION)),
 					false,
 					"Schema is invalid - contains an external reference in addition to other key/values that aren't a description field");
 		}
@@ -1971,7 +1971,7 @@ jschema_ref jschema_all()
 		list->next = list->prev = list;
 		assert(jarray_size(allSchemaRef->m_validation) == 1);
 		assert(jis_object(jarray_get(allSchemaRef->m_validation, 0)));
-		assert(jobject_size(jarray_get(allSchemaRef->m_validation, 0)) == 0);
+		assert(jobject_size_internal(jarray_get(allSchemaRef->m_validation, 0)) == 0);
 #if 0
 		allSchemaRef->m_refCnt = 1;
 		allSchemaRef->m_top = jschema_all_stack();

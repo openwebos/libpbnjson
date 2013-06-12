@@ -331,7 +331,7 @@ void TestJValue::testCompareObjects_data()
 	createNewRow(
 		(pj::Object() << pj::JValue::KeyValue("id", 1)),
 		(pj::Object() << pj::JValue::KeyValue("id", 1) << pj::JValue::KeyValue("name", "John"))) <<
-		false << true;
+		false << false;
 	createNewRow(
 		(pj::Object() << pj::JValue::KeyValue("id", 1) << pj::JValue::KeyValue("name", "John")),
 		(pj::Object() << pj::JValue::KeyValue("id", 1) << pj::JValue::KeyValue("name", "John"))) <<
@@ -371,7 +371,7 @@ void TestJValue::testCompareObjects_data()
 	createNewRow(
 		(pj::Object() << pj::JValue::KeyValue("array", (pj::Array() << 1))),
 		(pj::Object() << pj::JValue::KeyValue("array", (pj::Array() << 1)) << pj::JValue::KeyValue("array2", (pj::Array() << 1)))) <<
-		false << true;
+		false << false;
 }
 
 void TestJValue::testCompareObjects()

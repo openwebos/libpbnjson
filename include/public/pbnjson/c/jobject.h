@@ -282,6 +282,15 @@ PJSON_API bool jobject_set(jvalue_ref obj, raw_buffer key, jvalue_ref val);
  */
 PJSON_API bool jobject_put(jvalue_ref obj, jvalue_ref key, jvalue_ref val);
 
+/**
+ * Return number of key-value pairs in object obj;
+ *
+ * @param obj The JSON object to get size
+ * @return number of key-value pairs in object
+ */
+PJSON_API size_t jobject_size(jvalue_ref obj);
+
+
 // JSON Object iterators
 /**
  * Create an iterator for the object.  The iterator is allocated on the stack & will be automatically

@@ -120,7 +120,7 @@ extern PJSON_LOCAL jvalue JNULL;
 /**
  * The number of key/value pairs
  */
-PJSON_LOCAL size_t jobject_size(jvalue_ref obj);
+PJSON_LOCAL size_t jobject_size_internal(jvalue_ref obj);
 
 /**
  * Create a deep copy of the JSON value so that modifications in val are guaranteed to not

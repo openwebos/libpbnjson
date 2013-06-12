@@ -215,7 +215,7 @@ jvalue_ref jvalue_duplicate (jvalue_ref val)
 	if (jis_null (val) || val == &JEMPTY_STR) return result;
 
 	if (jis_object (val)) {
-		result = jobject_create_hint (jobject_size (val));
+		result = jobject_create_hint (jobject_size_internal (val));
 		jobject_iter i;
 		jobject_key_value pair;
 		jvalue_ref valueCopy;
@@ -663,7 +663,7 @@ bool jis_object (jvalue_ref val)
 	return val->m_type == JV_OBJECT;
 }
 
-size_t jobject_size (jvalue_ref obj)
+size_t jobject_size_internal (jvalue_ref obj)
 {
 	// FIXME: use a counter that is updated on insertion/removal instead of iterating every time
 	size_t result = 0;
@@ -676,6 +676,11 @@ size_t jobject_size (jvalue_ref obj)
 		result++;
 
 	return result;
+}
+
+size_t jobject_size(jvalue_ref obj)
+{
+	return jobject_size_internal(obj);
 }
 
 static jo_keyval_iter* jobject_find_keyval_iter (jkey_value_array *toCheck, raw_buffer *key, jkey_value_array **table)
