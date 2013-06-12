@@ -259,4 +259,3 @@ function(add_regular_test exe_name test_name)
 	endforeach()
     endif()
 endfunction()
-

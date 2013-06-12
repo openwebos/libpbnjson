@@ -178,6 +178,12 @@ endif()
 add_schema_test(test_schema "Number sanity check" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/sanity/ SimpleNumber)
 add_schema_test(test_schema "Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/contact/ Contact)
 
+
+# Link runTests with what we want to test and the GTest and pthread library
+add_executable(test_jobject TestJobject.cpp)
+target_link_libraries(test_jobject ${TEST_LIBRARIES} gtest gtest_main pthread)
+add_test(test_jobject test_jobject)
+
 #add_qt_test(test_schema "pjson-Schema Test Return Value" returnValue.schema returnValue1.good returnValue2.good returnValue3.good returnValue4.good)
 #add_qt_test(test_schema "pjson-Schema Test Invalid Return Value" returnValue.schema returnValue1.bad returnValue2.bad returnValue3.bad returnValue4.bad)
 #add_qt_test(test_num_conversion "Numeric conversion Unit Tests")

@@ -26,6 +26,7 @@ webos_component(1 3 0)
 include(FindPkgConfig)
 
 set(API_HEADERS ${CMAKE_SOURCE_DIR}/include/public)
+set(WITH_GTEST_SRC "/usr/src/gtest" CACHE PATH "Path to Google Test source code")
 
 add_subdirectory(src)
 
@@ -33,4 +34,11 @@ if(WITH_DOCS)
 	add_subdirectory(doc)
 else()
 	message(STATUS "Skipping document generation")
+endif()
+
+if(WITH_TESTS)
+	enable_testing()
+	add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure)
+else()
+	message(STATUS "Skipping automatic tests")
 endif()

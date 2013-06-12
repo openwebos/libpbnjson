@@ -39,6 +39,11 @@ if(NOT WITH_SCHEMA)
 	add_definitions(-DBYPASS_SCHEMA=1)
 endif()
 
+# Google Test setup
+add_subdirectory(${WITH_GTEST_SRC} ${CMAKE_BINARY_DIR}/gtest)
+include_directories(${WITH_GTEST_SRC}/include)
+
+
 add_subdirectory(c_api)
 add_subdirectory(cxx_api)
 

@@ -497,6 +497,7 @@ jvalue_ref jobject_create ()
 	return new_obj;
 }
 
+static jo_keyval_iter* jobject_find_keyval_iter (jkey_value_array *toCheck, raw_buffer *key, jkey_value_array **table) NON_NULL(1);
 static jobject_key_value* jobject_find (jkey_value_array *toCheck, raw_buffer *key, jkey_value_array **table) NON_NULL(1);
 static jobject_key_value* jobject_find2(jkey_value_array *toCheck, jvalue_ref key, jkey_value_array **table) NON_NULL(1);
 static bool jobject_insert_internal (jvalue_ref object, jkey_value_array *table, jobject_key_value item) NON_NULL(1);
@@ -677,7 +678,7 @@ size_t jobject_size (jvalue_ref obj)
 	return result;
 }
 
-static jobject_key_value* jobject_find (jkey_value_array *toCheck, raw_buffer *key, jkey_value_array **table)
+static jo_keyval_iter* jobject_find_keyval_iter (jkey_value_array *toCheck, raw_buffer *key, jkey_value_array **table)
 {
 	jvalue_ref keyInTable;
 	int bucket;
@@ -709,7 +710,7 @@ static jobject_key_value* jobject_find (jkey_value_array *toCheck, raw_buffer *k
 
 		if (jstring_equal_internal2 (keyInTable, key)) {
 			if (table) *table = toCheck;
-			return & (toCheck->m_bucket [bucket].entry);
+			return &toCheck->m_bucket [bucket];
 		}
 
 		if (table) *table = toCheck;
@@ -717,6 +718,14 @@ static jobject_key_value* jobject_find (jkey_value_array *toCheck, raw_buffer *k
 	}
 
 	return NULL;
+}
+
+static jobject_key_value* jobject_find (jkey_value_array *toCheck, raw_buffer *key, jkey_value_array **table)
+{
+	jo_keyval_iter *keyval_iter = jobject_find_keyval_iter (toCheck, key, table);
+	if (!keyval_iter)
+		return NULL;
+	return &keyval_iter->entry;
 }
 
 bool jobject_get_exists (jvalue_ref obj, raw_buffer key, jvalue_ref *value)
@@ -766,6 +775,7 @@ jvalue_ref jobject_get (jvalue_ref obj, raw_buffer key)
 
 bool jobject_remove (jvalue_ref obj, raw_buffer key)
 {
+	jo_keyval_iter *keyval_iter;
 	jobject_key_value *entry;
 
 	assert(jis_object(obj));
@@ -774,9 +784,14 @@ bool jobject_remove (jvalue_ref obj, raw_buffer key)
 	CHECK_CONDITION_RETURN_VALUE(jis_null(obj), false, "Attempt to cast null %p to object", obj);
 	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), false, "Attempt to cast type %d to object (%d)", obj->m_type, JV_OBJECT);
 
-	entry = jobject_find (&DEREF_OBJ(obj).m_table, &key, NULL);
-	if (entry == NULL) return false;
+	keyval_iter = jobject_find_keyval_iter (&DEREF_OBJ(obj).m_table, &key, NULL);
+	if (keyval_iter == NULL) return false;
 
+	// Unlink the entry from the iteration list
+	ldel(&keyval_iter->list);
+
+	// Remove the entry from the association table
+	entry = &keyval_iter->entry;
 	j_release (& (entry->key));
 	j_release (& (entry->value));
 	entry->key = NULL;
