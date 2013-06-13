@@ -91,7 +91,7 @@ To view the generated HTML documentation, point your browser to
 Unless otherwise specified, all content, including all source code files and
 documentation files in this repository are:
 
-Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+Copyright (c) 2009-2013 LG Electronics, Inc.
 
 Unless otherwise specified or set forth in the NOTICE file, all content,
 including all source code files and documentation files in this repository are:
