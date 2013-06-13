@@ -113,14 +113,13 @@ void TestJValue::testAssignmentOperator()
 
 void TestJValue::testStdStringComparisonOperator()
 {
-	QEXPECT_FAIL("", "JValue does not contain a char * comparison operator, so plain strings will be tried to be matches as booleans", Continue);
 	QVERIFY(pj::JValue("t") == "t");
-	QVERIFY(pj::JValue("test") == std::string("test"));
-	QVERIFY(pj::JValue("test1") != std::string("test"));
-	QVERIFY(pj::JValue(1) != std::string("1"));
-	QVERIFY(pj::JValue(true) != std::string("true"));
-	QVERIFY(pj::Object() != std::string(""));
-	QVERIFY(pj::Array() != std::string(""));
+	QVERIFY(pj::JValue("test") == "test");
+	QVERIFY(pj::JValue("test1") != "test");
+	QVERIFY(pj::JValue(1) != "1");
+	QVERIFY(pj::JValue(true) != "true");
+	QVERIFY(pj::Object() != "");
+	QVERIFY(pj::Array() != "");
 }
 
 void TestJValue::testBooleanComparisonOperator()

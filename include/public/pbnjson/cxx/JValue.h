@@ -74,6 +74,9 @@ private:
 	{
 		return JNULL;
 	}
+
+	const char * asCString() const;
+
 protected:
 	jvalue_ref peekRaw() const {
 		return m_jval;
@@ -187,6 +190,14 @@ public:
 	 *         actual textual comparison and you have utf8).
 	 */
 	bool operator==(const std::string& other) const;
+	/**
+	 * Test this object against a C string.
+	 *
+	 * @param[in] null-terminated C string to test this JSON string against.
+	 * @return True if and only if this object represents a JSON string with the same bytes (careful here if you need
+	 *         actual textual comparison and you have utf8).
+	 */
+	bool operator==(const char * other) const;
 	/**
 	 * Test this object against a floating point number.
 	 * @param[in] other The value to test this JSON number against

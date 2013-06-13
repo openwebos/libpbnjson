@@ -279,12 +279,22 @@ static bool numEqual(const JValue& jnum, const T& nativeNum)
 	return false;
 }
 
+bool JValue::operator==(const char * other) const
+{
+	const char * buffer = asCString();
+	if (buffer == NULL)
+		return false;
+
+	return strcmp(buffer, other) == 0;
+}
+
 bool JValue::operator==(const std::string& other) const
 {
-	std::string strRep;
-	if (asString(strRep) == CONV_OK)
-		return strRep == other;
-	return false;
+	const char * buffer = asCString();
+	if (buffer == NULL)
+		return false;
+
+	return other.compare(buffer);
 }
 
 bool JValue::operator==(const double& other) const
@@ -494,6 +504,17 @@ template <>
 NumericString JValue::asNumber<NumericString>() const
 {
 	return NumericString(asNumber<std::string>());
+}
+
+const char * JValue::asCString() const
+{
+	if (!isString()) {
+		return NULL;
+	}
+
+	raw_buffer backingBuffer = jstring_get_fast(m_jval);
+
+	return backingBuffer.m_str;
 }
 
 ConversionResultFlags JValue::asString(std::string &asStr) const
