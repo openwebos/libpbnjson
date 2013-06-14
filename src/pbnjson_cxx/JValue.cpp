@@ -294,7 +294,7 @@ bool JValue::operator==(const std::string& other) const
 	if (buffer == NULL)
 		return false;
 
-	return other.compare(buffer);
+	return other.compare(buffer) == 0;
 }
 
 bool JValue::operator==(const double& other) const
