@@ -20,6 +20,9 @@
 #include <JSchemaFragment.h>
 
 #include <pbnjson.h>
+#include <memory>
+
+using namespace std;
 
 namespace pbnjson {
 
@@ -33,6 +36,15 @@ JSchema JSchema::NullSchema()
 		"{\"" SK_DISALLOWED "\":\"any\"}"
 	);
 	return NO_VALID_INPUT_SCHEMA;
+}
+
+JSchema JSchema::AllSchema()
+{
+	static auto_ptr<Resource> all_resource(
+		new Resource(jschema_all(), Resource::CopySchema)
+		);
+	static JSchema all_schema(all_resource.release());
+	return all_schema;
 }
 
 JSchema::JSchema(const JSchema& other)

@@ -340,7 +340,6 @@ jschema_ref jschema_copy(jschema_ref schema)
 {
 #if !BYPASS_SCHEMA
 	SchemaWrapperRef schemaImpl = (SchemaWrapperRef)schema;
-	assert(schemaImpl != jschema_all());
 	assert(schemaImpl->m_refCnt > 0);
 	schemaImpl->m_refCnt++;
 

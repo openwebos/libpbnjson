@@ -116,6 +116,12 @@ public:
 	static JSchema NullSchema();
 
 	/**
+	 * A schema that is guaranteed to accept any input
+	 * as valid.
+	 */
+	static JSchema AllSchema();
+
+	/**
 	 * Create a copy of the schema object.
 	 */
 	JSchema(const JSchema& other);

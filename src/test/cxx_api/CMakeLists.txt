@@ -25,6 +25,7 @@ src(smoketest_mem
 )
 
 include_directories(${API_HEADERS})
+webos_add_compiler_flags(ALL -Wall "-std=gnu++0x")
 
 set(TEST_LIBRARIES pbnjson_cpp)
 ######################### THE UNIT TESTS ############################
@@ -112,3 +113,8 @@ add_schema_test(test_cppschema "C++ Number sanity check" ${CMAKE_CURRENT_SOURCE_
 add_schema_test(test_cppschema "C++ Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/contact/ Contact)
 add_qt_test(test_regressions "Regression testing")
 add_qt_test(test_jvalue "Test JValue class")
+
+
+add_executable(test_jarray TestJArray.cpp)
+target_link_libraries(test_jarray ${TEST_LIBRARIES} gtest gtest_main pthread)
+add_test(test_jarray test_jarray)

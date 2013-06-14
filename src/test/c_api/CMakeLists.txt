@@ -21,6 +21,7 @@ if(NOT QT_FOUND)
 endif()
 
 include_directories(${API_HEADERS})
+webos_add_compiler_flags(ALL -Wall "-std=gnu++0x")
 
 # Find CJSON for comparison benchmarks
 find_package(CJSON)
