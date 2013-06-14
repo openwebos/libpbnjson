@@ -711,11 +711,13 @@ static jo_keyval_iter* jobject_find_keyval_iter (jkey_value_array *toCheck, raw_
 		keyInTable = toCheck->m_bucket [bucket].entry.key;
 
 		assert(keyInTable != jnull());
-		if (keyInTable == NULL) break;
-
-		if (jstring_equal_internal2 (keyInTable, key)) {
-			if (table) *table = toCheck;
-			return &toCheck->m_bucket [bucket];
+		if (keyInTable)
+		{
+			if (jstring_equal_internal2 (keyInTable, key))
+			{
+				if (table) *table = toCheck;
+				return &toCheck->m_bucket [bucket];
+			}
 		}
 
 		if (table) *table = toCheck;
@@ -1542,7 +1544,7 @@ bool jarray_splice_append (jvalue_ref array, jvalue_ref arrayToAppend, JSpliceOw
 /****************************** JSON STRING API ************************/
 #define DEREF_STR(ref) ((ref)->value.val_str)
 
-#define SANITY_CHECK_JSTR_BUFFER(jval) 					\
+#define SANITY_CHECK_JSTR_BUFFER(jval)					\
 	do {								\
 		SANITY_CHECK_POINTER(jval);				\
 		SANITY_CHECK_POINTER(DEREF_STR(jval).m_data.m_str);	\

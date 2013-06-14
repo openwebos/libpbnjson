@@ -1,6 +1,5 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
 //      Copyright (c) 2013 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +20,8 @@
 #include <pbnjson.h>
 #include <string>
 #include <algorithm>
+
+#include <boost/scope_exit.hpp>
 
 using namespace std;
 
@@ -67,6 +68,24 @@ TEST_F(JobjRemove, ObjectRemoveAndIterate)
 	ASSERT_EQ(GetIteration(), "cde");
 	jobject_remove(obj, j_cstr_to_buffer("e"));
 	ASSERT_EQ(GetIteration(), "cd");
+}
+
+TEST(JobjRemove2, ObjectRemoveHashCollision)
+{
+	// [GF-6968] libpbnjson: jobject_find() won't find a key after jobject_remove
+	jvalue_ref obj = jobject_create();
+	BOOST_SCOPE_EXIT((&obj)) {
+		j_release(&obj);
+	} BOOST_SCOPE_EXIT_END
+
+	// The hashes of these keys must collide
+	jobject_put(obj, J_CSTR_TO_JVAL("ab"), jnumber_create_i32(5));
+	jobject_put(obj, J_CSTR_TO_JVAL("b"), jstring_create("Hello, world"));
+	ASSERT_TRUE(jobject_containskey(obj, j_cstr_to_buffer("ab")));
+	ASSERT_TRUE(jobject_containskey(obj, j_cstr_to_buffer("b")));
+	jobject_remove(obj, j_cstr_to_buffer("ab"));
+	ASSERT_FALSE(jobject_containskey(obj, j_cstr_to_buffer("ab")));
+	ASSERT_TRUE(jobject_containskey(obj, j_cstr_to_buffer("b")));
 }
 
 int main(int argc, char *argv[])
