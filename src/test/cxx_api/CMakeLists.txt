@@ -28,15 +28,8 @@ include_directories(${API_HEADERS})
 webos_add_compiler_flags(ALL -Wall "-std=gnu++0x")
 
 set(TEST_LIBRARIES pbnjson_cpp)
-######################### THE UNIT TESTS ############################
-# TestDOM test
-qt_hdrs(test_cppdom
-	TestDOM.h
-)
 
-src(test_cppdom
-	TestDOM.cpp
-)
+######################### THE UNIT TESTS ############################
 
 qt_hdrs(test_cppsax
 	TestSAX.h
@@ -80,32 +73,6 @@ set(test_regressions_test_list
 
 include_directories(${C_ENGINE_INCDIR})
 
-set(test_cppdom_test_list
-	testParserObjectSimple
-	testParserObjectComplex
-	testParserArray
-	testParserComplex
-	testObjectSimple
-	testObjectComplicated
-	testObjectIterator
-	testObjectPut
-	testArraySimple
-	testArrayComplicated
-	testStringSimple
-	testInteger32Simple
-	testInteger320
-	testInteger32Limits
-	testInteger64Simple
-	testInteger640
-	testInteger64Limits
-	testDouble0
-	testDoubleInfinities
-	testDoubleNaN
-	testDoubleFromInteger
-	testBoolean
-)
-
-add_qt_test(test_cppdom "C++ DOM binding")
 add_regular_test(smoketest_mem "C++ Smoke Test of Memory Usage")
 #add_qt_test(test_cppsax "pjson C++ binding SAX test")
 #add_qt_test(test_num_conversion "Numeric conversion Unit Tests")
@@ -114,6 +81,10 @@ add_schema_test(test_cppschema "C++ Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../sche
 add_qt_test(test_regressions "Regression testing")
 add_qt_test(test_jvalue "Test JValue class")
 
+
+add_executable(test_cppdom TestDOM.cpp)
+target_link_libraries(test_cppdom ${TEST_LIBRARIES} gtest gtest_main pthread)
+add_test(test_cppdom test_cppdom)
 
 add_executable(test_jarray TestJArray.cpp)
 target_link_libraries(test_jarray ${TEST_LIBRARIES} gtest gtest_main pthread)
