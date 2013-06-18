@@ -82,10 +82,10 @@ add_qt_test(test_regressions "Regression testing")
 add_qt_test(test_jvalue "Test JValue class")
 
 
-add_executable(CPP.TestDOM TestDOM.cpp)
+add_executable(test_cppdom TestDOM.cpp)
 target_link_libraries(test_cppdom ${TEST_LIBRARIES} gtest gtest_main pthread)
-add_test(test_cppdom test_cppdom)
+add_test(CPP.TestDOM test_cppdom)
 
-add_executable(CPP.TestJArray TestJArray.cpp)
+add_executable(test_jarray TestJArray.cpp)
 target_link_libraries(test_jarray ${TEST_LIBRARIES} gtest gtest_main pthread)
-add_test(test_jarray test_jarray)
+add_test(CPP.TestJArray test_jarray)
