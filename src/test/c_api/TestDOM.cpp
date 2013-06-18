@@ -17,213 +17,41 @@
 //
 // LICENSE@@@
 
-#include "TestDOM.h"
-#include <QTest>
-#include <QtDebug>
-#include <QMetaType>
-#include <iostream>
-#include <cassert>
-#include <limits>
-#include <execinfo.h>
-
+#include <gtest/gtest.h>
 #include <pbnjson.h>
 
-#include "../QBacktrace.h"
+using namespace std;
 
-Q_DECLARE_METATYPE(jvalue_ref);
-Q_DECLARE_METATYPE(ConversionResult);
-Q_DECLARE_METATYPE(bool);
-
-#if 0
-	CONV_OK = 0,
-	CONV_POSITIVE_OVERFLOW = 0x1, /// - the value for integers MUST be clamped to the largest representable number. for doubles, it will be positive infinity
-	CONV_NEGATIVE_OVERFLOW = 0x2, /// - the value for integers MUST be clamped to the smallest representable number. for doubles, it will be negative infinity
-/** CONV_POSITIVE_OVERFLOW | CONV_NEGATIVE_OVERFLOW */
-#define CONV_OVERFLOW (CONV_POSITIVE_OVERFLOW | CONV_NEGATIVE_OVERFLOW)
-	CONV_INFINITY = 0x4, ///  the value for integers MUST be clamped to the largest representable number
-#define CONV_POSITIVE_INFINITY (CONV_POSITIVE_OVERFLOW | CONV_INFINITY)
-#define CONV_NEGATIVE_INFINITY (CONV_NEGATIVE_OVERFLOW | CONV_INFINITY)
-	CONV_PRECISION_LOSS = 0x8, /// bit is set if a double is requested but the int cannot be represented perfectly or an int is requested but the double has floating point
-	CONV_NOT_A_NUM = 0x10, /// non-0 value + CONV_NOT_A_NUM = there's an integer approximation
-	CONV_NOT_A_STRING = 0x20, /// returned if the type is not a string - the raw string representation is still returned as appropriate
-	CONV_NOT_A_BOOLEAN = 0x40, /// returned if the type is not a boolean - the value written is always the boolean approximation
-	CONV_NOT_A_RAW_NUM = 0x80, /// if an attempt is made to get the raw number from a JSON Number backed by a numeric primitive
-	CONV_BAD_ARGS = 0x40000000, /// if the provided arguments are bogous (MUST NOT OVERLAP WITH ANY OTHER ERROR CODES)
-	CONV_GENERIC_ERROR = 0x80000000 /// if some other unspecified error occured (MUST NOT OVERLAP WITH ANY OTHER ERROR CODES)
-#endif
-
-static const char* conv_result_str(ConversionResult res)
+class Manager
 {
-	switch (res) {
-	case CONV_OK:
-		return "ok";
-	case CONV_POSITIVE_OVERFLOW:
-		return "+ overflow";
-	case CONV_NEGATIVE_OVERFLOW:
-		return "- overflow";
-	case CONV_INFINITY:
-		return "infinity";
-	case CONV_PRECISION_LOSS:
-		return "precision loss";
-	case CONV_NOT_A_NUM:
-		return "not a number";
-	case CONV_NOT_A_STRING:
-		return "not a string";
-	case CONV_NOT_A_BOOLEAN:
-		return "not a boolean";
-	case CONV_NOT_A_RAW_NUM:
-		return "not a raw num";
-	case CONV_BAD_ARGS:
-		return "bad args";
-	case CONV_GENERIC_ERROR:
-		return "generic error";
-	default:
-		return "unknown error";
-	}
-}
+private:
+	vector<jvalue_ref> managed;
 
-static std::string result_str(ConversionResultFlags res)
-{
-	std::string result;
-
-	if (res == CONV_OK)
-		return conv_result_str(CONV_OK);
-
-#define CHECK_ERR(flag) \
-	do {\
-		if (res & (flag)) result += conv_result_str(flag);\
-	} while (0)
-
-	CHECK_ERR(CONV_POSITIVE_OVERFLOW);
-	CHECK_ERR(CONV_NEGATIVE_OVERFLOW);
-	CHECK_ERR(CONV_INFINITY);
-	CHECK_ERR(CONV_PRECISION_LOSS);
-	CHECK_ERR(CONV_NOT_A_NUM);
-	CHECK_ERR(CONV_NOT_A_STRING);
-	CHECK_ERR(CONV_NOT_A_BOOLEAN);
-	CHECK_ERR(CONV_NOT_A_RAW_NUM);
-	CHECK_ERR(CONV_BAD_ARGS);
-	CHECK_ERR(CONV_GENERIC_ERROR);
-
-	return result;
-
-#undef CHECK_ERR
-}
-
-#define PRINT_BACKTRACE(fd, size) \
-		do {\
-			void *tracePtrs[size];\
-			int count;\
-			count = backtrace(tracePtrs, size);\
-			backtrace_symbols_fd(tracePtrs, count, fd);\
-		} while(0)
-
-#define MY_VERIFY(statement) \
-do {\
-    if (!QTest::qVerify((statement), #statement, "", __FILE__, __LINE__)) { \
-    	PRINT_BACKTRACE(STDERR_FILENO, 16);\
-    	/*qDebug() << "\n\t" << getBackTrace().join("\n\t") << "\n";*/\
-		throw TestFailure();\
-    } \
-} while (0)
-
-#define MY_COMPARE(actual, expected) \
-do {\
-    if (!QTest::qCompare(actual, expected, #actual, #expected, __FILE__, __LINE__)) { \
-    	PRINT_BACKTRACE(STDERR_FILENO, 16);\
-    	/*qDebug() << "\n\t" << getBackTrace().join("\n\t") << "\n";*/\
-        throw TestFailure();\
-    } \
-} while (0)
-
-namespace pjson {
-namespace testc {
-
-class TestFailure
-{
-
-};
-
-template <>
-void TestDOM::validateNumber<int32_t>(jvalue_ref jnum, int32_t expected, ConversionResultFlags conversionResult);
-template <>
-void TestDOM::validateNumber<int64_t>(jvalue_ref jnum, int64_t expected, ConversionResultFlags conversionResult);
-template <>
-void TestDOM::validateNumber<double>(jvalue_ref jnum, double expected, ConversionResultFlags conversionResult);
-template <>
-void TestDOM::validateNumber<raw_buffer>(jvalue_ref jnum, raw_buffer expected, ConversionResultFlags conversionResult);
-
-#define GET_CHILD(var, type, jval, id) \
-	try {\
-		var = getChild ## type(jval, id); \
-	} catch (...) { \
-		std::cerr << "Child retrieval failure at '" __FILE__ " :: " << __LINE__ << "'" << std::endl;\
-		throw;\
+public:
+	~Manager()
+	{
+		for (auto &val: managed)
+			j_release(&val);
 	}
 
-#define VAL_NUM(type, jval, expectVal, expectConvResult) \
-		try {\
-			validateNumber<type>(jval, expectVal, expectConvResult); \
-		} catch (...) { \
-			std::cerr << "Number validation failure at '" __FILE__ " :: " << __LINE__ << "'" << std::endl;\
-			throw;\
-		}
-
-#define VAL_NUM_OK(type, jval, expectVal) VAL_NUM(type, jval, expectVal, CONV_OK)
-
-#define VAL_STR(jval, expected) \
-	try {\
-		validateString(jval, expected); \
-	} catch (...) { \
-		std::cerr << "String validation failure at '" __FILE__ " :: " << __LINE__ << "'" << std::endl;\
-		throw;\
+	jvalue_ref operator()(jvalue_ref val)
+	{
+		managed.push_back(val);
+		return val;
 	}
 
-#define VAL_BOOL(jval, expected, expectedType)\
-	try {\
-		validateBool(jval, expected, expectedType); \
-	} catch (...) { \
-		std::cerr << "String validation failure at '" __FILE__ " :: " << __LINE__ << "'" << std::endl;\
-		throw;\
-	}
+} g_manager;
 
-#define VAL_BOOL_AS_BOOL(jval, expected) VAL_BOOL(jval, expected, TJBOOL)
-
-TestDOM::TestDOM()
+static jvalue_ref manage(jvalue_ref val)
 {
-	//testValist(jkeyval((jvalue_ref)0x1, (jvalue_ref)0x2), jkeyval(NULL, NULL));
+	return g_manager(val);
 }
 
-TestDOM::~TestDOM()
+TEST(TestDOM, ObjectSimple)
 {
-
-}
-
-void TestDOM::initTestCase()
-{
-	m_managed.clear();
-}
-
-void TestDOM::init()
-{
-}
-
-void TestDOM::cleanup()
-{
-}
-
-void TestDOM::cleanupTestCase()
-{
-	for (size_t i = 0; i < m_managed.size(); i++) {
-		j_release(&m_managed[i]);
-	}
-}
-
-void TestDOM::testObjectSimple()
-{
-	assert(!jis_null(manage(J_CSTR_TO_JVAL("abc"))));
-	assert(!jis_null(manage(J_CSTR_TO_JVAL("def"))));
-	assert(!jis_null(manage(jnumber_create(J_CSTR_TO_BUF("5463")))));
+	ASSERT_FALSE(jis_null(manage(J_CSTR_TO_JVAL("abc"))));
+	ASSERT_FALSE(jis_null(manage(J_CSTR_TO_JVAL("def"))));
+	ASSERT_FALSE(jis_null(manage(jnumber_create(J_CSTR_TO_BUF("5463")))));
 
 	jvalue_ref simpleObject = manage(jobject_create_var(
 		jkeyval(J_CSTR_TO_JVAL("abc"), J_CSTR_TO_JVAL("def")),
@@ -231,53 +59,49 @@ void TestDOM::testObjectSimple()
 		J_END_OBJ_DECL
 	));
 
-	QVERIFY(jis_object(simpleObject));
+	ASSERT_TRUE(jis_object(simpleObject));
+	jvalue_ref jstr(0);
+	EXPECT_TRUE(jobject_get_exists(simpleObject, J_CSTR_TO_BUF("abc"), &jstr));
+	EXPECT_STREQ(jstring_get_fast(jstr).m_str, "def");
 
-	try {
-		jvalue_ref jstr, jnum;
-
-		GET_CHILD(jstr, String, simpleObject, "abc");
-		VAL_STR(jstr, "def");
-
-		GET_CHILD(jnum, Number, simpleObject, "def");
-		VAL_NUM_OK(int32_t, jnum, 5463);
-	} catch (TestFailure /*f*/) {
-		return;
-	}
+	jvalue_ref jnum(0);
+	EXPECT_TRUE(jobject_get_exists(simpleObject, J_CSTR_TO_BUF("def"), &jnum));
+	int32_t num(-1);
+	EXPECT_EQ(jnumber_get_i32(jnum, &num), CONV_OK);
+    EXPECT_EQ(num, 5463);
 }
 
-void TestDOM::testObjectComplicated()
+// sanity check that assumptions about limits of double storage
+// are correct
+static const int64_t maxDblPrecision = 0x1FFFFFFFFFFFFFLL;
+static const int64_t minDblPrecision = -0x1FFFFFFFFFFFFFLL;
+static const int64_t positiveOutsideDblPrecision = maxDblPrecision + 2; // +1 doesn't work because it's the same (it truncates a 0)
+static const int64_t negativeOutsideDblPrecision = minDblPrecision - 2; // +1 doesn't work because it's the same (it truncates a 0)
+static const int64_t maxInt32 = std::numeric_limits<int32_t>::max();
+static const int64_t minInt32 = std::numeric_limits<int32_t>::min();
+static const char weirdString[] = "long and complicated \" string ' with \" $*U@*(&#(@*&";
+static const char veryLargeNumber[] = "645458489754321564894654151561684894456464513215648946543132189489461321684.2345646544e509";
+
+TEST(TestDOM, SanityCheck)
 {
-	// sanity check that assumptions about limits of double storage
-	// are correct
-	static const int64_t maxDblPrecision = 0x1FFFFFFFFFFFFFLL;
-	static const int64_t minDblPrecision = -0x1FFFFFFFFFFFFFLL;
-	static const int64_t positiveOutsideDblPrecision = maxDblPrecision + 2; // +1 doesn't work because it's the same (it truncates a 0)
-	static const int64_t negativeOutsideDblPrecision = minDblPrecision - 2; // +1 doesn't work because it's the same (it truncates a 0)
-	static const int64_t maxInt32 = std::numeric_limits<int32_t>::max();
-	static const int64_t minInt32 = std::numeric_limits<int32_t>::min();
-	static const char weirdString[] = "long and complicated \" string ' with \" $*U@*(&#(@*&";
-	static const char veryLargeNumber[] = "645458489754321564894654151561684894456464513215648946543132189489461321684.2345646544e509";
+	double check = (double)maxDblPrecision;
+	EXPECT_EQ((int64_t)check, maxDblPrecision);
 
-	{
-		double check;
+	check = (double)minDblPrecision;
+	EXPECT_EQ((int64_t)check, minDblPrecision);
 
-		check = (double)maxDblPrecision;
-		QVERIFY((int64_t)check == maxDblPrecision);
+	check = (double)(positiveOutsideDblPrecision);
+	EXPECT_NE((int64_t)check, positiveOutsideDblPrecision);
 
-		check = (double)minDblPrecision;
-		QVERIFY((int64_t)check == minDblPrecision);
+	check = (double)(negativeOutsideDblPrecision);
+	EXPECT_NE((int64_t)check, negativeOutsideDblPrecision);
 
-		check = (double)(positiveOutsideDblPrecision);
-		QVERIFY((int64_t)check != positiveOutsideDblPrecision);
+	EXPECT_TRUE(std::numeric_limits<double>::has_quiet_NaN);
+	EXPECT_TRUE(std::numeric_limits<double>::has_signaling_NaN);
+}
 
-		check = (double)(negativeOutsideDblPrecision);
-		QVERIFY((int64_t)check != negativeOutsideDblPrecision);
-	}
-
-	QVERIFY(std::numeric_limits<double>::has_quiet_NaN);
-	QVERIFY(std::numeric_limits<double>::has_signaling_NaN);
-
+TEST(TestDOM, ObjectComplex)
+{
 	// unfortunately, C++ doesn't allow us to use J_CSTR_TO_JVAL which is what I would use
 	// for string literals under C.
 	jvalue_ref complexObject = manage (jobject_create_var(
@@ -316,110 +140,172 @@ void TestDOM::testObjectComplicated()
 		J_END_OBJ_DECL
 	));
 
-	jvalue_ref jbool, jnum, jstr, jobj;
+	jvalue_ref jbool = jobject_get(complexObject, J_CSTR_TO_BUF("bool1"));
+	EXPECT_TRUE(jis_boolean(jbool));
+	bool bool_val(false);
+	EXPECT_EQ(jboolean_get(jbool, &bool_val), CONV_OK);
+	EXPECT_EQ(bool_val, true);
 
-	GET_CHILD(jbool, Bool, complexObject, "bool1");
-	VAL_BOOL_AS_BOOL(jbool, true);
+	jbool = jobject_get(complexObject, J_CSTR_TO_BUF("bool2"));
+	EXPECT_TRUE(jis_boolean(jbool));
+	EXPECT_EQ(jboolean_get(jbool, &bool_val), CONV_OK);
+	EXPECT_EQ(bool_val, false);
 
-	GET_CHILD(jbool, Bool, complexObject, "bool2");
-	VAL_BOOL_AS_BOOL(jbool, false);
+	jvalue_ref jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numi32_1"));
+	EXPECT_TRUE(jis_number(jnum));
+	int32_t i32(-1);
+	EXPECT_EQ(jnumber_get_i32(jnum, &i32), CONV_OK);
+	EXPECT_EQ(i32, 0);
 
-	GET_CHILD(jnum, Number, complexObject, "numi32_1");
-	VAL_NUM_OK(int32_t, jnum, 0);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numi32_2"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_i32(jnum, &i32), CONV_OK);
+	EXPECT_EQ(i32, -50);
 
-	GET_CHILD(jnum, Number, complexObject, "numi32_2");
-	VAL_NUM_OK(int32_t, jnum, -50);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numi32_3"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_i32(jnum, &i32), CONV_OK);
+	EXPECT_EQ(i32, 12345323);
 
-	GET_CHILD(jnum, Number, complexObject, "numi32_3");
-	VAL_NUM_OK(int32_t, jnum, 12345323);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numi64_1"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_i32(jnum, &i32), CONV_POSITIVE_OVERFLOW);
+	int64_t i64(-1);
+	EXPECT_EQ(jnumber_get_i64(jnum, &i64), CONV_OK);
+	EXPECT_EQ(i64, maxInt32 + 1);
 
-	GET_CHILD(jnum, Number, complexObject, "numi64_1");
-	VAL_NUM(int32_t, jnum, std::numeric_limits<int32_t>::max(), CONV_POSITIVE_OVERFLOW);
-	VAL_NUM_OK(int64_t, jnum, maxInt32 + 1);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numi64_2"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_i32(jnum, &i32), CONV_NEGATIVE_OVERFLOW);
+	EXPECT_EQ(jnumber_get_i64(jnum, &i64), CONV_OK);
+	EXPECT_EQ(i64, minInt32 - 1);
 
-	GET_CHILD(jnum, Number, complexObject, "numi64_2");
-	VAL_NUM(int32_t, jnum, std::numeric_limits<int32_t>::min(), CONV_NEGATIVE_OVERFLOW);
-	VAL_NUM_OK(int64_t, jnum, minInt32 - 1);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numi64_3"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_i64(jnum, &i64), CONV_OK);
+	EXPECT_EQ(i64, 0);
 
-	GET_CHILD(jnum, Number, complexObject, "numi64_3");
-	VAL_NUM_OK(int64_t, jnum, 0);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numi64_4"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_i64(jnum, &i64), CONV_OK);
+	EXPECT_EQ(i64, maxDblPrecision);
+	double dbl;
+	EXPECT_EQ(jnumber_get_f64(jnum, &dbl), CONV_OK);
+	EXPECT_EQ(dbl, (double)maxDblPrecision);
 
-	GET_CHILD(jnum, Number, complexObject, "numi64_4");
-	VAL_NUM_OK(int64_t, jnum, maxDblPrecision);
-	VAL_NUM_OK(double, jnum, (double)maxDblPrecision);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numi64_5"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_i64(jnum, &i64), CONV_OK);
+	EXPECT_EQ(i64, minDblPrecision);
+	EXPECT_EQ(jnumber_get_f64(jnum, &dbl), CONV_OK);
+	EXPECT_EQ(dbl, (double)minDblPrecision);
 
-	GET_CHILD(jnum, Number, complexObject, "numi64_5");
-	VAL_NUM_OK(int64_t, jnum, minDblPrecision);
-	VAL_NUM_OK(double, jnum, (double)minDblPrecision);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numi64_6"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_i64(jnum, &i64), CONV_OK);
+	EXPECT_EQ(i64, positiveOutsideDblPrecision);
+	EXPECT_EQ(jnumber_get_f64(jnum, &dbl), CONV_PRECISION_LOSS);
+	EXPECT_EQ(dbl, (double)positiveOutsideDblPrecision);
 
-	GET_CHILD(jnum, Number, complexObject, "numi64_6");
-	VAL_NUM_OK(int64_t, jnum, positiveOutsideDblPrecision);
-	VAL_NUM(double, jnum, (double)positiveOutsideDblPrecision, CONV_PRECISION_LOSS);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numi64_7"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_i64(jnum, &i64), CONV_OK);
+	EXPECT_EQ(i64, negativeOutsideDblPrecision);
+	EXPECT_EQ(jnumber_get_f64(jnum, &dbl), CONV_PRECISION_LOSS);
+	EXPECT_EQ(dbl, (double)negativeOutsideDblPrecision);
 
-	GET_CHILD(jnum, Number, complexObject, "numi64_7");
-	VAL_NUM_OK(int64_t, jnum, negativeOutsideDblPrecision);
-	VAL_NUM(double, jnum, (double)negativeOutsideDblPrecision, CONV_PRECISION_LOSS);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numf64_1"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_f64(jnum, &dbl), CONV_OK);
+	EXPECT_EQ(dbl, 0.45642156489);
+	EXPECT_EQ(jnumber_get_i64(jnum, &i64), CONV_PRECISION_LOSS);
+	EXPECT_EQ(i64, 0);
 
-	GET_CHILD(jnum, Number, complexObject, "numf64_1");
-	VAL_NUM_OK(double, jnum, 0.45642156489);
-	VAL_NUM(int64_t, jnum, 0, CONV_PRECISION_LOSS);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numf64_2"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_f64(jnum, &dbl), CONV_OK);
+	EXPECT_EQ(dbl, -54897864.14);
+	EXPECT_EQ(jnumber_get_i64(jnum, &i64), CONV_PRECISION_LOSS);
+	EXPECT_EQ(i64, -54897864);
 
-	GET_CHILD(jnum, Number, complexObject, "numf64_2");
-	VAL_NUM_OK(double, jnum, -54897864.14);
-	VAL_NUM(int64_t, jnum, -54897864, CONV_PRECISION_LOSS);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numf64_3"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_f64(jnum, &dbl), CONV_OK);
+	EXPECT_EQ(dbl, -54897864);
+	EXPECT_EQ(jnumber_get_i64(jnum, &i64), CONV_OK);
+	EXPECT_EQ(i64, -54897864);
 
-	GET_CHILD(jnum, Number, complexObject, "numf64_3");
-	VAL_NUM_OK(double, jnum, -54897864);
-	VAL_NUM_OK(int64_t, jnum, -54897864);
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numf64_4"));
+	EXPECT_TRUE(jis_null(jnum));  // + inf
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numf64_5"));
+	EXPECT_TRUE(jis_null(jnum));  // - inf
+	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numf64_6"));
+	EXPECT_TRUE(jis_null(jnum));  // NaN
 
 
-	GET_CHILD(jnum, Null, complexObject, "numf64_4"); // + inf
-	GET_CHILD(jnum, Null, complexObject, "numf64_5"); // - inf
-	GET_CHILD(jnum, Null, complexObject, "numf64_6"); // NaN
+	jvalue_ref jstr = jobject_get(complexObject, J_CSTR_TO_BUF("str1"));
+	EXPECT_TRUE(jis_null(jstr));
+	jstr = jobject_get(complexObject, J_CSTR_TO_BUF("str2"));
+	EXPECT_TRUE(jis_null(jstr));
 
-	GET_CHILD(jstr, Null, complexObject, "str1");
-	GET_CHILD(jstr, Null, complexObject, "str2");
+	jstr = jobject_get(complexObject, J_CSTR_TO_BUF("str3"));
+	EXPECT_TRUE(jis_string(jstr));
 
-	GET_CHILD(jstr, String, complexObject, "str3");
-	VAL_STR(jstr, "");
+	auto string_from_jval = [](jvalue_ref jstr) -> string
+	{
+		raw_buffer buf = jstring_get_fast(jstr);
+		return string(buf.m_str, buf.m_str + buf.m_len);
+	};
 
-	GET_CHILD(jstr, String, complexObject, "str4");
-	VAL_STR(jstr, "foo");
+	EXPECT_TRUE(string_from_jval(jstr).empty());
 
-	GET_CHILD(jstr, String, complexObject, "str5");
-	VAL_STR(jstr, weirdString);
+	jstr = jobject_get(complexObject, J_CSTR_TO_BUF("str4"));
+	EXPECT_TRUE(jis_string(jstr));
+	EXPECT_EQ(string_from_jval(jstr), string{"foo"});
 
-	GET_CHILD(jobj, Object, complexObject, "obj1");
-	GET_CHILD(jnum, Number, jobj, "num_1");
-	VAL_NUM(int64_t, jnum, 64, CONV_PRECISION_LOSS);
-	VAL_NUM_OK(double, jnum, 64.234);
+	jstr = jobject_get(complexObject, J_CSTR_TO_BUF("str5"));
+	EXPECT_TRUE(jis_string(jstr));
+	EXPECT_EQ(string_from_jval(jstr), string{weirdString});
 
-	GET_CHILD(jnum, Number, jobj, "num_2");
-	VAL_NUM(int64_t, jnum, std::numeric_limits<int64_t>::max(), CONV_POSITIVE_OVERFLOW | CONV_PRECISION_LOSS);
-	VAL_NUM(double, jnum, std::numeric_limits<double>::infinity(), CONV_POSITIVE_OVERFLOW);
-	VAL_NUM_OK(raw_buffer, jnum, J_CSTR_TO_BUF(veryLargeNumber));
+	jvalue_ref jobj = jobject_get(complexObject, J_CSTR_TO_BUF("obj1"));
+	EXPECT_TRUE(jis_object(jobj));
+	jnum = jobject_get(jobj, J_CSTR_TO_BUF("num_1"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_i64(jnum, &i64), CONV_PRECISION_LOSS);
+	EXPECT_EQ(i64, 64);
+	EXPECT_EQ(jnumber_get_f64(jnum, &dbl), CONV_OK);
+	EXPECT_EQ(dbl, 64.234);
+
+	jnum = jobject_get(jobj, J_CSTR_TO_BUF("num_2"));
+	EXPECT_TRUE(jis_number(jnum));
+	EXPECT_EQ(jnumber_get_i64(jnum, &i64), CONV_POSITIVE_OVERFLOW | CONV_PRECISION_LOSS);
+	EXPECT_EQ(i64, std::numeric_limits<int64_t>::max());
+	EXPECT_EQ(jnumber_get_f64(jnum, &dbl), CONV_POSITIVE_OVERFLOW);
+	EXPECT_EQ(dbl, std::numeric_limits<double>::infinity());
+	raw_buffer raw;
+	EXPECT_EQ(jnumber_get_raw(jnum, &raw), CONV_OK);
+	EXPECT_EQ(string(raw.m_str, raw.m_str + raw.m_len), string(veryLargeNumber));
 }
 
-void TestDOM::testObjectPut()
+TEST(TestDOM, ObjectPut)
 {
 	jvalue_ref obj = manage(jobject_create());
-	jvalue_ref val;
 
 	// name collision
-	jobject_put(obj, J_CSTR_TO_JVAL("test1"), jnumber_create_i32(5));
-	jobject_put(obj, J_CSTR_TO_JVAL("test1"), J_CSTR_TO_JVAL("test2"));
+	ASSERT_TRUE(jobject_put(obj, J_CSTR_TO_JVAL("test1"), jnumber_create_i32(5)));
+	ASSERT_TRUE(jobject_put(obj, J_CSTR_TO_JVAL("test1"), J_CSTR_TO_JVAL("test2")));
 
 	// replacement of object
 	// valgrind will fail if this was done improperly
-	val = jobject_get(obj, J_CSTR_TO_BUF("test1"));
-	QCOMPARE(jis_string(val), true);
+	jvalue_ref val = jobject_get(obj, J_CSTR_TO_BUF("test1"));
+	EXPECT_TRUE(jis_string(val));
 
 	// should be the same pointer since I used a 0-copy string
 	// (assuming the c-compiler interns strings)
-	QCOMPARE(jstring_get_fast(val).m_str, "test2");
+	EXPECT_STREQ(jstring_get_fast(val).m_str, "test2");
 }
 
-void TestDOM::testArraySimple()
+TEST(TestDOM, ArraySimple)
 {
 	jvalue_ref simple_arr = manage(jarray_create_var(NULL,
 			J_CSTR_TO_JVAL("index 0"),
@@ -431,529 +317,211 @@ void TestDOM::testArraySimple()
 			J_CSTR_TO_JVAL(""),
 			jnumber_create_f64(7),
 			J_END_ARRAY_DECL));
-	jvalue_ref val;
 
-	QCOMPARE(jarray_size(simple_arr), (ssize_t)8);
+	ASSERT_EQ(jarray_size(simple_arr), 8);
 
-	GET_CHILD(val, String, simple_arr, 0);
-	VAL_STR(val, "index 0");
-	VAL_BOOL(val, true, TJSTR);
+	jvalue_ref val = jarray_get(simple_arr, 0);
+	EXPECT_TRUE(jis_string(val));
+	EXPECT_STREQ(jstring_get_fast(val).m_str, "index 0");
 
-	GET_CHILD(val, Number, simple_arr, 1);
-	VAL_NUM_OK(raw_buffer, val, J_CSTR_TO_BUF("1"));
-	VAL_NUM_OK(int32_t, val, 1);
-	VAL_BOOL(val, true, TJNUM);
+	val = jarray_get(simple_arr, 1);
+	EXPECT_TRUE(jis_number(val));
+	int32_t i32{-1};
+	EXPECT_EQ(jnumber_get_i32(val, &i32), CONV_OK);
+	EXPECT_EQ(i32, 1);
 
-	GET_CHILD(val, Number, simple_arr, 2);
-	VAL_NUM_OK(int32_t, val, 2);
+	val = jarray_get(simple_arr, 2);
+	EXPECT_TRUE(jis_number(val));
+	EXPECT_EQ(jnumber_get_i32(val, &i32), CONV_OK);
+	EXPECT_EQ(i32, 2);
 
-	GET_CHILD(val, Bool, simple_arr, 3);
-	VAL_BOOL_AS_BOOL(val, false);
+	val = jarray_get(simple_arr, 3);
+	EXPECT_TRUE(jis_boolean(val));
+	bool bool_val(true);
+	EXPECT_EQ(jboolean_get(val, &bool_val), CONV_OK);
+	EXPECT_EQ(bool_val, false);
 
-	GET_CHILD(val, Bool, simple_arr, 4);
-	VAL_BOOL_AS_BOOL(val, true);
+	val = jarray_get(simple_arr, 4);
+	EXPECT_TRUE(jis_boolean(val));
+	EXPECT_EQ(jboolean_get(val, &bool_val), CONV_OK);
+	EXPECT_EQ(bool_val, true);
 
-	GET_CHILD(val, Null, simple_arr, 5);
-	QCOMPARE(val, jnull());
-	VAL_BOOL(val, false, TJNULL);
+	val = jarray_get(simple_arr, 5);
+	EXPECT_TRUE(jis_null(val));
 
-	GET_CHILD(val, String, simple_arr, 6);
-	VAL_STR(val, "");
-	VAL_BOOL(val, false, TJSTR);
+	val = jarray_get(simple_arr, 6);
+	EXPECT_TRUE(jis_string(val));
+	EXPECT_EQ(jstring_get_fast(val).m_len, 0);
+	raw_buffer buf = jstring_get(val);
+	EXPECT_STREQ(buf.m_str, "");
+	EXPECT_EQ(buf.m_len, 0);
+	free((void *)buf.m_str); // FIXME!!!
 
-	GET_CHILD(val, Number, simple_arr, 7);
-	VAL_NUM_OK(int32_t, val, 7);
+	val = jarray_get(simple_arr, 7);
+	EXPECT_TRUE(jis_number(val));
+	EXPECT_EQ(jnumber_get_i32(val, &i32), CONV_OK);
+	EXPECT_EQ(i32, 7);
 }
 
-void TestDOM::testArrayComplicated()
+TEST(TestDOM, ArrayComplex)
 {
 	jvalue_ref arr = manage(jarray_create(NULL));
-	jvalue_ref child;
 
-	QVERIFY(jis_array(arr));
+	ASSERT_TRUE(jis_array(arr));
 
-	for (int32_t i = 0; i < 100; i++) {
+	for (int32_t i = 0; i < 100; i++)
+	{
 		jarray_append(arr, jnumber_create_i32(i));
-		QCOMPARE(jarray_size(arr), (ssize_t) i + 1);
-		GET_CHILD(child, Number, arr, i);
-		VAL_NUM_OK(int32_t, child, i);
+		EXPECT_EQ(jarray_size(arr), i + 1);
+
+		jvalue_ref child = jarray_get(arr, i);
+		EXPECT_TRUE(jis_number(child));
+		int32_t i32(-1);
+		EXPECT_EQ(jnumber_get_i32(child, &i32), CONV_OK);
+		EXPECT_EQ(i32, i);
+
 		if (i > 20)
-			QVERIFY(jis_number(getChildNumber(arr, 20)));
+			EXPECT_TRUE(jis_number(jarray_get(arr, 20)));
 	}
 
-	QCOMPARE(jarray_size(arr), (ssize_t)100);
-	QVERIFY(jis_number(getChildNumber(arr, 20)));
+	EXPECT_EQ(jarray_size(arr), 100);
 
-	for (int32_t i = 0; i < 100; i++) {
-		int32_t element;
-		GET_CHILD(child, Number, arr, i);
-		QVERIFY(jis_number(child));
-		QCOMPARE(jnumber_get_i32(child, &element), (ConversionResultFlags)CONV_OK);
-		QCOMPARE(element, i);
-	}
-}
-
-void TestDOM::testStringSimple_data()
-{
-	QTest::addColumn<QByteArray>("string");
-	QTest::addColumn<QByteArray>("utf8Result"); // the result when not supplying the length to the string
-	QTest::addColumn<QByteArray>("rawResult");
-
-#define QB_STR(str) str, sizeof(str) - 1
-	QTest::newRow("regular ascii string") <<
-		QByteArray::fromRawData(QB_STR("foo bar")) <<
-		QByteArray::fromRawData(QB_STR("foo bar")) <<
-		QByteArray::fromRawData(QB_STR("foo bar"));
-
-	QTest::newRow("ascii string w/ embedded null") <<
-		QByteArray::fromRawData(QB_STR("foo bar. the quick brown\0 fox jumped over the lazy dog.")) <<
-		QByteArray::fromRawData(QB_STR("foo bar. the quick brown")) <<
-		QByteArray::fromRawData(QB_STR("foo bar. the quick brown\0 fox jumped over the lazy dog."));
-#undef QB_STR
-}
-
-void TestDOM::testStringSimple()
-{
-	QFETCH(QByteArray, string);
-	QFETCH(QByteArray, utf8Result);
-	QFETCH(QByteArray, rawResult);
-
-	jvalue_ref str1 = manage(jstring_create(string.constData()));
-	QVERIFY(jis_string(str1));
-	VAL_STR(str1, utf8Result);
-
-	jvalue_ref str2 = manage(jstring_create_nocopy(j_str_to_buffer(string.constData(), string.size())));
-	VAL_STR(str2, rawResult);
-
-	if (utf8Result != rawResult) {
-		QVERIFY(!jstring_equal2(str1, j_str_to_buffer(rawResult.constData(), rawResult.size())));
-		QVERIFY(!jstring_equal2(str2, j_str_to_buffer(utf8Result.constData(), utf8Result.size())));
+	for (int32_t i = 0; i < 100; i++)
+	{
+		jvalue_ref child = jarray_get(arr, i);
+		EXPECT_TRUE(jis_number(child));
+		int32_t i32(-1);
+		EXPECT_EQ(jnumber_get_i32(child, &i32), CONV_OK);
+		EXPECT_EQ(i32, i);
 	}
 }
 
-static volatile bool *flagToChange = NULL;
-static void strdealloc(void *str)
+TEST(TestDOM, StringSimple)
 {
-	free(str);
-	if (flagToChange != NULL) {
-		*flagToChange = true;
-		flagToChange = NULL;
-	} else {
-		qWarning("Deallocation routine used without setting the flag to notify of free");
-	}
+	char const data[] = "foo bar. the quick brown\0 fox jumped over the lazy dog.";
+	jvalue_ref str1 = manage(jstring_create(data));
+	EXPECT_TRUE(jis_string(str1));
+	EXPECT_STREQ(jstring_get_fast(str1).m_str, "foo bar. the quick brown");
+
+	jvalue_ref str2 = manage(jstring_create_nocopy(j_str_to_buffer(data, sizeof(data) - 1)));
+	EXPECT_TRUE(jis_string(str2));
+	raw_buffer buf = jstring_get_fast(str2);
+	EXPECT_EQ(buf.m_len, sizeof(data) - 1);
+	EXPECT_EQ(string(buf.m_str, buf.m_str + buf.m_len),
+	          string(data, data + sizeof(data) - 1));
+
+	EXPECT_TRUE(jstring_equal2(str1, j_str_to_buffer(data, strlen(data))));
+	EXPECT_TRUE(jstring_equal2(str2, j_str_to_buffer(data, sizeof(data) - 1)));
 }
 
-void TestDOM::testStringDealloc()
+struct Dealloc
 {
-	volatile bool dealloced = false;
-#define str "the quick brown fox jumped over the lazy dog"
-	QCOMPARE(sizeof(str), (size_t)45);
-	QCOMPARE(strlen(str), (size_t)44);
+	static volatile int free_count;
+
+	static void Free(void *str)
+	{
+		free(str);
+		++free_count;
+	}
+};
+volatile int Dealloc::free_count = 0;
+
+TEST(TestDOM, StringDealloc)
+{
+	char const str[] = "the quick brown fox jumped over the lazy dog";
+
+	ASSERT_EQ(45, sizeof(str));
+	ASSERT_EQ(44, strlen(str));
 	raw_buffer srcString = J_CSTR_TO_BUF(str);
-	QCOMPARE(srcString.m_len, (unsigned long)44);
+	ASSERT_EQ(44, srcString.m_len);
 
 	char *dynstr = (char *)calloc(srcString.m_len + 1, sizeof(char));
 	ptrdiff_t dynstrlen = strlen(strncpy(dynstr, srcString.m_str, srcString.m_len));
-	QCOMPARE(dynstrlen, (ptrdiff_t)srcString.m_len);
+	ASSERT_EQ(srcString.m_len, dynstrlen);
 
-	flagToChange = &dealloced;
-
-	jvalue_ref created_string = jstring_create_nocopy_full(j_str_to_buffer(dynstr, dynstrlen), strdealloc);
+	jvalue_ref created_string = jstring_create_nocopy_full(j_str_to_buffer(dynstr, dynstrlen), Dealloc::Free);
 	jvalue_ref old_ref = created_string;
-	QVERIFY(dealloced == false);
+	EXPECT_EQ(0, Dealloc::free_count);
 	j_release(&created_string);
 #ifndef NDEBUG
 	// we might not compile with DEBUG_FREED_POINTERS even in non-release mode
-	QVERIFY(created_string == (void *)0xdeadbeef || created_string == old_ref);
+	EXPECT_TRUE(created_string == (void *)0xdeadbeef || created_string == old_ref);
 #else
-	QVERIFY(created_string == old_ref);
+	EXPECT_TRUE(created_string == old_ref);
 #endif
-	QVERIFY(dealloced == true);
-#undef str
+	EXPECT_EQ(1, Dealloc::free_count);
 }
 
-void TestDOM::testInteger32Simple()
+TEST(TestDOM, Boolean)
 {
-}
+	jvalue_ref jval;
+	bool val(false);
 
-void TestDOM::testInteger320()
-{
+	jval = manage(jboolean_create(true));
+	EXPECT_EQ(CONV_OK, jboolean_get(jval, &val));
+	EXPECT_EQ(val, true);
 
-}
+	jval = manage(jboolean_create(false));
+	EXPECT_EQ(CONV_OK, jboolean_get(jval, &val));
+	EXPECT_EQ(val, false);
 
-void TestDOM::testInteger32Limits()
-{
-
-}
-
-void TestDOM::testInteger64Simple()
-{
-
-}
-
-void TestDOM::testInteger640()
-{
-
-}
-
-void TestDOM::testInteger64Limits()
-{
-
-}
-
-void TestDOM::testDouble0()
-{
-
-}
-
-void TestDOM::testDoubleInfinities()
-{
-
-}
-
-void TestDOM::testDoubleNaN()
-{
-
-}
-
-void TestDOM::testDoubleFromInteger()
-{
-
-}
-
-void TestDOM::testBoolean_data()
-{
-	QTest::addColumn<jvalue_ref>("jvalToTest");
-	QTest::addColumn<ConversionResultFlags>("expectedConvResult");
-	QTest::addColumn<bool>("expectedValue");
-
-	QTest::newRow("true bool") <<
-		manage(jboolean_create(true)) <<
-		(unsigned int)CONV_OK <<
-		true;
-
-	QTest::newRow("false bool") <<
-		manage(jboolean_create(false)) <<
-		(unsigned int)CONV_OK <<
-		false;
-
-	QTest::newRow("null") <<
-		jnull() <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		false;
+	jval = jnull();
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, false);
 
 #ifndef NDEBUG
 	// __attribute__((non_null)) might let the compiler optimize out
 	// the check.  this might also break non-gcc compilers
-	QTest::newRow("undefined") <<
-		(jvalue_ref)NULL <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		false;
+	jval = NULL;
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, false);
 #endif
 
-	QTest::newRow("empty object") <<
-		manage(jobject_create()) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		true;
+	jval = manage(jobject_create());
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, true);
 
-	QTest::newRow("non empty object") <<
-		manage(jobject_create_var(jkeyval(J_CSTR_TO_JVAL("nothing"), jnull()), J_END_OBJ_DECL)) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		true;
+	jval = manage(jobject_create_var(jkeyval(J_CSTR_TO_JVAL("nothing"), jnull()), J_END_OBJ_DECL));
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, true);
 
-	QTest::newRow("empty array") <<
-		manage(jarray_create(NULL)) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		true;
+	jval = manage(jarray_create_var(NULL, J_END_ARRAY_DECL));
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, true);
 
-	QTest::newRow("non empty array (single null element)") <<
-		manage(jarray_create_var(NULL, jnull(), J_END_ARRAY_DECL)) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		true;
+	jval = manage(jarray_create_var(NULL, jnull(), J_END_ARRAY_DECL));
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, true);
 
-	QTest::newRow("non empty array (single false element)") <<
-		manage(jarray_create_var(NULL, jboolean_create(false), J_END_ARRAY_DECL)) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		true;
+	jval = manage(jarray_create_var(NULL, jboolean_create(false), J_END_ARRAY_DECL));
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, true);
 
-	QTest::newRow("empty string") <<
-		manage(J_CSTR_TO_JVAL("")) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		false;
+	jval = manage(J_CSTR_TO_JVAL(""));
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, false);
 
-	QTest::newRow("non-empty string") <<
-		manage(J_CSTR_TO_JVAL("false")) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		true;
+	jval = manage(J_CSTR_TO_JVAL("false"));
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, true);
 
-	QTest::newRow("0 number") <<
-		manage(jnumber_create_i64(0)) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		false;
+	jval = manage(jnumber_create_f64(0));
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, false);
 
-	QTest::newRow("0 number 2") <<
-		manage(jnumber_create_f64(0)) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		false;
+	jval = manage(jnumber_create_unsafe(J_CSTR_TO_BUF("0"), NULL));
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, false);
 
-	QTest::newRow("0 number 3") <<
-		manage(jnumber_create_unsafe(J_CSTR_TO_BUF("0"), NULL)) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		false;
+	jval = manage(jnumber_create_unsafe(J_CSTR_TO_BUF("0.0"), NULL));
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, false);
 
-	QTest::newRow("0 number 4") <<
-		manage(jnumber_create_unsafe(J_CSTR_TO_BUF("0.0"), NULL)) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		false;
+	jval = manage(jnumber_create_unsafe(J_CSTR_TO_BUF("124"), NULL));
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(val, true);
 
-	QTest::newRow("non-0 number") <<
-		manage(jnumber_create_unsafe(J_CSTR_TO_BUF("124"), NULL)) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		true;
-
-	QTest::newRow("non-0 number 1") <<
-		manage(jnumber_create_i64(1)) <<
-		(unsigned int)CONV_NOT_A_BOOLEAN <<
-		true;
+	jval = manage(jnumber_create_i64(1));
+	EXPECT_EQ(CONV_NOT_A_BOOLEAN, jboolean_get(jval, &val));
+	EXPECT_EQ(true, val);
 }
-
-void TestDOM::testBoolean()
-{
-	QFETCH(jvalue_ref, jvalToTest);
-	QFETCH(ConversionResultFlags, expectedConvResult);
-	QFETCH(bool, expectedValue);
-
-	ConversionResultFlags actualConversion;
-	bool actualAsBool;
-
-	actualConversion = jboolean_get(jvalToTest, &actualAsBool);
-	QCOMPARE(actualAsBool, expectedValue);
-	QCOMPARE(actualConversion, expectedConvResult);
-}
-
-/***************************************************** HELPER ROUTINES ***************************************************/
-
-
-void TestDOM::validateBool(jvalue_ref jbool, bool expected, JType expectedType)
-{
-	bool actual;
-
-	switch (expectedType) {
-		case TJOBJ:
-			MY_VERIFY(jis_object(jbool));
-			break;
-		case TJARR:
-			MY_VERIFY(jis_array(jbool));
-			break;
-		case TJSTR:
-			MY_VERIFY(jis_string(jbool));
-			break;
-		case TJNUM:
-			MY_VERIFY(jis_number(jbool));
-			break;
-		case TJNULL:
-			MY_VERIFY(jis_null(jbool));
-			break;
-		default:
-			MY_COMPARE(jboolean_get(jbool, &actual), (ConversionResultFlags)CONV_OK);
-			MY_COMPARE(actual, expected);
-			return;
-	}
-
-	MY_COMPARE(jboolean_get(jbool, &actual), (ConversionResultFlags)CONV_NOT_A_BOOLEAN);
-	MY_COMPARE(actual, expected);
-}
-
-void TestDOM::validateString(jvalue_ref jstr, QByteArray expected)
-{
-	raw_buffer actualBuffer;
-	QByteArray actualBufferWrapper;
-
-	MY_VERIFY(jis_string(jstr));
-	actualBuffer = jstring_get_fast(jstr);
-	actualBufferWrapper = QByteArray::fromRawData(actualBuffer.m_str, actualBuffer.m_len);
-
-	MY_COMPARE(actualBufferWrapper, expected);
-	MY_VERIFY(jstring_equal2(jstr, (raw_buffer){expected.constData(), expected.size()}));
-}
-
-template <>
-void TestDOM::validateNumber<int32_t>(jvalue_ref jnum, int32_t expected, ConversionResultFlags conversionResult)
-{
-	int32_t actual;
-
-	MY_VERIFY(jis_number(jnum));
-	try {
-		MY_COMPARE(jnumber_get_i32(jnum, &actual), conversionResult);
-	} catch(...) {
-		std::cerr << "Error [" << actual << "!=" << expected << "] is: '" << result_str(jnumber_get_i32(jnum, &actual)) << "' but expecting '" << result_str(conversionResult) << "'" << std::endl;
-		throw;
-	}
-	MY_COMPARE(actual, expected);
-}
-
-template <>
-void TestDOM::validateNumber<int64_t>(jvalue_ref jnum, int64_t expected, ConversionResultFlags conversionResult)
-{
-	int64_t actual;
-
-	MY_VERIFY(jis_number(jnum));
-	try {
-		MY_COMPARE(jnumber_get_i64(jnum, &actual), conversionResult);
-	} catch(...) {
-		std::cerr << "Error [" << actual << "!=" << expected << "] is: '" << result_str(jnumber_get_i64(jnum, &actual)) << "' but expecting '" << result_str(conversionResult) << "'" << std::endl;
-		throw;
-	}
-	MY_COMPARE(actual, expected);
-}
-
-template <>
-void TestDOM::validateNumber<double>(jvalue_ref jnum, double expected, ConversionResultFlags conversionResult)
-{
-	double actual;
-
-	MY_VERIFY(jis_number(jnum));
-	try {
-		MY_COMPARE(jnumber_get_f64(jnum, &actual), conversionResult);
-	} catch(...) {
-		std::cerr << "Error [" << actual << "!=" << expected << "] is: '" << result_str(jnumber_get_f64(jnum, &actual)) << "' but expecting '" << result_str(conversionResult) << "'" << std::endl;
-		throw;
-	}
-
-	MY_VERIFY(actual == expected);	// unfortunately QTest::qCompare does a fuzzy comparison on the number
-}
-
-template <>
-void TestDOM::validateNumber<raw_buffer>(jvalue_ref jnum, raw_buffer expected, ConversionResultFlags conversionResult)
-{
-	raw_buffer actual;
-
-	MY_VERIFY(conversionResult == CONV_OK || conversionResult == CONV_GENERIC_ERROR || conversionResult == CONV_BAD_ARGS || conversionResult == CONV_NOT_A_RAW_NUM);
-	MY_VERIFY(jis_number(jnum));
-	MY_COMPARE(jnumber_get_raw(jnum, &actual), (ConversionResultFlags) conversionResult);
-	MY_COMPARE(actual.m_len, expected.m_len);
-	MY_COMPARE(memcmp(actual.m_str, expected.m_str, expected.m_len), 0);
-}
-
-jvalue_ref TestDOM::getChild(jvalue_ref obj, std::string key)
-{
-	jvalue_ref child;
-
-	MY_VERIFY(jis_object(obj));
-	MY_VERIFY(jobject_get_exists(obj, j_str_to_buffer(key.c_str(), key.size()), &child));
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChild(jvalue_ref arr, size_t i)
-{
-	jvalue_ref child;
-
-	MY_VERIFY(jis_array(arr));
-	child = jarray_get(arr, i);
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChildObject(jvalue_ref obj, std::string key)
-{
-	jvalue_ref child = getChild(obj, key);
-	MY_VERIFY(jis_object(child));
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChildArray(jvalue_ref obj, std::string key)
-{
-	jvalue_ref child = getChild(obj, key);
-	MY_VERIFY(jis_array(child));
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChildString(jvalue_ref obj, std::string key)
-{
-	jvalue_ref child = getChild(obj, key);
-	MY_VERIFY(jis_string(child));
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChildNumber(jvalue_ref obj, std::string key)
-{
-	jvalue_ref child = getChild(obj, key);
-	MY_VERIFY(jis_number(child));
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChildBool(jvalue_ref obj, std::string key)
-{
-	jvalue_ref child = getChild(obj, key);
-	MY_COMPARE(jboolean_get(child, NULL), (ConversionResultFlags)CONV_OK);
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChildNull(jvalue_ref obj, std::string key)
-{
-	jvalue_ref child = getChild(obj, key);
-	MY_VERIFY(jis_null(child));
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChildObject(jvalue_ref arr, size_t i)
-{
-	jvalue_ref child = getChild(arr, i);
-	MY_VERIFY(jis_object(child));
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChildArray(jvalue_ref arr, size_t i)
-{
-	jvalue_ref child = getChild(arr, i);
-	MY_VERIFY(jis_array(child));
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChildString(jvalue_ref arr, size_t i)
-{
-	jvalue_ref child = getChild(arr, i);
-	MY_VERIFY(jis_string(child));
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChildNumber(jvalue_ref arr, size_t i)
-{
-	jvalue_ref child = getChild(arr, i);
-	MY_VERIFY(jis_number(child));
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChildBool(jvalue_ref arr, size_t i)
-{
-	jvalue_ref child = getChild(arr, i);
-	MY_COMPARE(jboolean_get(child, NULL), (ConversionResultFlags)CONV_OK);
-
-	return child;
-}
-
-jvalue_ref TestDOM::getChildNull(jvalue_ref arr, size_t i)
-{
-	jvalue_ref child = getChild(arr, i);
-	MY_VERIFY(jis_null(child));
-
-	return child;
-}
-
-/***************************************************** HELPER ROUTINES ***************************************************/
-
-}
-}
-
-QTEST_APPLESS_MAIN(pjson::testc::TestDOM);

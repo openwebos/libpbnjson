@@ -60,15 +60,6 @@ endforeach()
 
 
 ######################### THE UNIT TESTS ############################
-# TestDOM test
-qt_hdrs(test_dom
-	TestDOM.h
-)
-
-src(test_dom
-	TestDOM.cpp
-)
-
 qt_hdrs(test_parse
 	TestParse.h
 )
@@ -122,27 +113,6 @@ src(smoketest_mem_badinput
 
 include_directories(${C_ENGINE_INCDIR})
 
-set(test_dom_test_list
-	testObjectSimple
-	testObjectComplicated
-	testObjectPut
-	testArraySimple
-	testArrayComplicated
-	testStringSimple
-	testStringDealloc
-	testInteger32Simple
-	testInteger320
-	testInteger32Limits
-	testInteger64Simple
-	testInteger640
-	testInteger64Limits
-	testDouble0
-	testDoubleInfinities
-	testDoubleNaN
-	testDoubleFromInteger
-	testBoolean
-)
-
 set(test_parse_test_list
 	testParseDoubleAccuracy
 	testParseFile
@@ -159,7 +129,6 @@ set(test_schema2_test_list
 )
 
 add_qt_test(test_yajl "YAJL sanity")
-add_qt_test(test_dom "DOM API")
 add_qt_test(test_parse "Parser logic")
 add_qt_test(test_sax "SAX API")
 add_qt_test(test_schema2 "Schema sanity checks")
@@ -180,10 +149,14 @@ add_schema_test(test_schema "Number sanity check" ${CMAKE_CURRENT_SOURCE_DIR}/..
 add_schema_test(test_schema "Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/contact/ Contact)
 
 
+add_executable(test_dom TestDOM.cpp)
+target_link_libraries(test_dom ${TEST_LIBRARIES} gtest gtest_main pthread)
+add_test(C.TestDOM test_dom)
+
 # Link runTests with what we want to test and the GTest and pthread library
 add_executable(test_jobject TestJobject.cpp)
 target_link_libraries(test_jobject ${TEST_LIBRARIES} gtest gtest_main pthread)
-add_test(test_jobject test_jobject)
+add_test(C.TestJObject test_jobject)
 
 #add_qt_test(test_schema "pjson-Schema Test Return Value" returnValue.schema returnValue1.good returnValue2.good returnValue3.good returnValue4.good)
 #add_qt_test(test_schema "pjson-Schema Test Invalid Return Value" returnValue.schema returnValue1.bad returnValue2.bad returnValue3.bad returnValue4.bad)
