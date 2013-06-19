@@ -44,7 +44,7 @@
 	} while (0)
 
 #define ERR_HANDLER_FAILED(err_handler, cb, ...) \
-	(err_handler->cb) == NULL || !((err_handler->cb)(err_handler->m_ctxt, ##__VA_ARGS__))
+	(err_handler) == NULL ||  (err_handler->cb) == NULL || !((err_handler->cb)(err_handler->m_ctxt, ##__VA_ARGS__))
 
 #define SCHEMA_HANDLER_FAILED(ctxt) ERR_HANDLER_FAILED((ctxt)->m_errors, m_schema, (ctxt))
 
@@ -645,7 +645,33 @@ static bool handleUnknownError(void *ctxt, JSAXContextRef parseCtxt)
 	return false;
 }
 
+static JErrorCallbacksRef create_default_error_handlers()
+{
+	JErrorCallbacksRef error_handler = (JErrorCallbacksRef)malloc(sizeof(struct JErrorCallbacks));
+
+	if (error_handler == NULL)
+		return NULL;
+
+
+	error_handler->m_parser = handleParserError;
+	error_handler->m_schema = handleSchemaError;
+	error_handler->m_unknown = handleUnknownError;
+
+	return error_handler;
+}
+
 JStreamRef jstreamInternal(jschema_ref schema, TopLevelType type, bool schemaNecessary)
+{
+	JSchemaInfo schemainfo;
+	JSchemaResolverRef resolver = jget_garbage_resolver();
+	JErrorCallbacksRef errors = NULL;
+
+	jschema_info_init(&schemainfo, schema, resolver, errors);
+
+	return jstreamInternalWithInfo(&schemainfo, type, schemaNecessary);
+}
+
+JStreamRef jstreamInternalWithInfo(JSchemaInfoRef schemainfo, TopLevelType type, bool schemaNecessary)
 {
 	ActualStream* stream = (ActualStream*)calloc(1, sizeof(ActualStream));
 	if (UNLIKELY(stream == NULL)) {
@@ -678,26 +704,24 @@ JStreamRef jstreamInternal(jschema_ref schema, TopLevelType type, bool schemaNec
 	stream->opened = type;
 	stream->error = GEN_OK;
 
-	JErrorCallbacksRef error_handler = (JErrorCallbacksRef)malloc(sizeof(struct JErrorCallbacks));
-	error_handler->m_parser = handleParserError;
-	error_handler->m_schema = handleSchemaError;
-	error_handler->m_unknown = handleUnknownError;
-	//TODO Resolver is left empty - implement if it's needed
-	//TODO error handler needs ctcx = jsaxcontextref
-	//TODO consider jget_garbage_resolver() (=NOOP_BAD_RESOLVER)
+	if(schemainfo->m_errHandler == NULL)
+	{
+		schemainfo->m_errHandler = create_default_error_handlers();
+	}
+
 	JSAXContextRef ctxt = (JSAXContextRef)malloc(sizeof(struct __JSAXContext));
 	DomInfo *domctxt = calloc(1, sizeof(struct DomInfo));
 	ctxt->ctxt = domctxt;
 	ctxt->m_handlers = &yajl_cb;
-	JSchemaInfo schemaInfo;
-	jschema_info_init(&schemaInfo, schema, NULL, error_handler);
-	ctxt->m_validation = jschema_init(&schemaInfo);
+
+	ctxt->m_validation = jschema_init(schemainfo);
 	if (ctxt->m_validation == NULL) {
 		return NULL;
 	}
-	ctxt->m_errors = error_handler;
+	ctxt->m_errors = schemainfo->m_errHandler;
 	ctxt->m_errorstate = jsax_error_init();
-	error_handler->m_ctxt = ctxt;
+	if (schemainfo->m_errHandler != NULL)
+		schemainfo->m_errHandler->m_ctxt = ctxt;
 	stream->error = GEN_OK;
 	stream->ctxt = ctxt;
 

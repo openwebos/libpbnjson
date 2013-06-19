@@ -41,7 +41,7 @@ public:
 	}
 };
 
-TEST(Schemakeywords, DISABLED_extends) {
+TEST(Schemakeywords, extends) {
 
 	pj::JSchemaFile schema("./data/schemas/TestSchemaKeywords/extends/extended.json");
 	ASSERT_TRUE(schema.isInitialized());

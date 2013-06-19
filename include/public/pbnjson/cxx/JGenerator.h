@@ -44,7 +44,7 @@ public:
 	 * @return True if the DOM was successfully stringified, false otherwise.  False typically indicates a schema violation or invalid DOM
 	 *         (e.g. Root of DOM isn't an object or array)
 	 */
-	bool toString(const JValue &val, const JSchema& schema, std::string &asStr);
+	bool toString(const JValue &obj, const JSchema& schema, std::string &asStr);
 
 	/**
 	 * Convenience function to wrap call to toString for JSON objects/arrays.

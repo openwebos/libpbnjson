@@ -23,6 +23,7 @@
 
 #include <stack>
 #include <string>
+#include <memory>
 
 #include "JSchema.h"
 
@@ -33,8 +34,7 @@ namespace pbnjson {
 class JErrorHandler;
 class JSchema;
 class JResolver;
-
-extern "C" JSchemaResolutionResult sax_schema_resolver(JSchemaResolverRef resolver, jschema_ref *resolvedSchema);
+class JSchemaResolverWrapper;
 
 /**
  * For consistency purposes, I'm borrowing the XML terminology.  The DOM represents JSON
@@ -170,17 +170,6 @@ protected:
 	virtual bool jsonNull() { return false; }
 
 	/**
-	 * Called when the schema should be resolved.  By default, this does not need to be overridden
-	 * (it invokes the resolver you created this class with).
-	 * @param abstractResolver - The resolution information from the C library
-	 * @param resolvedSchema - An output variable.  It is set to the parsed external schema & ownership is
-	 *                         transferred to the invoker of the callback.  This should be NULL if and only if
-	 *                         the return value is not SCHEMA_RESOLVED.
-	 * @return Whether or not resolution of the external schema reference succeeded.
-	 */
-	virtual JSchemaResolutionResult resolve(JSchemaResolverRef abstractResolver, jschema_ref *resolvedSchema);
-
-	/**
 	 * How your parser expects numbers to be handled.
 	 * JNUM_CONV_NATIVE - The numeric string is converted to a 64-bit integer or a floating point
 	 *                    number for you (using proper JSON number parsing - no assumptions about
@@ -197,6 +186,10 @@ protected:
 
 	JErrorHandler* errorHandlers() const;
 	void setErrorHandlers(JErrorHandler* errors);
+
+protected:
+	std::auto_ptr<JSchemaResolverWrapper> m_resolverWrapper;
+
 private:
 	std::stack<std::string> m_keyStack;
 	std::stack<DocumentState> m_stateStack;
@@ -204,7 +197,6 @@ private:
 	JResolver* m_resolver;
 
 	friend class SaxBounce;
-	friend JSchemaResolutionResult sax_schema_resolver(JSchemaResolverRef resolver, jschema_ref *resolvedSchema);
 };
 
 }

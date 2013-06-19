@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright ©2009-2013 Zenith Electronics LLC, a subsidiary of LG Electronics USA, Inc. All Rights Reserved.
+//      Copyright (c) 2009-2013 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -135,6 +135,9 @@ PJSON_API bool jis_null(jvalue_ref val);
  * NOTE: FOR THE IMPLEMENTOR - even if it is possible to extend the lifetime, it's not necessarily smart if COW is used since a write
  * might cause weirdness conceptually with the lifetime of the buffer if the parent already had its ownership released (best not to encourage
  * such API usage).
+ *
+ * NOTE: This function doesn't resolve any references to external additions in the schema.
+ * @see jvalue_tostring_schemainfo()
  */
 PJSON_API const char *jvalue_tostring(jvalue_ref val, const jschema_ref schema) NON_NULL(1, 2);
 
@@ -148,6 +151,16 @@ PJSON_API const char *jvalue_tostring(jvalue_ref val, const jschema_ref schema) 
  * @see jvalue_tostring
  */
 PJSON_API const char *jvalue_tostring_simple(jvalue_ref val) NON_NULL(1);
+
+/**
+ * Just like jvalue_tostring(), but is able to solve external references in the given schema.
+ * @param schemainfo This is used to carry useful information to the parser.
+ * 			m_schema is expected to contain the schema
+ *			m_resolver should contain a proper schema resolver
+ * @see JSchemaInfo
+ * @see jvalue_tostring()
+ */
+PJSON_API const char *jvalue_tostring_schemainfo (jvalue_ref val, const JSchemaInfoRef schemainfo) NON_NULL(1, 2);
 
 /*** JSON Object operations ***/
 /**

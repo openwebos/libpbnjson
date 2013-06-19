@@ -20,15 +20,10 @@ LICENSE@@@ */
 #include <JErrorHandler.h>
 #include <pbnjson.h>
 #include <JResolver.h>
+#include <JSchemaResolverWrapper.h>
 #include "liblog.h"
 
 namespace pbnjson {
-
-JSchemaResolutionResult sax_schema_resolver(JSchemaResolverRef resolver, jschema_ref *resolvedSchema)
-{
-	JParser *__this = reinterpret_cast<JParser *>(resolver->m_userCtxt);
-	return __this->resolve(resolver, resolvedSchema);
-}
 
 /**
  * Need this class to get around the member visibility restriction (& not having to declare all of the functions as
@@ -150,19 +145,21 @@ static inline raw_buffer strToRawBuffer(const std::string& str)
 }
 
 JParser::JParser(JResolver* schemaResolver)
-	: m_errors(NULL), m_resolver(schemaResolver)
+	: m_resolverWrapper(new JSchemaResolverWrapper(schemaResolver))
+	, m_errors(NULL)
 {
 }
 
 JParser::JParser(const JParser& other)
-	: m_keyStack(other.m_keyStack), m_stateStack(other.m_stateStack), m_errors(other.m_errors)
+	: m_resolverWrapper(new JSchemaResolverWrapper(*other.m_resolverWrapper))
+	, m_keyStack(other.m_keyStack)
+	, m_stateStack(other.m_stateStack)
+	, m_errors(other.m_errors)
 {
-
 }
 
 JParser::~JParser()
 {
-
 }
 
 bool JParser::parse(const std::string& input, const JSchema& schema, JErrorHandler *errors)
@@ -194,34 +191,6 @@ bool JParser::parse(const std::string& input, const JSchema& schema, JErrorHandl
 	}
 
 	return true;
-}
-
-JSchemaResolutionResult JParser::resolve(JSchemaResolverRef resolver, jschema_ref *resolvedSchema)
-{
-	if (m_resolver == NULL) {
-		PJ_LOG_ERR("Parser constructed with NULL JResolver. Unable to resolve external refs");
-		return SCHEMA_GENERIC_ERROR;
-	}
-
-	if (resolver == NULL) {
-		PJ_LOG_ERR("Parameter resolver is NULL. Unable to resolve external refs");
-		return SCHEMA_GENERIC_ERROR;
-	}
-
-	JSchema::Resource *simpleResource = new JSchema::Resource(resolver->m_ctxt, JSchema::Resource::CopySchema);
-	JSchema parent(simpleResource);
-
-	std::string resource(resolver->m_resourceToResolve.m_str, resolver->m_resourceToResolve.m_len);
-
-	JResolver::ResolutionRequest request(parent, resource);
-	JSchemaResolutionResult result;
-	JSchema resolvedWrapper(m_resolver->resolve(request, result));
-
-	if (result == SCHEMA_RESOLVED) {
-		*resolvedSchema = jschema_copy(resolvedWrapper.peek());
-	} else
-		*resolvedSchema = NULL;
-	return result;
 }
 
 JErrorHandler* JParser::errorHandlers() const

@@ -96,7 +96,7 @@ static jvalue JEMPTY_STR = {
 	.m_toStringDealloc = NULL
 };
 
-static const char *jvalue_tostring_internal_layer2 (jvalue_ref val, jschema_ref schema, bool schemaNecessary);
+static const char *jvalue_tostring_internal_layer2 (jvalue_ref val, JSchemaInfoRef schemainfo, bool schemaNecessary);
 static bool jvalue_to_string_append (jvalue_ref jref, JStreamRef generating);
 static bool jobject_to_string_append (jvalue_ref jref, JStreamRef generating);
 static bool jarray_to_string_append (jvalue_ref jref, JStreamRef generating);
@@ -367,7 +367,7 @@ jvalue_ref jnull ()
 	return &JNULL;
 }
 
-static const char *jvalue_tostring_internal_layer2 (jvalue_ref val, jschema_ref schema, bool schemaNecessary)
+static const char *jvalue_tostring_internal_layer2 (jvalue_ref val, JSchemaInfoRef schemainfo, bool schemaNecessary)
 {
 	SANITY_CHECK_POINTER(val);
 	CHECK_POINTER_RETURN_VALUE(val, "null");
@@ -375,7 +375,7 @@ static const char *jvalue_tostring_internal_layer2 (jvalue_ref val, jschema_ref 
 	if (!val->m_toString) {
 		bool parseok = false;
 		StreamStatus error;
-		JStreamRef generating = jstreamInternal(schema, TOP_None, schemaNecessary);
+		JStreamRef generating = jstreamInternalWithInfo(schemainfo, TOP_None, schemaNecessary);
 		if (generating == NULL) {
 			return NULL;
 		}
@@ -391,29 +391,48 @@ static const char *jvalue_tostring_internal_layer2 (jvalue_ref val, jschema_ref 
 	return val->m_toString;
 }
 
-static const char *jvalue_tostring_internal_layer1 (jvalue_ref val, jschema_ref schema, bool schemaNecessary)
+static const char *jvalue_tostring_internal_layer1 (jvalue_ref val, JSchemaInfoRef schemainfo, bool schemaNecessary)
 {
 	if (val->m_toStringDealloc)
 		val->m_toStringDealloc(val->m_toString);
 	val->m_toString = NULL;
 
-	const char* result = jvalue_tostring_internal_layer2 (val, schema, schemaNecessary);
+	const char* result = jvalue_tostring_internal_layer2 (val, schemainfo, schemaNecessary);
 
 	if (result == NULL) {
 		PJ_LOG_ERR("Failed to generate string from jvalue. Error location: %s", val->m_toString);
 	}
 
 	return result;
+
+}
+
+//if schemainfo->m_schema is null, schema_info_all() is used
+const char * jvalue_tostring_schemainfo (jvalue_ref val, const JSchemaInfoRef schemainfo)
+{
+	return jvalue_tostring_internal_layer1(val, schemainfo, true);
 }
 
 const char *jvalue_tostring_simple(jvalue_ref val)
 {
-	return jvalue_tostring_internal_layer1(val, jschema_all(), false);
+	JSchemaInfo schemainfo;
+	JSchemaResolverRef resolver = NULL;
+	JErrorCallbacksRef errors = NULL;
+
+	jschema_info_init(&schemainfo, jschema_all(), resolver, errors);
+
+	return jvalue_tostring_internal_layer1(val, &schemainfo, false);
 }
 
 const char * jvalue_tostring (jvalue_ref val, const jschema_ref schema)
 {
-	return jvalue_tostring_internal_layer1(val, schema, true);
+	JSchemaInfo schemainfo;
+	JSchemaResolverRef resolver = NULL;
+	JErrorCallbacksRef errors = NULL;
+
+	jschema_info_init(&schemainfo, schema, resolver, errors);
+
+	return jvalue_tostring_internal_layer1(val, &schemainfo, true);
 }
 
 /************************* JSON OBJECT API **************************************/

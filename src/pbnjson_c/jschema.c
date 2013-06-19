@@ -476,6 +476,7 @@ void jschema_info_init(JSchemaInfoRef schemaInfo, jschema_ref schema, JSchemaRes
 	schemaInfo->m_schema = schema;
 	schemaInfo->m_errHandler = errHandler;
 	schemaInfo->m_resolver = resolver;
+
 #ifndef NDEBUG
 	for (int i = sizeof(schemaInfo->m_padding) / sizeof(schemaInfo->m_padding[0]) - 1; i >= 0; i--)
 		SANITY_KILL_POINTER(schemaInfo->m_padding[i]);
@@ -782,7 +783,6 @@ ValidationStateRef jschema_init(JSchemaInfoRef schemaInfo)
 #if !BYPASS_SCHEMA
 	ValidationStateRef validation = (ValidationStateRef) malloc(sizeof(struct ValidationState));
 	CHECK_POINTER_RETURN_NULL(validation);
-
 	validation->m_state = calloc(1, sizeof(struct SchemaState));
 	if (validation->m_state == NULL) {
 		validation_destroy(&validation);
@@ -1441,8 +1441,6 @@ bool jschema_key(JSAXContextRef sax, ValidationStateRef parseState, raw_buffer o
 				assert(jis_object(specificSchema));
 				goto append_schema;
 			}
-			PJ_SCHEMA_ERR("Schema problem - schema for instance key %.*s is null instead of object",
-					(int)objKey.m_len, objKey.m_str);
 		}
 		// properties field either didn't contain the key or didn't exist
 		// let's use additionalProperties if it exists

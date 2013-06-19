@@ -17,6 +17,7 @@
 // LICENSE@@@
 
 #include <JGenerator.h>
+#include <JSchemaResolverWrapper.h>
 #include <pbnjson.h>
 
 #include <JResolver.h>
@@ -28,12 +29,33 @@ JGenerator::JGenerator(JResolver *resolver)
 {
 }
 
-JGenerator::~JGenerator() {
+JGenerator::~JGenerator()
+{
 }
 
 bool JGenerator::toString(const JValue &obj, const JSchema& schema, std::string &asStr)
 {
-	const char *str = jvalue_tostring(obj.peekRaw(), schema.peek());
+	const char *str;
+
+	if(m_resolver == NULL)
+	{
+		str = jvalue_tostring(obj.peekRaw(), schema.peek());
+	}
+	else
+	{
+		JSchemaResolverWrapper resolverWrapper(m_resolver);
+
+		JSchemaResolver schemaresolver;
+		schemaresolver.m_resolve = &(resolverWrapper.sax_schema_resolver);
+		schemaresolver.m_userCtxt = &resolverWrapper;
+
+		JSchemaInfo schemainfo;
+		jschema_info_init(&schemainfo, schema.peek(), &schemaresolver, NULL);
+
+		str = jvalue_tostring_schemainfo(obj.peekRaw(), &schemainfo);
+	}
+
+
 	if (UNLIKELY(str == NULL)) {
 		asStr = "";
 		return false;

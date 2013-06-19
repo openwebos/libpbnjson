@@ -20,6 +20,7 @@
 #include <pbnjson.h>
 #include "JErrorHandler.h"
 #include <JSchema.h>
+#include "JSchemaResolverWrapper.h"
 #include "../pbnjson_c/jschema_types_internal.h"
 
 #include <JResolver.h>
@@ -79,7 +80,7 @@ static bool __err_unknown(void *ctxt, JSAXContextRef parseCtxt)
 }
 
 JDomParser::JDomParser(JResolver *resolver)
-	: JParser(resolver), m_optimization(DOMOPT_NOOPT), m_resolver(resolver)
+	: JParser(resolver), m_optimization(DOMOPT_NOOPT)
 {
 }
 
@@ -105,8 +106,8 @@ JSchemaInfo JDomParser::prepare(const JSchema& schema, const JSchemaResolver& re
 JSchemaResolver JDomParser::prepareResolver() const
 {
 	JSchemaResolver resolver;
-	resolver.m_resolve = sax_schema_resolver;
-	resolver.m_userCtxt = const_cast<JDomParser *>(this);
+	resolver.m_resolve = &(m_resolverWrapper->sax_schema_resolver);
+	resolver.m_userCtxt = m_resolverWrapper.get();
 	return resolver;
 }
 
