@@ -89,3 +89,7 @@ add_test(CPP.TestDOM test_cppdom)
 add_executable(test_jarray TestJArray.cpp)
 target_link_libraries(test_jarray ${TEST_LIBRARIES} gtest gtest_main pthread)
 add_test(CPP.TestJArray test_jarray)
+
+add_executable(test_jvalue2 TestJValue2.cpp)
+target_link_libraries(test_jvalue2 ${TEST_LIBRARIES} gtest gtest_main pthread)
+add_test(CPP.TestJValue2 test_jvalue2)

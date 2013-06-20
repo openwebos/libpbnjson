@@ -48,7 +48,7 @@ class JSchema;
  * @li String: Represented by text surrounded with double-quotes.  Double-quotes within the string are escaped with '\'
  * @li Number: An abstract number type that can be represented in several forms as a string (+/-XXXX.YYYYEZZZZ) where almost all the parts
  *             are optional.
- * @li Boolean: As a string, "true" or "false" (without quotes).  
+ * @li Boolean: As a string, "true" or "false" (without quotes).
  * @li Null: As a string, "null" (without quotes).
  * @see http://www.json.org
  */
@@ -112,12 +112,15 @@ public:
 	JValue();
 
 	/**
-	 * Regular copy constructor - no magic here.
+	 * Regular copy constructor. The newly constructed JValue object references
+	 * the same JSON value as the other. Use duplicate() to create a copy
+	 * of the referenced JSON.
 	 *
 	 * @param[in] other
+	 * @see duplicate()
 	 */
 	JValue(const JValue& other);
-	
+
 	/**
 	 * Convenience method to construct a JSON string.
 	 * \note This isn't a routine to parse JSON.  It actually creates a JSON representation of a string.
@@ -134,7 +137,7 @@ public:
 	/**
 	 * This constructor is explicitely specialized - it is used
 	 * to construct a primitive JSON value (string, number, boolean).
-	 * 
+	 *
 	 * The supported C types are converted as follows:
 	 *    std::string : JSON string
 	 *    int32_t, int64_t, double, NumericString : JSON number
@@ -149,7 +152,15 @@ public:
 	 */
 	template <class V>
 	JValue(const V& v);
+
+	/**
+	 * Create a new instance of JSON value, identical to this one but completely independent.
+	 *
+	 * @return The reference to newly created JSON value.
+	 */
+	JValue duplicate() const;
 	//@}
+
 	~JValue();
 
 	//{@
@@ -500,7 +511,7 @@ public:
 	/**
 	 * Convenience method to convert to a boolean.  I strongly discourage using it.
 	 *
-	 * 
+	 *
 	 */
 	bool asBool() const
 	{
@@ -771,20 +782,20 @@ public:
 	ObjectConstIterator begin() const;
 
 	/**
- 	 * Get the iterator representing the position after the last key-value pair in this object.
- 	 *
- 	 * \note Behaviour is undefined if this isn't an object.
- 	 *
- 	 * \note Behaviour is currently undefined if you try to modify an object while iterating.
- 	 *       This is untested & likely unsafe.
- 	 *
- 	 * \note Behaviour is undefined if you try to iterate the returned iterator.
- 	 *
- 	 * \return An iterator representing the position after the last key/value pair in this JSON object.
- 	 *
- 	 * \see begin()
- 	 * \see end() const
- 	 */
+	 * Get the iterator representing the position after the last key-value pair in this object.
+	 *
+	 * \note Behaviour is undefined if this isn't an object.
+	 *
+	 * \note Behaviour is currently undefined if you try to modify an object while iterating.
+	 *       This is untested & likely unsafe.
+	 *
+	 * \note Behaviour is undefined if you try to iterate the returned iterator.
+	 *
+	 * \return An iterator representing the position after the last key/value pair in this JSON object.
+	 *
+	 * \see begin()
+	 * \see end() const
+	 */
 	ObjectIterator end();
 	/**
 	 * Const-safe version of the iterator.

@@ -163,6 +163,11 @@ JValue& JValue::operator=(const JValue& other)
 	return *this;
 }
 
+JValue JValue::duplicate() const
+{
+	return jvalue_duplicate(this->peekRaw());
+}
+
 JValue Object()
 {
 	return jobject_create();

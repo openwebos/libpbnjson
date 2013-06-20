@@ -87,6 +87,14 @@ extern "C" {
 PJSON_API jvalue_ref jvalue_copy(jvalue_ref val);
 
 /**
+ * Create a deep copy of the JSON value so that modifications in val are guaranteed to not
+ * be seen in the copy.
+ *
+ * The implementation may cheat however with immutable objects by still doing a reference count.
+ */
+PJSON_API jvalue_ref jvalue_duplicate(jvalue_ref val);
+
+/**
  * Release ownership from *val.  *val has an undefined value afterwards.  It is an error
  * to call this on references for which ownership does not preside with the caller
  * (i.e. only call when there was a _create or _copy call was made without a corresponding put, append, or release)

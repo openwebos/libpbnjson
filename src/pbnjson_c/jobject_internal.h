@@ -122,14 +122,6 @@ extern PJSON_LOCAL jvalue JNULL;
  */
 PJSON_LOCAL size_t jobject_size_internal(jvalue_ref obj);
 
-/**
- * Create a deep copy of the JSON value so that modifications in val are guaranteed to not
- * be seen in the copy.
- *
- * The implementation may cheat however with immutable objects by still doing a reference count.
- */
-extern PJSON_LOCAL jvalue_ref jvalue_duplicate(jvalue_ref val);
-
 extern PJSON_LOCAL int64_t jnumber_deref_i64(jvalue_ref num);
 
 extern PJSON_LOCAL bool jboolean_deref(jvalue_ref boolean);
