@@ -68,19 +68,16 @@ add_schema_test(test_cppschema "C++ Number sanity check" ${CMAKE_CURRENT_SOURCE_
 add_schema_test(test_cppschema "C++ Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/contact/ Contact)
 add_qt_test(test_jvalue "Test JValue class")
 
+SET( CPPUnitTest
+	TestDOM
+	TestJArray
+	TestJValue2
+	TestJValueGTest
+	TestRegression
+	)
 
-add_executable(test_regression TestRegression.cpp)
-target_link_libraries(test_regression ${TEST_LIBRARIES} gtest gtest_main pthread)
-add_test(CPP.TestRegression test_regression)
-
-add_executable(test_cppdom TestDOM.cpp)
-target_link_libraries(test_cppdom ${TEST_LIBRARIES} gtest gtest_main pthread)
-add_test(CPP.TestDOM test_cppdom)
-
-add_executable(test_jarray TestJArray.cpp)
-target_link_libraries(test_jarray ${TEST_LIBRARIES} gtest gtest_main pthread)
-add_test(CPP.TestJArray test_jarray)
-
-add_executable(test_jvalue2 TestJValue2.cpp)
-target_link_libraries(test_jvalue2 ${TEST_LIBRARIES} gtest gtest_main pthread)
-add_test(CPP.TestJValue2 test_jvalue2)
+FOREACH(TEST ${CPPUnitTest})
+	add_executable(${TEST} ${TEST}.cpp)
+	target_link_libraries(${TEST} ${TEST_LIBRARIES} gtest gtest_main pthread)
+	add_test(CPP.${TEST} ${TEST})
+ENDFOREACH()
