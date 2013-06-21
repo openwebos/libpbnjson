@@ -39,6 +39,7 @@
 namespace pbnjson {
 
 class JSchema;
+class JValueArrayElement;
 
 /**
  * This class represents an opaque object containing a JSON value.
@@ -59,6 +60,7 @@ class PJSONCXX_API JValue {
 	friend JValue Array();
 
 private:
+
 	static JValue JNULL;
 
 	jvalue_ref m_jval;
@@ -78,6 +80,7 @@ private:
 	const char * asCString() const;
 
 protected:
+
 	jvalue_ref peekRaw() const {
 		return m_jval;
 	}
@@ -89,6 +92,7 @@ protected:
 	}
 
 public:
+
 	/**
 	 * Convenience alias for representing a key/value pair within a JSON object.
 	 */
@@ -256,7 +260,8 @@ public:
 	 * @see JValue::hasKey
 	 * @see JValue::isArray
 	 */
-	JValue operator[](int index) const;
+	JValueArrayElement operator[](int index) const;
+public:
 
 	//{@
 	/**
@@ -273,7 +278,7 @@ public:
 	 * @see JValue::hasKey
 	 * @see JValue::isObject
 	 */
-	JValue operator[](const std::string& key) const;
+	JValueArrayElement operator[](const std::string& key) const;
 	/**
 	 * Convenience method to access values within this JSON object,
 	 * without using STL.
@@ -281,7 +286,7 @@ public:
 	 * @param[in] key The key to look up
 	 * @return The value associated with the key, or a JSON null if this isn't a JSON object.
 	 */
-	JValue operator[](const raw_buffer& key) const;
+	JValueArrayElement operator[](const raw_buffer& key) const;
 	//@}
 
 
@@ -868,6 +873,8 @@ template <>
 JValue::JValue(const bool& value);
 template<>
 JValue::JValue(const NumericString& value);
+template<>
+JValue::JValue(const JValueArrayElement& value);
 //@}
 
 /*! \name asNumber template specializations
@@ -909,6 +916,15 @@ NumericString JValue::asNumber<NumericString>() const;
  */
 std::ostream& operator<<(std::ostream& out, const JValue &toprint);
 #endif
+
+class PJSONCXX_API JValueArrayElement
+	: public JValue
+{
+	friend class JValue;
+
+	JValueArrayElement(const JValue & value);
+	void operator=(const JValue& other);
+};
 
 }
 

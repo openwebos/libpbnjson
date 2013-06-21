@@ -136,10 +136,14 @@ JValue::JValue(const NumericString& value)
 #endif
 }
 
-JValue::~JValue()
+template<>
+JValue::JValue(const JValueArrayElement& other)
+	: m_jval(jvalue_copy(other.m_jval)), m_input(other.m_input)
+#if PBNJSON_ZERO_COPY_STL_STR
+	, m_children(other.m_children)
+#endif
 {
-	PJ_DBG_CXX_STR(std::cerr << "Releasing handle to " << (void *)m_input.c_str() << std::endl);
-	j_release(&m_jval);
+
 }
 
 JValue::JValue(const JValue& other)
@@ -149,6 +153,13 @@ JValue::JValue(const JValue& other)
 #endif
 {
 }
+
+JValue::~JValue()
+{
+	PJ_DBG_CXX_STR(std::cerr << "Releasing handle to " << (void *)m_input.c_str() << std::endl);
+	j_release(&m_jval);
+}
+
 
 JValue& JValue::operator=(const JValue& other)
 {
@@ -325,20 +336,19 @@ bool JValue::operator==(bool other) const
 	return false;
 }
 
-
-JValue JValue::operator[](int index) const
+JValueArrayElement JValue::operator[](int index) const
 {
-	return jvalue_copy(jarray_get(m_jval, index));
+	return JValue(jvalue_copy(jarray_get(m_jval, index)));
 }
 
-JValue JValue::operator[](const std::string& key) const
+JValueArrayElement JValue::operator[](const std::string& key) const
 {
 	return this->operator[](j_str_to_buffer(key.c_str(), key.size()));
 }
 
-JValue JValue::operator[](const raw_buffer& key) const
+JValueArrayElement JValue::operator[](const raw_buffer& key) const
 {
-	return jvalue_copy(jobject_get(m_jval, key));
+	return JValueArrayElement(jvalue_copy(jobject_get(m_jval, key)));
 }
 
 bool JValue::put(size_t index, const JValue& value)
@@ -794,6 +804,11 @@ JValue::ObjectConstIterator JValue::end() const
 NumericString::operator JValue()
 {
 	return JValue(*this);
+}
+
+JValueArrayElement::JValueArrayElement(const JValue & value)
+	: JValue(value)
+{
 }
 
 }
