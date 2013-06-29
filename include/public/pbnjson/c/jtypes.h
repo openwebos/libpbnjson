@@ -20,6 +20,7 @@
 #define JOBJECT_TYPES_H_
 
 #include <stddef.h>
+#include <glib.h>
 #include "japi.h"
 
 #ifdef __cplusplus
@@ -29,7 +30,7 @@ extern "C" {
 typedef struct jvalue* jvalue_ref;
 
 typedef struct {
-	void *m_opaque;
+	GHashTableIter m_iter;
 } jobject_iter;
 
 typedef struct {
@@ -67,3 +68,4 @@ typedef void (*jdeallocator)(void *buffer);
 #endif
 
 #endif /* JOBJECT_TYPES_H_ */
+// vim: set noet ts=4 sw=4:

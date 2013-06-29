@@ -21,18 +21,11 @@
 
 #include <japi.h>
 #include <jtypes.h>
-#include "linked_list.h"
+#include <glib.h>
 
 #define ARRAY_BUCKET_SIZE (1 << 4)
 #define OUTSIDE_ARR_BUCKET_RANGE(value) ((value) & (~(ARRAY_BUCKET_SIZE - 1)))
 
-
-/**
- * MUST BE A POWER OF 2
- */
-#define OBJECT_BUCKET_SIZE (1 << 3)
-#define OBJECT_BUCKET_MODULO(num) ((num) & (OBJECT_BUCKET_SIZE - 1))
-#define OUTSIDE_OBJ_BUCKET_RANGE(value) ((value) & (~(OBJECT_BUCKET_SIZE - 1)))
 
 typedef enum {
 	JV_NULL = 0,
@@ -77,25 +70,8 @@ typedef struct PJSON_LOCAL {
 } jarray;
 
 typedef struct PJSON_LOCAL {
-	list_head list;
-	jobject_key_value entry;
-} jo_keyval_iter;
-
-struct jkey_value_array;
-
-struct jkey_value_array {
-	jo_keyval_iter m_bucket[OBJECT_BUCKET_SIZE];
-	struct jkey_value_array *m_next;
-};
-
-typedef struct PJSON_LOCAL jkey_value_array jkey_value_array;
-
-typedef struct {
-	jkey_value_array m_table;
-	jo_keyval_iter m_start;
+	GHashTable *m_members;
 } jobject;
-
-// iterator already has a typedef
 
 struct jvalue {
 	union {
@@ -117,10 +93,7 @@ typedef struct PJSON_LOCAL jvalue jvalue;
 
 extern PJSON_LOCAL jvalue JNULL;
 
-/**
- * The number of key/value pairs
- */
-PJSON_LOCAL size_t jobject_size_internal(jvalue_ref obj);
+PJSON_LOCAL bool jobject_init(jobject *obj);
 
 extern PJSON_LOCAL int64_t jnumber_deref_i64(jvalue_ref num);
 

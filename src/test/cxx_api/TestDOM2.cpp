@@ -23,14 +23,6 @@
 using namespace std;
 using namespace pbnjson;
 
-static ssize_t GetObjectSize(const pbnjson::JValue& value)
-{
-	ssize_t result = 0;
-	for (pbnjson::JValue::ObjectConstIterator i = value.begin(); i != value.end(); ++i)
-		++result;
-	return result;
-}
-
 TEST(TestDOM, ParserObjectSimple)
 {
 	JDomParser parser(nullptr);
@@ -39,10 +31,10 @@ TEST(TestDOM, ParserObjectSimple)
 	ASSERT_TRUE(parser.parse("{}", schema));
 
 	JValue parsed = parser.getDom();
-	EXPECT_TRUE(parsed.isObject());
-	EXPECT_TRUE(parsed.begin() == parsed.end());
-	EXPECT_FALSE(parsed.begin() != parsed.end());
-	EXPECT_EQ(GetObjectSize(parsed), ssize_t{0});
+	ASSERT_TRUE(parsed.isObject());
+	//EXPECT_TRUE(parsed.begin() == parsed.end());
+	//EXPECT_FALSE(parsed.begin() != parsed.end());
+	EXPECT_EQ(parsed.objectSize(), ssize_t{0});
 }
 
 TEST(TestDOM, ParserObjectComplex)
@@ -53,17 +45,18 @@ TEST(TestDOM, ParserObjectComplex)
 	std::string dom1Str = "{\"key1\" : null, \"key2\" : \"str\", \"key3\" : 506 }";
 	ASSERT_TRUE(parser.parse(dom1Str, schema));
 	JValue parsed = parser.getDom();
-	EXPECT_EQ(GetObjectSize(parsed), ssize_t{3});
+	ASSERT_TRUE(parsed.isObject());
+	EXPECT_EQ(parsed.objectSize(), ssize_t{3});
 
 	auto val1 = JValue{parsed["key1"]};
 	EXPECT_TRUE(val1.isNull());
 
 	auto val2 = JValue{parsed["key2"]};
-	EXPECT_TRUE(val2.isString());
+	ASSERT_TRUE(val2.isString());
 	EXPECT_EQ(val2.asString(), string{"str"});
 
 	auto val3 = JValue{parsed["key3"]};
-	EXPECT_TRUE(val3.isNumber());
+	ASSERT_TRUE(val3.isNumber());
 	EXPECT_EQ(val3.asNumber<std::string>(), string{"506"});
 	EXPECT_EQ(val3.asNumber<int64_t>(), int64_t{506});
 }
@@ -88,32 +81,32 @@ TEST(TestDOM, ParserObjectComplex2)
 	ASSERT_TRUE(parser.parse(dom2Str, schema));
 
 	JValue parsed = parser.getDom();
-	EXPECT_TRUE(parsed.isObject());
-	EXPECT_EQ(GetObjectSize(parsed), ssize_t{1});
+	ASSERT_TRUE(parsed.isObject());
+	EXPECT_EQ(ssize_t{1}, parsed.objectSize());
 
-	EXPECT_TRUE(parsed["key1"].isObject());
-	EXPECT_EQ(GetObjectSize(parsed["key1"]), ssize_t{1});
+	ASSERT_TRUE(parsed["key1"].isObject());
+	EXPECT_EQ(ssize_t{1}, parsed["key1"].objectSize());
 
-	EXPECT_TRUE(parsed["key1"]["key1"].isObject());
-	EXPECT_EQ(GetObjectSize(parsed["key1"]["key1"]), ssize_t{3});
+	ASSERT_TRUE(parsed["key1"]["key1"].isObject());
+	EXPECT_EQ(ssize_t{3}, parsed["key1"]["key1"].objectSize());
 
-	EXPECT_TRUE(parsed["key1"]["key1"]["foo"].isArray());
-	EXPECT_EQ(parsed["key1"]["key1"]["foo"].arraySize(), ssize_t{3});
+	ASSERT_TRUE(parsed["key1"]["key1"]["foo"].isArray());
+	EXPECT_EQ(ssize_t{3}, parsed["key1"]["key1"]["foo"].arraySize());
 
 	// the (ssize_t) cast is only necessary for OSX 10.5 which uses an old compiler
-	EXPECT_TRUE(parsed["key1"]["key1"]["foo"][0].isString());
-	EXPECT_EQ(parsed["key1"]["key1"]["foo"][0].asString(), std::string{"bar"});
+	ASSERT_TRUE(parsed["key1"]["key1"]["foo"][0].isString());
+	EXPECT_EQ(std::string{"bar"}, parsed["key1"]["key1"]["foo"][0].asString());
 
-	EXPECT_TRUE(parsed["key1"]["key1"]["foo"][1].isNumber());
-	EXPECT_EQ(parsed["key1"]["key1"]["foo"][1].asNumber<int32_t>(), 5);
+	ASSERT_TRUE(parsed["key1"]["key1"]["foo"][1].isNumber());
+	EXPECT_EQ(5, parsed["key1"]["key1"]["foo"][1].asNumber<int32_t>());
 
 	EXPECT_TRUE(parsed["key1"]["key1"]["foo"][2].isNull());
 
-	EXPECT_TRUE(parsed["key1"]["key1"]["bar"].isBoolean());
-	EXPECT_EQ(parsed["key1"]["key1"]["bar"].asBool(), false);
+	ASSERT_TRUE(parsed["key1"]["key1"]["bar"].isBoolean());
+	EXPECT_FALSE(parsed["key1"]["key1"]["bar"].asBool());
 
-	EXPECT_TRUE(parsed["key1"]["key1"]["test"].isString());
-	EXPECT_EQ(parsed["key1"]["key1"]["test"].asString(), std::string{"abcd"});
+	ASSERT_TRUE(parsed["key1"]["key1"]["test"].isString());
+	EXPECT_EQ(std::string{"abcd"}, parsed["key1"]["key1"]["test"].asString());
 }
 
 TEST(TestDOM, ParserObjectCommaMemLeak)
@@ -141,22 +134,23 @@ TEST(TestDOM, ParserObjectCommaMemLeak)
 TEST(TestDOM, ObjectSimple)
 {
 	JValue simpleObject = Object();
-	JSchemaFragment schema("{}");
-	JGenerator generator(NULL);
 
 	simpleObject.put("abc", "def");
-	EXPECT_TRUE(simpleObject.hasKey("abc"));
-	EXPECT_TRUE(simpleObject["abc"].isString());
-	EXPECT_EQ(simpleObject["abc"].asString(), std::string{"def"});
+	ASSERT_TRUE(simpleObject.hasKey("abc"));
+	ASSERT_TRUE(simpleObject["abc"].isString());
+	EXPECT_EQ(std::string{"def"}, simpleObject["abc"].asString());
 
 	simpleObject.put("def", NumericString("5463"));
-	EXPECT_TRUE(simpleObject.hasKey("def"));
-	EXPECT_TRUE(simpleObject["def"].isNumber());
-	EXPECT_EQ(simpleObject["def"].asNumber<int32_t>(), 5463);
+	ASSERT_TRUE(simpleObject.hasKey("def"));
+	ASSERT_TRUE(simpleObject["def"].isNumber());
+	EXPECT_EQ(5463, simpleObject["def"].asNumber<int32_t>());
 
 	string simpleObjectAsStr;
-	ASSERT_TRUE(generator.toString(simpleObject, schema, simpleObjectAsStr));
-	EXPECT_EQ(simpleObjectAsStr, string("{\"abc\":\"def\",\"def\":5463}"));
+	JSchemaFragment schema("{}");
+	ASSERT_TRUE(JGenerator{}.toString(simpleObject, schema, simpleObjectAsStr));
+	JDomParser parser;
+	ASSERT_TRUE(parser.parse(simpleObjectAsStr, schema));
+	EXPECT_TRUE(simpleObject == parser.getDom());
 
 	EXPECT_TRUE(simpleObject.isObject());
 }
@@ -170,7 +164,7 @@ TEST(TestDOM, ObjectIterator)
 	ASSERT_TRUE(parser.parse(inputStr, schema));
 	JValue parsed = parser.getDom();
 
-	EXPECT_TRUE(parsed.isObject());
+	ASSERT_TRUE(parsed.isObject());
 	EXPECT_TRUE(parsed.hasKey("a"));
 	EXPECT_TRUE(parsed["a"].isObject());
 	EXPECT_TRUE(parsed["a"].hasKey("b"));

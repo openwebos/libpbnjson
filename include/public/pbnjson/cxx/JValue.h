@@ -302,6 +302,13 @@ public:
 	bool hasKey(const std::string& key) const;
 
 	/**
+	 * Returns the count of members in a JSON object.
+	 *
+	 * @return The count of members of the object, or -1 if this isn't an object.
+	 */
+	ssize_t objectSize() const;
+
+	/**
 	 * Returns the length of this JSON array.
 	 *
 	 * @return The size of the array, or -1 if this isn't an array.
@@ -527,35 +534,34 @@ public:
 		return result;
 	}
 
-#if 0
-	/**
-	 * Convenience method to avoid having to construct a JGenerator.
-	 *
-	 * @see JGenerator
-	 */
-	bool toString(const JSchema& schema, std::string& toStr) const;
-#endif
-
 	/**
 	 * The iterator class for key/value pairs in a JSON object.
 	 */
-	class ObjectIterator : public std::iterator<std::input_iterator_tag, JValue, void, void, void> {
-		friend class JValue;
-
+	class ObjectIterator
+		: public std::iterator<std::input_iterator_tag, JValue, void, void, void>
+	{
 	private:
-		jobject_iter i;
-		jvalue_ref m_parent;
-//		KeyValue m_keyval;
+		jobject_iter _it;
+		jvalue_ref _parent;
+		jobject_key_value _key_value;
+		bool _at_end;
 
-	protected:
-		ObjectIterator(jvalue_ref parent, const jobject_iter &i);
 
 	public:
+		// A detached state, which is equivalent to the end position.
+		// Is suitable for equality comparison with any other iterator,
+		// and if another iterator is equal to ObjectIterator(),
+		// the iterator is at end of the collection.
+		//
+		// It is undefined behaviour to apply any other operation to a defaultly
+		// constructed iterator.
 		ObjectIterator();
+
+		ObjectIterator(jvalue_ref parent);
+
 		~ObjectIterator();
 
 		ObjectIterator(const ObjectIterator& other);
-
 		ObjectIterator& operator=(const ObjectIterator& other);
 
 		/**
@@ -576,42 +582,16 @@ public:
 		 */
 		ObjectIterator operator++(int);
 		/**
-		 * Jump n elements forward.  Note that this is likely an O(n)
-		 * operation.
+		 * Jump n elements forward.  Note that this is an O(n)
+		 * operation. Consider using std::advance(), for this operator may be declared
+		 * deprecated in the future.
 		 *
 		 * \note Behaviour is unspecified if you try to jump to an element after the last one.
 		 * \note Behaviour is undefined if you try to do this to end()
 		 *
 		 * \return An iterator representing n elements ahead.
 		 */
-		ObjectIterator operator+(int n) const;
-		/**
-		 * Pre-decrement the iterator the previous element.
-		 *
-		 * \note Behaviour is undefined if you try to do this to the first element.
-		 * \note Behaviour is undefined if you try to do this to the end()
-		 *
-		 * \return This iterator except it has moved 1 element back.
-		 */
-		ObjectIterator& operator--();
-		/**
-		 * Post-decrement the iterator to the previous element.
-		 *
-		 * \note Behaviour is undefined if you try to use this once you hit the end.
-		 *
-		 * \see ObjectIterator::operator--()
-		 * \return An iterator representing the current element (not the previous element)
-		 */
-		ObjectIterator operator--(int);
-		/**
-		 * Jump n elements backward.
-		 *
-		 * \note It is an implementation detail, but currently this is an O(n) operation.
-		 *
-		 * \param n The amount of elements to jump backward
-		 * \return An iterator representing the position of this iteration - n elements.
-		 */
-		ObjectIterator operator-(int n) const;
+		ObjectIterator operator+(size_t n) const;
 
 		/**
 		 * Convenience operator for determining inequality.
@@ -640,128 +620,10 @@ public:
 		 * @return A pair of JValue objects.  The key is a string and the value is any JSON value.  If this is not a valid iterator,
 		 *         then JSON null is returned for both fields.
 		 */
-		KeyValue operator*();
+		KeyValue operator*() const;
 	};
 
-	/**
-	 * The iterator class for key/value pairs in a JSON object.
-	 */
-	class ObjectConstIterator : public std::iterator<std::input_iterator_tag, JValue, void, void, void> {
-		friend class JValue;
-
-	private:
-		jobject_iter i;
-		jvalue_ref m_parent;
-
-	protected:
-		ObjectConstIterator(jvalue_ref parent, const jobject_iter &i);
-
-	public:
-		ObjectConstIterator();
-		~ObjectConstIterator();
-
-		ObjectConstIterator(const ObjectConstIterator& other);
-
-		ObjectConstIterator& operator=(const ObjectConstIterator& other);
-
-		/**
-		 * Pre-increment the iterator to the next element.
-		 *
-		 * \note Behaviour is undefined if you try to do this to end()
-		 *
-		 * \return This iterator except it has moved 1 element forward.
-		 */
-		ObjectConstIterator& operator++();
-		/**
-		 * Post-increment the iterator to the next element.
-		 *
-		 * \note Behaviour is undefined if you try to do this to end()
-		 *
-		 * \see ObjectConstIterator::operator++()
-		 * \return An iterator representing the current element (not the next element)
-		 */
-		ObjectConstIterator operator++(int);
-		/**
-		 * Jump n elements forward.  Note that this is likely an O(n)
-		 * operation.
-		 *
-		 * \note Behaviour is unspecified if you try to jump to an element after the last one.
-		 * \note Behaviour is undefined if you try to do this to end()
-		 *
-		 * \return An iterator representing n elements ahead.
-		 */
-		ObjectConstIterator operator+(int n) const;
-		/**
-		 * Pre-decrement the iterator the previous element.
-		 *
-		 * \note Behaviour is undefined if you try to do this to the first element.
-		 * \note Behaviour is undefined if you try to do this to the end()
-		 *
-		 * \return This iterator except it has moved 1 element back.
-		 */
-		ObjectConstIterator& operator--();
-		/**
-		 * Post-decrement the iterator to the previous element.
-		 *
-		 * \note Behaviour is undefined if you try to use this once you hit the end.
-		 *
-		 * \see ObjectConstIterator::operator--()
-		 * \return An iterator representing the current element (not the previous element)
-		 */
-		ObjectConstIterator operator--(int);
-		/**
-		 * Jump n elements backward.
-		 *
-		 * \note It is an implementation detail, but currently this is an O(n) operation.
-		 *
-		 * \param n The amount of elements to jump backward
-		 * \return An iterator representing the position of this iteration - n elements.
-		 */
-		ObjectConstIterator operator-(int n) const;
-
-		/**
-		 * Convenience operator for determining inequality.
-		 *
-		 * @return True if the iterators point to different key/value pairs.
-		 * @see operator==(const ObjectConstIterator&)
-		 */
-		bool operator!=(const ObjectConstIterator& other) const { return !(this->operator==(other)); }
-
-
-		/**
-		 * Determine equality between iterators - do they point to the same key/value pair.
-		 *
-		 * @note Behaviour is unspecified if objects are modified during iteration.
-		 *
-		 * @param[in] other The iterator to compare to
-		 * @return True if both iterators are for the same object and represent the same point in iteration.
-		 */
-		bool operator==(const ObjectConstIterator& other) const;
-
-#if 0
-		// TODO: implement const-safe key/value access
-
-		/**
-		 * Retrieve the key-value pair this iterator represents.
-		 *
-		 * \note If you iterate, the key/value stored within the reference are undefined.
-		 *
-		 * @return A pair of JValue objects.  The key is a string and the value is any JSON value.  If this is not a valid iterator,
-		 *         then JSON null is returned for both fields.
-		 */
-		KeyValue operator*();
-
-		/**
-		 * Access the key/value pair this iterator represents.
-		 *
-		 * \note If you iterate, the key/value stored within the reference are undefined.
-		 *
-		 * \return A pair of JValue objects.  The key is a string and the value is any JSON value.  If this is not a valid iterator,
-		 *         then JSON null is returned for both fields.
-		 */
-		KeyValue operator->();
-#endif
-	};
+	typedef ObjectIterator ObjectConstIterator;
 
 	/**
 	 * Get the beginning iterator for this object.

@@ -215,43 +215,25 @@ void TestParse::testParseFile_data()
 
 static bool identical(jvalue_ref obj1, jvalue_ref obj2)
 {
-	if (jis_object(obj1)) {
+	if (jis_object(obj1))
+	{
 		if (!jis_object(obj2))
 			return false;
 
-		jobject_iter iter1 = jobj_iter_init(obj1);
-		jobject_iter iter2 = jobj_iter_init(obj2);
 
-		int numKeys1 = 0;
-		int numKeys2 = 0;
-
-		bool moreKeys = true;
-
-		while (moreKeys) {
-			moreKeys = false;
-
-			if (jobj_iter_is_valid(iter1)) {
-				numKeys1++;
-				moreKeys = true;
-				iter1 = jobj_iter_next(iter1);
-			}
-			if (jobj_iter_is_valid(iter2)) {
-				numKeys2++;
-				moreKeys = true;
-				iter2 = jobj_iter_next(iter2);
-			}
-		}
+		int numKeys1 = jobject_size(obj1);
+		int numKeys2 = jobject_size(obj2);
 
 		if (numKeys1 != numKeys2)
 			return false;
 
-		for (iter1 = jobj_iter_init(obj1); jobj_iter_is_valid(iter1); iter1 = jobj_iter_next(iter1)) {
-			jobject_key_value keyval;
+		jobject_iter iter;
+		jobject_iter_init(&iter, obj1);
+		jobject_key_value keyval;
+
+		while (jobject_iter_next(&iter, &keyval))
+		{
 			jvalue_ref obj2Val;
-
-			if (!jobj_iter_deref(iter1, &keyval))
-				abort();
-
 			if (!jobject_get_exists(obj2, jstring_get_fast(keyval.key), &obj2Val))
 				return false;
 

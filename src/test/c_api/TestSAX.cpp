@@ -196,17 +196,19 @@ static void generate(jvalue_ref jval, JStreamRef s)
 		s->o_begin(s);
 		typedef QMap<JValueWrapper, jvalue_ref> JObject;
 		JObject sorted;
-		for (jobject_iter i = jobj_iter_init(jval); jobj_iter_is_valid(i); i = jobj_iter_next(i)) {
-			jobject_key_value keyval;
-			if (!jobj_iter_deref(i, &keyval))
-				throw "Invalid iterator";
+
+		jobject_iter it;
+		jobject_key_value keyval;
+		jobject_iter_init(&it, jval);
+		while (jobject_iter_next(&it, &keyval))
+		{
 			if (!jis_string(keyval.key))
 				throw "invalid key";
 			sorted.insert(keyval.key, keyval.value);
 		}
 
 		for (JObject::const_iterator i = sorted.constBegin(); i != sorted.constEnd(); i++) {
-			s->o_key(s, jstring_get(i.key()));
+			s->o_key(s, jstring_get_fast(i.key()));
 			generate(i.value(), s);
 		}
 		s->o_end(s);

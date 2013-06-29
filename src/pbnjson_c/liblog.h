@@ -144,7 +144,6 @@ static inline void log_fatal(const char *path, int line, const char *message, ..
  */
 #define SANITY_FREE(dealloc, type, pointer, length, ...)		\
 		do {							\
-			SANITY_CHECK_POINTER(dealloc);			\
 			SANITY_CHECK_POINTER(pointer);			\
 			SANITY_CLEAR_MEMORY(pointer, length);		\
 			dealloc((type)(pointer), ##__VA_ARGS__);	\

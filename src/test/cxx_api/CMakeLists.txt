@@ -68,8 +68,8 @@ add_schema_test(test_cppschema "C++ Number sanity check" ${CMAKE_CURRENT_SOURCE_
 add_schema_test(test_cppschema "C++ Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/contact/ Contact)
 add_qt_test(test_jvalue "Test JValue class")
 
-SET( CPPUnitTest
-	TestDOM
+SET(CPPUnitTest
+	TestDOM2
 	TestJArray
 	TestJValue2
 	TestJValueGTest

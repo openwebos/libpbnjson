@@ -19,7 +19,6 @@
 #include <JValue.h>
 
 #include <pbnjson.h>
-#include <pbnjson_experimental.h>
 #include <JSchema.h>
 #include <JGenerator.h>
 #include <cassert>
@@ -237,18 +236,17 @@ bool JValue::operator==(const JValue& other) const
 		if (jobject_size(m_jval) != jobject_size(other.m_jval))
 			return false;
 		jobject_key_value value;
-		jvalue_ref tmpVal;
-		for (jobject_iter i = jobj_iter_init(m_jval); jobj_iter_is_valid(i); i = jobj_iter_next(i)) {
-			if (jobj_iter_deref(i, &value)) {
-				if (!jobject_get_exists(other.m_jval, jstring_get_fast(value.key), &tmpVal))
-					return false;
-				//tmpVal is owned by 'other'
-				//value is already a copy, but it goes out of scope, as does tmpVal
-				if (JValue(jvalue_copy(value.value)) != JValue(jvalue_copy(tmpVal)))
-					return false;
-			} else {
-				assert(false);
-			}
+		jobject_iter it;
+		jobject_iter_init(&it, m_jval);
+		while (jobject_iter_next(&it, &value))
+		{
+			jvalue_ref tmpVal;
+			if (!jobject_get_exists(other.m_jval, jstring_get_fast(value.key), &tmpVal))
+				return false;
+			//tmpVal is owned by 'other'
+			//value is already a copy, but it goes out of scope, as does tmpVal
+			if (JValue(jvalue_copy(value.value)) != JValue(jvalue_copy(tmpVal)))
+				return false;
 		}
 		return true;
 	} else if (isArray()) {
@@ -403,6 +401,11 @@ bool JValue::append(const JValue& value)
 bool JValue::hasKey(const std::string& key) const
 {
 	return jobject_get_exists(m_jval, strToRawBuffer(key), NULL);
+}
+
+ssize_t JValue::objectSize() const
+{
+	return jobject_size(m_jval);
 }
 
 ssize_t JValue::arraySize() const
@@ -562,31 +565,46 @@ ConversionResultFlags JValue::asBool(bool &result) const
 }
 
 JValue::ObjectIterator::ObjectIterator()
-	: i(jobj_iter_init(NULL)), m_parent(NULL)
+	: _parent(0)
+	, _at_end(true)
 {
+	_key_value.key = 0;
+	_key_value.value = 0;
 }
 
-JValue::ObjectIterator::ObjectIterator(jvalue_ref parent, const jobject_iter& other)
-	: i(other), m_parent(jvalue_copy(parent))
+JValue::ObjectIterator::ObjectIterator(jvalue_ref parent)
+	: _parent(jvalue_copy(parent))
+	, _at_end(false)
 {
+	_key_value.key = 0;
+	_key_value.value = 0;
+
+	jobject_iter_init(&_it, _parent);
+	_at_end = !jobject_iter_next(&_it, &_key_value);
 }
 
 JValue::ObjectIterator::ObjectIterator(const ObjectIterator& other)
-	: i(other.i), m_parent(jvalue_copy(other.m_parent))
+	: _it(other._it)
+	, _parent(jvalue_copy(other._parent))
+	, _key_value(other._key_value)
+	, _at_end(other._at_end)
 {
 }
 
 JValue::ObjectIterator::~ObjectIterator()
 {
-	j_release(&m_parent);
+	j_release(&_parent);
 }
 
 JValue::ObjectIterator& JValue::ObjectIterator::operator=(const ObjectIterator &other)
 {
-	if (this != &other) {
-		i.m_opaque = other.i.m_opaque;
-		j_release(&m_parent);
-		m_parent = jvalue_copy(other.m_parent);
+	if (this != &other)
+	{
+		_it = other._it;
+		j_release(&_parent);
+		_parent = jvalue_copy(other._parent);
+		_key_value = other._key_value;
+		_at_end = other._at_end;
 	}
 	return *this;
 }
@@ -598,7 +616,7 @@ JValue::ObjectIterator& JValue::ObjectIterator::operator=(const ObjectIterator &
  */
 JValue::ObjectIterator& JValue::ObjectIterator::operator++()
 {
-	i = jobj_iter_next(i);
+	_at_end = !jobject_iter_next(&_it, &_key_value);
 	return *this;
 }
 
@@ -609,146 +627,30 @@ JValue::ObjectIterator JValue::ObjectIterator::operator++(int)
 	return result;
 }
 
-JValue::ObjectIterator JValue::ObjectIterator::operator+(int n) const
+JValue::ObjectIterator JValue::ObjectIterator::operator+(size_t n) const
 {
-	ObjectIterator next(m_parent, i);
-	for (int j = n; j > 0; j--)
+	ObjectIterator next(*this);
+	for (; n > 0; --n)
 		++next;
 	return next;
-}
-
-JValue::ObjectIterator& JValue::ObjectIterator::operator--()
-{
-	i = jobj_iter_previous(i);
-	return *this;
-}
-
-JValue::ObjectIterator JValue::ObjectIterator::operator--(int)
-{
-	ObjectIterator result(*this);
-	--(*this);
-	return result;
-}
-
-JValue::ObjectIterator JValue::ObjectIterator::operator-(int n) const
-{
-	ObjectIterator previous(*this);
-	for (int j = n; j > 0; j--)
-		--previous;
-	return previous;
 }
 
 bool JValue::ObjectIterator::operator==(const ObjectIterator& other) const
 {
-	return this == &other || jobj_iter_equal(i, other.i);
+	if (this == &other)
+		return true;
+	if (_at_end && other._at_end)
+		return true;
+	if (_at_end || other._at_end)
+		return false;
+	return jstring_equal(_key_value.key, other._key_value.key);
 }
 
-JValue::KeyValue JValue::ObjectIterator::operator*()
+JValue::KeyValue JValue::ObjectIterator::operator*() const
 {
-	KeyValue m_keyval;
-	jobject_key_value pair;
-	if (jobj_iter_deref(i, &pair)) {
-		m_keyval = KeyValue(jvalue_copy(pair.key), jvalue_copy(pair.value));
-	}
-	else
-		m_keyval = KeyValue(JValue::Null(), JValue::Null());
-	return m_keyval;
+	return KeyValue(jvalue_copy(_key_value.key), jvalue_copy(_key_value.value));
 }
 
-JValue::ObjectConstIterator::ObjectConstIterator()
-	: i(jobj_iter_init(NULL)), m_parent(NULL)
-{
-}
-
-JValue::ObjectConstIterator::ObjectConstIterator(jvalue_ref parent, const jobject_iter& other)
-	: i(other), m_parent(jvalue_copy(parent))
-{
-}
-
-JValue::ObjectConstIterator::ObjectConstIterator(const ObjectConstIterator& other)
-	: i(other.i), m_parent(jvalue_copy(other.m_parent))
-{
-}
-
-JValue::ObjectConstIterator::~ObjectConstIterator()
-{
-	j_release(&m_parent);
-}
-
-JValue::ObjectConstIterator& JValue::ObjectConstIterator::operator=(const ObjectConstIterator &other)
-{
-	if (this != &other) {
-		i.m_opaque = other.i.m_opaque;
-		j_release(&m_parent);
-		m_parent = jvalue_copy(other.m_parent);
-	}
-	return *this;
-}
-
-/**
- * specification says it's undefined, but implementation-wise,
- * the C api will return the current iterator if you try to go past the end.
- *
- */
-JValue::ObjectConstIterator& JValue::ObjectConstIterator::operator++()
-{
-	i = jobj_iter_next(i);
-	return *this;
-}
-
-JValue::ObjectConstIterator JValue::ObjectConstIterator::operator++(int)
-{
-	ObjectConstIterator result(*this);
-	++(*this);
-	return result;
-}
-
-JValue::ObjectConstIterator JValue::ObjectConstIterator::operator+(int n) const
-{
-	ObjectConstIterator next(m_parent, i);
-	for (int j = n; j > 0; j--)
-		++next;
-	return next;
-}
-
-JValue::ObjectConstIterator& JValue::ObjectConstIterator::operator--()
-{
-	i = jobj_iter_previous(i);
-	return *this;
-}
-
-JValue::ObjectConstIterator JValue::ObjectConstIterator::operator--(int)
-{
-	ObjectConstIterator result(*this);
-	--(*this);
-	return result;
-}
-
-JValue::ObjectConstIterator JValue::ObjectConstIterator::operator-(int n) const
-{
-	ObjectConstIterator previous(*this);
-	for (int j = n; j > 0; j--)
-		--previous;
-	return previous;
-}
-
-bool JValue::ObjectConstIterator::operator==(const ObjectConstIterator& other) const
-{
-	return this == &other || jobj_iter_equal(i, other.i);
-}
-
-#if 0
-JValue::KeyValue JValue::ObjectConstIterator::operator*()
-{
-	KeyValue m_keyval;
-	jobject_key_value pair;
-	if (jobj_iter_deref(i, &pair))
-		m_keyval = KeyValue(jvalue_copy(pair.key), jvalue_copy(pair.value));
-	else
-		m_keyval = KeyValue(JValue::Null(), JValue::Null());
-	return m_keyval;
-}
-#endif
 
 /**
  * specification says it's undefined. in the current implementation
@@ -757,8 +659,7 @@ JValue::KeyValue JValue::ObjectConstIterator::operator*()
  */
 JValue::ObjectIterator JValue::begin()
 {
-	jobject_iter i = jobj_iter_init(m_jval);
-	return ObjectIterator(m_jval, i);
+	return ObjectIterator(m_jval);
 }
 
 /**
@@ -771,8 +672,7 @@ JValue::ObjectIterator JValue::begin()
  */
 JValue::ObjectIterator JValue::end()
 {
-	jobject_iter i = jobj_iter_init_last(m_jval);
-	return ObjectIterator(m_jval, i);
+	return ObjectIterator();
 }
 
 /**
@@ -782,8 +682,7 @@ JValue::ObjectIterator JValue::end()
  */
 JValue::ObjectConstIterator JValue::begin() const
 {
-	jobject_iter i = jobj_iter_init(m_jval);
-	return ObjectConstIterator(m_jval, i);
+	return ObjectConstIterator(m_jval);
 }
 
 /**
@@ -796,8 +695,7 @@ JValue::ObjectConstIterator JValue::begin() const
  */
 JValue::ObjectConstIterator JValue::end() const
 {
-	jobject_iter i = jobj_iter_init_last(m_jval);
-	return ObjectConstIterator(m_jval, i);
+	return ObjectConstIterator();
 }
 
 NumericString::operator JValue()

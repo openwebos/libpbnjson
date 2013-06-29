@@ -779,19 +779,20 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 		return false;
 	}
 #if YAJL_VERSION < 20000
-        yajl_parser_config yajl_opts = {
-                comments,
-                0, // currently only UTF-8 will be supported for input.
-        };
+	yajl_parser_config yajl_opts =
+	{
+		comments,
+		0, // currently only UTF-8 will be supported for input.
+	};
 
 	yajl_handle handle = yajl_alloc(&my_bounce, &yajl_opts, NULL, &internalCtxt);
 #else
-        yajl_handle handle = yajl_alloc(&my_bounce, NULL, &internalCtxt);
+	yajl_handle handle = yajl_alloc(&my_bounce, NULL, &internalCtxt);
 
-        yajl_config(handle, yajl_allow_comments, comments ? 1 : 0);
+	yajl_config(handle, yajl_allow_comments, comments ? 1 : 0);
 
-        // currently only UTF-8 will be supported for input.
-        yajl_config(handle, yajl_dont_validate_strings, 0);
+	// currently only UTF-8 will be supported for input.
+	yajl_config(handle, yajl_dont_validate_strings, 0);
 #endif
 	parseResult = yajl_parse(handle, (unsigned char *)input.m_str, input.m_len);
 	if (ctxt != NULL)
@@ -875,11 +876,14 @@ static inline bool jsax_parse_inject_internal(JSAXContextRef ctxt, jvalue_ref ke
 		case JV_OBJECT:
 		{
 			jobject_key_value keyval;
+			jobject_iter it;
+
 			if (UNLIKELY(!cbs->yajl_start_map(ctxt)))
 				return false;
 
-			for (jobject_iter i = jobj_iter_init(value); jobj_iter_is_valid(i); i = jobj_iter_next(i)) {
-				jobj_iter_deref(i, &keyval);
+			jobject_iter_init(&it, value);
+			while (jobject_iter_next(&it, &keyval))
+			{
 				if (UNLIKELY(!jsax_parse_inject(ctxt, keyval.key, keyval.value)))
 					return false;
 			}

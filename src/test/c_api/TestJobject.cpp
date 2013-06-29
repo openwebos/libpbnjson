@@ -49,11 +49,13 @@ protected:
 	string GetIteration() const
 	{
 		string res;
-		for (jobject_iter it = jobj_iter_init(obj); jobj_iter_is_valid(it); it = jobj_iter_next(it))
+		jobject_iter it;
+		jobject_key_value keyval;
+
+		jobject_iter_init(&it, obj);
+		while (jobject_iter_next(&it, &keyval))
 		{
-			jobject_key_value key_value;
-			jobj_iter_deref(it, &key_value);
-			res.push_back(jstring_get_fast(key_value.key).m_str[0]);
+			res.push_back(jstring_get_fast(keyval.key).m_str[0]);
 		}
 		std::sort(res.begin(), res.end());
 		return res;

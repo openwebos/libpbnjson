@@ -261,9 +261,9 @@ static bool resolveSchema(SchemaWrapperRef schema, SchemaResolutionRef resolver)
 		SchemaWrapperRef resolvedRemote;
 
 		// need to resolve a reference
-		if (UNLIKELY(jobject_size_internal(toResolve) != 1)) {
+		if (UNLIKELY(jobject_size(toResolve) != 1)) {
 			CHECK_CONDITION_RETURN_VALUE(
-					jobject_size_internal(toResolve) != 2 || !jobject_containskey(toResolve, J_CSTR_TO_BUF(SK_DESCRIPTION)),
+					jobject_size(toResolve) != 2 || !jobject_containskey(toResolve, J_CSTR_TO_BUF(SK_DESCRIPTION)),
 					false,
 					"Schema is invalid - contains an external reference in addition to other key/values that aren't a description field");
 		}
@@ -1245,12 +1245,11 @@ bool jschema_obj_end(JSAXContextRef sax, ValidationStateRef parseState)
 		jvalue_ref propertiesList = jobject_get(schemaToValidate, J_CSTR_TO_BUF(SK_PROPS));
 		if (!jis_null(propertiesList)) {
 			jobject_key_value property;
+			jobject_iter it;
 
-			for (jobject_iter i = jobj_iter_init(propertiesList); jobj_iter_is_valid(i); i = jobj_iter_next(i)) {
-				if (!jobj_iter_deref(i, &property)) {
-					PJ_SCHEMA_ERR("Failed to dereference iterator over properties list");
-					goto schema_failure;
-				}
+			jobject_iter_init(&it, propertiesList);
+			while (jobject_iter_next(&it, &property))
+			{
 				if (!jobject_containskey2(toMatch->m_seenKeys, property.key)) {
 
 					// if we have a default value then inject that.
@@ -1882,33 +1881,7 @@ static struct jvalue DEFAULT_SCHEMA = {
 		.m_refCnt = 1,
 		.m_toString = "{}",
 		.m_toStringDealloc = NULL,
-		.value.val_obj = {
-				.m_table = {
-						.m_bucket = {
-								{
-									.list = {
-											.prev = NULL,
-											.next = NULL
-									},
-									.entry = {
-											.key = NULL,
-											.value = NULL
-									}
-								}
-						},
-						.m_next = NULL
-				},
-				.m_start = {
-						.list = {
-								.prev = NULL,
-								.next = NULL
-						},
-						.entry = {
-								.key = NULL,
-								.value = NULL
-						}
-				}
-		}
+		.value.val_obj = {.m_members = NULL},
 	};
 
 static struct jvalue DEFAULT_SCHEMA_STACK = {
@@ -1958,23 +1931,6 @@ static SchemaWrapper ALL_SCHEMA = {
 jschema_ref jschema_all()
 {
 #if !BYPASS_SCHEMA
-	static SchemaWrapperRef allSchemaRef = NULL;
-	if (UNLIKELY(allSchemaRef == NULL)) {
-		allSchemaRef = &ALL_SCHEMA;
-		// need to fix up linked list head pointer in object
-		list_head *list = &allSchemaRef->m_validation->
-				value.val_array.m_smallBucket[0]->
-				value.val_obj.m_start.list;
-		list->next = list->prev = list;
-		assert(jarray_size(allSchemaRef->m_validation) == 1);
-		assert(jis_object(jarray_get(allSchemaRef->m_validation, 0)));
-		assert(jobject_size_internal(jarray_get(allSchemaRef->m_validation, 0)) == 0);
-#if 0
-		allSchemaRef->m_refCnt = 1;
-		allSchemaRef->m_top = jschema_all_stack();
-		allSchemaRef->m_validation = jschema_all_stack();
-#endif
-	}
 	return &ALL_SCHEMA;
 #else
 	return NULL;

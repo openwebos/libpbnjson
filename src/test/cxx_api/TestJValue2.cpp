@@ -20,6 +20,7 @@
 #include <pbnjson.hpp>
 
 using namespace pbnjson;
+using namespace std;
 
 TEST(TestJValue, CopyConstructor)
 {
@@ -43,4 +44,24 @@ TEST(TestJValue, Duplicate)
 	EXPECT_FALSE(v1.hasKey("key2"));
 	EXPECT_TRUE(v2.hasKey("key1"));
 	EXPECT_TRUE(v2.hasKey("key2"));
+}
+
+TEST(TestJValue, IteratorAdvance)
+{
+	JValue obj = Object();
+	EXPECT_TRUE(obj.objectSize() == 0);
+	for (int i = 0; i != 10; ++i)
+	{
+		char key = 'a' + i;
+		obj.put(string(&key, &key + 1), JValue(i));
+	}
+	ASSERT_EQ(obj.objectSize(), 10);
+
+	JValue::ObjectIterator it1 = obj.begin();
+	for (int i = 1; i != 5; ++i)
+	{
+		JValue::KeyValue kv1 = *++it1;
+		JValue::KeyValue kv2 = *(obj.begin() + i);
+		EXPECT_TRUE(kv1 == kv2);
+	}
 }

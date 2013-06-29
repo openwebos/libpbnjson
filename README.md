@@ -7,7 +7,7 @@ Palm's Better Native JSON library
 
 Description
 -----------
-A JSON engine, implemented as a pair of libraries with APIs for easier C and 
+A JSON engine, implemented as a pair of libraries with APIs for easier C and
 C++ abstraction over the core PBNJSON library.
 
 Dependencies
@@ -18,6 +18,7 @@ Below are the tools and libraries (and their minimum versions) required to build
 - cmake (version required by cmake-modules-webos)
 - gcc 4.6.3
 - g++ 4.6.3
+- glib 2.30.0
 - make (any version)
 - openwebos/cmake-modules-webos 1.0.0 RC3
 - pkg-config 0.26

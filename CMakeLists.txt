@@ -21,9 +21,13 @@ project(pbnjson)
 
 include(webOS/webOS)
 webos_modules_init(1 0 0 QUALIFIER RC3)
-webos_component(1 4 0)
+webos_component(2 0 0)
 
 include(FindPkgConfig)
+
+pkg_check_modules(GLIB2 REQUIRED glib-2.0)
+include_directories(${GLIB2_INCLUDE_DIRS})
+webos_add_compiler_flags(ALL -Wall ${GLIB2_CFLAGS_OTHER})
 
 set(API_HEADERS ${CMAKE_SOURCE_DIR}/include/public)
 set(WITH_GTEST_SRC "/usr/src/gtest" CACHE PATH "Path to Google Test source code")

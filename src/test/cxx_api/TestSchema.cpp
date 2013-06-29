@@ -303,7 +303,7 @@ int main(int argc, char **argv)
 	}
 
 	for (int i = 0; i < jsonInput.fileNames.size(); i++) {
-		raw_buffer fileData;
+		raw_buffer fileData = {0};
 		FilePtr fileHandle(map(jsonInput.fileNames.at(i), fileData));
 		if (fileHandle == NULL) {
 			destroyFiles(fileHandles);

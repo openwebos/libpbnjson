@@ -24,10 +24,10 @@ include_directories(${API_HEADERS})
 webos_add_compiler_flags(ALL -Wall "-std=gnu++0x")
 
 # Find CJSON for comparison benchmarks
-find_package(CJSON)
+pkg_check_modules(CJSON cjson)
 if(NOT CJSON_FOUND)
 	set(CJSON_INCLUDE_DIR "")
-	set(CJSON_LIBRARY "")
+	set(CJSON_LIBRARIES "")
 	set(HAVE_CJSON false)
 endif()
 
@@ -39,7 +39,7 @@ if(NOT YAJL_FOUND)
 endif()
 
 ######################### TEST CONFIGURATION ########################
-set(TEST_LIBRARIES pbnjson_c ${CJSON_LIBRARY} ${YAJL_LIBRARIES})
+set(TEST_LIBRARIES pbnjson_c ${CJSON_LIBRARIES} ${YAJL_LIBRARIES})
 
 include(CheckSymbolExists)
 if(CJSON_FOUND)
@@ -74,22 +74,6 @@ qt_hdrs(test_sax
 src(test_sax
 	TestSAX.cpp
 	JSXMLConverter.cpp
-)
-
-qt_hdrs(test_yajl
-	TestYAJL.h
-)
-  
-src(test_yajl
-	TestYAJL.cpp
-)
-
-qt_hdrs(test_perf
-	TestPerformance.h
-)
-
-src(test_perf
-	TestPerformance.cpp
 )
 
 qt_hdrs(test_schema
@@ -128,36 +112,25 @@ set(test_schema2_test_list
 	testSchemaReuse
 )
 
-add_qt_test(test_yajl "YAJL sanity")
 add_qt_test(test_parse "Parser logic")
 add_qt_test(test_sax "SAX API")
 add_qt_test(test_schema2 "Schema sanity checks")
 add_regular_test(smoketest_mem_badinput "C memory leak smoke test for parsing invalid input")
 
-if(WITH_PERFORMANCE_TESTS)
-	if(WITH_VALGRIND)
-		set(_OLD_VALGRIND_TOOL ${VALGRIND_TOOL})
-		set(VALGRIND_TOOL "callgrind")
-		add_qt_test(test_perf "Performance test" -callgrind)
-		set(VALGRIND_TOOL ${_OLD_VALGRIND_TOOL})
-	else()
-		add_qt_test(test_perf "Performance test")
-	endif()
-endif()
-
 add_schema_test(test_schema "Number sanity check" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/sanity/ SimpleNumber)
 add_schema_test(test_schema "Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/contact/ Contact)
 
+SET(UnitTest
+	TestDOM
+	TestJobject
+	TestYAJL
+	)
 
-add_executable(test_dom TestDOM.cpp)
-target_link_libraries(test_dom ${TEST_LIBRARIES} gtest gtest_main pthread)
-add_test(C.TestDOM test_dom)
+FOREACH(TEST ${UnitTest})
+	add_executable(${TEST} ${TEST}.cpp)
+	target_link_libraries(${TEST} ${TEST_LIBRARIES} gtest gtest_main pthread)
+	add_test(C.${TEST} ${TEST})
+ENDFOREACH()
 
-# Link runTests with what we want to test and the GTest and pthread library
-add_executable(test_jobject TestJobject.cpp)
-target_link_libraries(test_jobject ${TEST_LIBRARIES} gtest gtest_main pthread)
-add_test(C.TestJObject test_jobject)
-
-#add_qt_test(test_schema "pjson-Schema Test Return Value" returnValue.schema returnValue1.good returnValue2.good returnValue3.good returnValue4.good)
-#add_qt_test(test_schema "pjson-Schema Test Invalid Return Value" returnValue.schema returnValue1.bad returnValue2.bad returnValue3.bad returnValue4.bad)
-#add_qt_test(test_num_conversion "Numeric conversion Unit Tests")
+add_executable(TestPerformance TestPerformance.cpp)
+target_link_libraries(TestPerformance ${TEST_LIBRARIES} gtest gtest_main pthread)

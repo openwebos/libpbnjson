@@ -77,9 +77,9 @@ webos_add_compiler_flags(ALL -std=c99 ${C_ENGINE_DEFINITIONS})
 file(GLOB SHARED_SOURCE "./*.c" "./jvalue/*.c")
 
 set(STATIC_SOURCE ${SHARED_SOURCE})
-    
+
 add_library(pbnjson_c SHARED ${SHARED_SOURCE})
-target_link_libraries(pbnjson_c ${C_ENGINE_LIBNAME} ${PCRE_LDFLAGS})
+target_link_libraries(pbnjson_c ${C_ENGINE_LIBNAME} ${PCRE_LDFLAGS} ${GLIB2_LDFLAGS})
 set_target_properties(pbnjson_c PROPERTIES DEFINE_SYMBOL PJSON_SHARED)
 
 include_directories(${API_HEADERS} ${API_HEADERS}/pbnjson ${API_HEADERS}/pbnjson/c ${C_ENGINE_INCDIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${PCRE_INCLUDE_DIRS})

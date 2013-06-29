@@ -326,76 +326,39 @@ PJSON_API size_t jobject_size(jvalue_ref obj);
 // JSON Object iterators
 /**
  * Create an iterator for the object.  The iterator is allocated on the stack & will be automatically
- * cleaned
- * 
+ * cleaned.
+ *
  * NOTE: It is assumed that ownership of obj is maintained for the lifetime of the iterator by the caller.
  * NOTE: Behaviour is undefined if the ownership is released while an iterator still exists.
  * NOTE: Behaviour is undefined if the object changes while iterating over it.
  *
+ * @param iter Pointer to an iterator instance to be initialized
  * @param obj The JSON object to iterate over
- * @return The iterator pointing to the first element of the object.
  */
-PJSON_API jobject_iter jobj_iter_init(const jvalue_ref obj);
+PJSON_API void jobject_iter_init(jobject_iter *iter, jvalue_ref obj);
 
 /**
- * Returns the iterator that comes after this one.
- * 
+ * Obtain key-value pair of the object, advance the iterator to the next pair.
+ *
  * NOTE: Behaviour is unspecified if the iterator has not been initialized.
- * NOTE: Unspecified API use is logged if possible.
  *
- * @param i The iterator to use
- * @return "i + 1" - the structure pointing to the next key-value pair in the object.
- */
-PJSON_API jobject_iter jobj_iter_next(const jobject_iter i);
+ * Typical usage is the following:
+  <code>
+    jobject_iter it;
+    jobject_key_value key_value;
 
-/**
- * !!EXPERIMENTAL!!
+    jobject_iter_init(&it, obj);
+    while (jobject_iter_next(&it, &key_value))
+    {
+        // Do whatever is neededed with the key_value
+    }
+  </code>
  *
- * Deletes the key/value pair pointed to by this iterator.  This calls j_release
- * on the key and value.
- *
- * NOTE: Behaviour is unspecified if the iterator is not valid.
- *
- * @param i A valid iterator
- * @return The next key/value pair (or an invalid iterator if there is none).
+ * @param iter The iterator to use
+ * @param keyval Structure to capture the current key-value pair.
+ * @return true if more pairs are available, false if the end is reached.
  */
-PJSON_API jobject_iter jobj_iter_remove(jobject_iter i);
-
-/**
- * Determine whether or not the iterator points to a valid key-value.
- *
- * @param i A pointer to the object iterator to check the validity of
- * @return True if this still points to a key/value pair within the iteration of the object this iterator is for.
- *         False if the iterator has not been initialized or the end of the iteration has been reached.
- */
-PJSON_API bool jobj_iter_is_valid(const jobject_iter i);
-
-/**
- * NOTE: Behaviour is unspecified if the iterator has not been initialized or value is not a valid pointer.
- * NOTE: If any invalid parameters are provided that hit the error conditions below or unspecified use of the API
- *       is used, then this is logged if possible.
- * NOTE: It is unspecified what values this structure will have if this function returns false.
- *
- * @param i A pointer to the object iterator to get the key/value pair for
- * @param value A pointer to the key-value pair structure to fill in.
- * @return True if the key/value pair was retrieved, false otherwise.
- */
-PJSON_API bool jobj_iter_deref(const jobject_iter i, jobject_key_value *value) NON_NULL(2);
-
-/**
- * Determines if i1 & i2 point to the same key/value pair in the object.
- *
- * NOTE: Result is unspecified if both iterators are invalid.
- *
- * @param i1 The first iterator to compare
- * @param i2 The second iterator to compare
- * @return True if and only if i1 & i2 point to the same key/value pair.  If both are invalid,
- *         it is unspecified what the return value is (even if both of them are iterating over the same
- *         object).
- *
- * @see jobj_iter_is_valid
- */
-PJSON_API bool jobj_iter_equal(const jobject_iter i1, const jobject_iter i2);
+PJSON_API bool jobject_iter_next(jobject_iter *iter, jobject_key_value *keyval);
 
 /*** JSON Array operations ***/
 /**

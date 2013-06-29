@@ -16,299 +16,232 @@
 //
 // LICENSE@@@
 
-#include "TestPerformance.h"
-#include <QtTest>
-#include <QStringList>
-#include <QtDebug>
-
+#include <gtest/gtest.h>
+#include <pbnjson.h>
 #include <cjson.h>
 #include <yajl.h>
+#include <memory>
+#include <boost/range.hpp>
+#include <chrono>
 
-Q_DECLARE_METATYPE(pbnjson::testc::TestPerformance::TestLibrary)
-Q_DECLARE_METATYPE(JDOMOptimizationFlags)
-Q_DECLARE_METATYPE(jschema_ref)
+using namespace std;
+using namespace std::chrono;
 
-QByteArray lastBadInput;
+namespace {
 
-namespace pbnjson {
-namespace testc {
-
-QList<JDOMOptimizationFlags> TestPerformance::NO_OPTS;
-QList<JDOMOptimizationFlags> TestPerformance::ALL_OPTS;
-QList<jschema_ref> TestPerformance::EMPTY_SCHEMA;
-
-TestPerformance::TestPerformance()
-{
-
-}
-
-void TestPerformance::parseCJSON(raw_buffer input, JDOMOptimizationFlags opt, jschema_ref schema)
-{
 #if HAVE_CJSON
-	json_object *o = json_tokener_parse(input.m_str);
-	if (!o || is_error(o)) {
-		QByteArray badInput(input.m_str, input.m_len);
-		if (lastBadInput != badInput) {
-			qWarning() << "Potentially bad input: " << badInput;
-			lastBadInput = badInput;
-		} else
-			qWarning() << "Bad input same as previous failure";
-
-		throw "CJSON parse failure";
-	}
-	json_object_put(o);
-#endif
+void ParseCjson(raw_buffer const &input)
+{
+	unique_ptr<json_object, void(*)(json_object*)>
+		o{json_tokener_parse(input.m_str), &json_object_put};
+	ASSERT_TRUE(o.get());
+	ASSERT_FALSE(is_error(o.get()));
 }
+#endif // HAVE_CJSON
 
-void TestPerformance::parsePBNJSON(raw_buffer input, JDOMOptimizationFlags opt, jschema_ref schema)
+void ParsePbnjson(raw_buffer const &input, JDOMOptimizationFlags opt, jschema_ref schema)
 {
 	JSchemaInfo schemaInfo;
 	jschema_info_init(&schemaInfo, schema, NULL, NULL);
-	jvalue_ref jv = jdom_parse(input, opt, &schemaInfo);
+	unique_ptr<jvalue, function<void(jvalue_ref &)>>
+		jv{jdom_parse(input, opt, &schemaInfo), [](jvalue_ref &v) { j_release(&v); }};
 
-	if (jis_null(jv)) {
-		QByteArray badInput(input.m_str, input.m_len);
-		if (lastBadInput != badInput) {
-			qWarning() << "Potentially bad input: " << badInput;
-			lastBadInput = badInput;
-		} else
-			qWarning() << "Bad input same as previous failure";
-		
-		throw "PBNJSON parse failure";
-	}
-
-	j_release(&jv);
+	ASSERT_FALSE(jis_null(jv.get()));
 }
 
-void TestPerformance::parseYAJL(raw_buffer input, JDOMOptimizationFlags opt, jschema_ref schema)
-{
 #if HAVE_YAJL
+void ParseYajl(raw_buffer const &input)
+{
 	yajl_callbacks nocb = { 0 };
-	yajl_handle handle = yajl_alloc(&nocb, NULL, NULL, NULL);
-	if (yajl_status_ok != yajl_parse(handle, (const unsigned char *)input.m_str, input.m_len))
-		goto parse_problem;
+	unique_ptr<remove_pointer<yajl_handle>::type, void(*)(yajl_handle)>
+		handle{yajl_alloc(&nocb, NULL, NULL, NULL), &yajl_free};
 
-	if (yajl_status_ok != yajl_parse_complete(handle))
-		goto parse_problem;
-
-	yajl_free(handle);
-	return;
-
-parse_problem:
-	yajl_free(handle);
-
-	QByteArray badInput(input.m_str, input.m_len);
-	if (lastBadInput != badInput) {
-		qWarning() << "Potentially bad input: " << badInput;
-		lastBadInput = badInput;
-	} else
-		qWarning() << "Bad input same as previous failure";
-	
-	throw "YAJL parse failure";
-
-#endif
+	ASSERT_EQ(yajl_status_ok,
+		yajl_parse(handle.get(), (const unsigned char *)input.m_str, input.m_len));
+	ASSERT_EQ(yajl_status_ok, yajl_parse_complete(handle.get()));
 }
+#endif // HAVE_YAJL
 
-void TestPerformance::parseSAX(raw_buffer input, JDOMOptimizationFlags opt, jschema_ref schema)
+void ParseSax(raw_buffer const &input, jschema_ref schema)
 {
 	JSchemaInfo schemaInfo;
 	jschema_info_init(&schemaInfo, schema, NULL, NULL);
 
-	if (!jsax_parse(NULL, input, &schemaInfo)) {
-		QByteArray badInput(input.m_str, input.m_len);
-		if (lastBadInput != badInput) {
-			qWarning() << "Potentially bad input: " << badInput;
-			lastBadInput = badInput;
-		} else
-			qWarning() << "Bad input same as previous failure";
-		
-		throw "PBNJSON SAX parse failure";
-	}
+	ASSERT_TRUE(jsax_parse(NULL, input, &schemaInfo));
 }
 
-void TestPerformance::initTestCase()
+double _BenchmarkMeasure(function<void(size_t)> code, size_t n)
 {
-	NO_OPTS << DOMOPT_NOOPT;
-	ALL_OPTS << DOMOPT_INPUT_NOCHANGE << DOMOPT_INPUT_NULL_TERMINATED << DOMOPT_INPUT_OUTLIVES_DOM
-		<< (DOMOPT_INPUT_NOCHANGE | DOMOPT_INPUT_OUTLIVES_DOM)
-		<< (DOMOPT_INPUT_NOCHANGE | DOMOPT_INPUT_OUTLIVES_DOM | DOMOPT_INPUT_NOCHANGE);
-	EMPTY_SCHEMA << jschema_all();
+	typedef high_resolution_clock ClockT;
+	time_point<ClockT> start = ClockT::now();
+	code(n);
+	time_point<ClockT> finish = ClockT::now();
+	duration<double> time_span = duration_cast<duration<double>>(finish - start);
+	return time_span.count();
+}
 
-	QString bigInput1 = "{ "
-			"\"o1\" : null, "
-			"\"o2\" : {}, "
-			"\"a1\" : null, "
-			"\"a2\" : [], "
-			"\"o3\" : {"
-				"\"x\" : true, "
-				"\"y\" : false, "
-				"\"z\" : \"\\\"es'ca'pes'\\\"\""
-			"}, "
-			"\"n1\" : 0"
-			"                              "
-			",\"n2\" : 232452312412, "
-			"\"n3\" : -233243.653345e-2342 "
-			"                              "
-			",\"s1\" : \"adfa\","
-			"\"s2\" : \"asdflkmsadfl jasdf jasdhf ashdf hasdkf badskjbf a,msdnf ;whqoehnasd kjfbnakjd "
-			"bfkjads fkjasdbasdf jbasdfjk basdkjb fjkndsab fjk\","
-			"\"a3\" : [ true, false, null, true, false, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}],"
-			"\"a4\" : [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],"
-			"\"n4\" : 928437987349237893742897234987243987234297982347987249387,"
-			"\"b1\" : true"
-			"}";
+double _BenchmarkPerformNs(function<void(size_t)> code)
+{
+	const double low_time_threshold = 3; // seconds, assume a good good resolution warmup
+	const double measure_seconds = 5;
+	size_t n = 50;
+	double t;
+	do
+	{
+		n*=2;
+	} while ((t = _BenchmarkMeasure(code, n)) < low_time_threshold);
 
-	smallInputs << "{}"
-		<< "[]"
-		<< "[\"e1\", \"e2\", \"e3\"]"
-		<< "{ \"returnValue\" : true }"
-		<< "{ \"returnValue\" : true, \"results\" : [ { \"property\" : \"someName\", \"value\" : 40.5 } ] }"
-		;
+	// actual measure
+	size_t repeats = measure_seconds * n / t;
+	double timing = _BenchmarkMeasure(code, repeats);
+	return timing * 1e9 / repeats;
+}
 
-	bigInputs << bigInput1;
+const int OPT_NONE = DOMOPT_NOOPT;
 
-#if !HAVE_CJSON
-	qWarning() << "Compiled without cjson support - no comparitive performance";
+const int OPT_ALL = DOMOPT_INPUT_NOCHANGE
+                  | DOMOPT_INPUT_OUTLIVES_DOM
+                  | DOMOPT_INPUT_NULL_TERMINATED;
+
+} //namespace;
+
+TEST(Performance, ParseSmallInput)
+{
+	raw_buffer small_inputs[] =
+	{
+		J_CSTR_TO_BUF("{}"),
+		J_CSTR_TO_BUF("[]"),
+		J_CSTR_TO_BUF("[\"e1\", \"e2\", \"e3\"]"),
+		J_CSTR_TO_BUF("{ \"returnValue\" : true }"),
+		J_CSTR_TO_BUF("{ \"returnValue\" : true, \"results\" : [ { \"property\" : \"someName\", \"value\" : 40.5 } ] }")
+	};
+
+	cout << "Parsing small JSON (ns):" << endl;
+#if HAVE_YAJL
+	double ns_yajl = _BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+			{
+				for (auto const &rb : small_inputs)
+					ParseYajl(rb);
+			}
+		});
+	cout << "YAJL:\t\t\t" << ns_yajl << endl;
 #endif
 
-#if !HAVE_YAJL
-	qWarning() << "Compiled without yajl support - no comparitive performance";
-#endif
-}
-
-void TestPerformance::cleanupTestCase()
-{
-
-}
-
-int TestPerformance::domData(QStringList jsonInput,
-		const char *type, TestLibrary lib,
-		QList<JDOMOptimizationFlags> opts,
-		QList<jschema_ref> schemas)
-{
-	static char title[80] = {0};
-	int rows = 0;
-
-	const char *optStr, *gramStr, *libStr;
-
-	JDOMOptimizationFlags noCopyFlags = DOMOPT_INPUT_NOCHANGE | DOMOPT_INPUT_OUTLIVES_DOM;
-	JDOMOptimizationFlags fastToStringFlags = noCopyFlags | DOMOPT_INPUT_NULL_TERMINATED;
-
-	for (int i = 0; i < opts.size(); i++) {
-		JDOMOptimizationFlags opt = opts.at(i);
-		for (int j = 0; j < schemas.size(); j++) {
-			jschema_ref schema = schemas.at(j);
-			for (int i = 0; i < jsonInput.size(); i++) {
-				rows++;
-#if !HAVE_CJSON
-				if (lib == CJSON) continue;
+#if HAVE_CJSON
+	double ns_cjson = _BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+			{
+				for (auto const &rb : small_inputs)
+					ParseCjson(rb);
+			}
+		});
+	cout << "CJSON:\t\t\t" << ns_cjson << endl;
 #endif
 
-#if !HAVE_YAJL
-				if (lib == YAJL) continue;
+	double ns_sax = _BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+			{
+				for (auto const &rb : small_inputs)
+					ParseSax(rb, jschema_all());
+			}
+		});
+	cout << "pbnjson-sax:\t\t" << ns_sax << endl;
+
+	double ns_pbnjson = _BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+			{
+				for (auto const &rb : small_inputs)
+					ParsePbnjson(rb, OPT_NONE, jschema_all());
+			}
+		});
+	cout << "pbnjson (-opts):\t" << ns_pbnjson << endl;
+
+	double ns_pbnjson2 = _BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+			{
+				for (auto const &rb : small_inputs)
+					ParsePbnjson(rb, OPT_ALL, jschema_all());
+			}
+		});
+	cout << "pbnjson (+opts):\t" << ns_pbnjson2 << endl;
+
+	SUCCEED();
+}
+
+TEST(Performance, ParseBigInput)
+{
+	raw_buffer input = J_CSTR_TO_BUF(
+		"{ "
+		"\"o1\" : null, "
+		"\"o2\" : {}, "
+		"\"a1\" : null, "
+		"\"a2\" : [], "
+		"\"o3\" : {"
+			"\"x\" : true, "
+			"\"y\" : false, "
+			"\"z\" : \"\\\"es'ca'pes'\\\"\""
+		"}, "
+		"\"n1\" : 0"
+		"                              "
+		",\"n2\" : 232452312412, "
+		"\"n3\" : -233243.653345e-2342 "
+		"                              "
+		",\"s1\" : \"adfa\","
+		"\"s2\" : \"asdflkmsadfl jasdf jasdhf ashdf hasdkf badskjbf a,msdnf ;whqoehnasd kjfbnakjd "
+		"bfkjads fkjasdbasdf jbasdfjk basdkjb fjkndsab fjk\","
+		"\"a3\" : [ true, false, null, true, false, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}],"
+		"\"a4\" : [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],"
+		"\"n4\" : 928437987349237893742897234987243987234297982347987249387,"
+		"\"b1\" : true"
+		"}");
+
+	cout << "Parsing big JSON (ns):" << endl;
+#if HAVE_YAJL
+	double ns_yajl = _BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+				ParseYajl(input);
+		});
+	cout << "YAJL:\t\t\t" << ns_yajl << endl;
 #endif
 
-				QString qOptStr("");
-				qOptStr += (opt & noCopyFlags) ? " w/ nocopy" : " w/ copy";
-				qOptStr += (opt & fastToStringFlags) ? " w/ fast tostring" : " w/o fast tostring";
+#if HAVE_CJSON
+	double ns_cjson = _BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+				ParseCjson(input);
+		});
+	cout << "CJSON:\t\t\t" << ns_cjson << endl;
+#endif
 
-				optStr = qPrintable(qOptStr);
+	double ns_sax = _BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+				ParseSax(input, jschema_all());
+		});
+	cout << "pbnjson-sax:\t\t" << ns_sax << endl;
 
-				gramStr = (schema == jschema_all() ? " w/ no schema" : " w/ schema");
-				if (lib == CJSON) libStr = "cjson";
-				else if (lib == PBNJSON) libStr = "pbnjson dom";
-				else if (lib == YAJL) libStr = "yajl";
-				else if (lib == PBNJSON_SAX) libStr = "pbnjson sax";
-				else libStr = "unrecognized parser type";
+	double ns_pbnjson = _BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+				ParsePbnjson(input, OPT_NONE, jschema_all());
+		});
+	cout << "pbnjson (-opts):\t" << ns_pbnjson << endl;
 
-				snprintf(title, sizeof(title),
-						"%s %s performance test %s%s parsing input %d",
-						libStr, type, optStr, gramStr, i);
-				QTest::newRow(title) << lib << jsonInput[i] << opt << schema;
-			}
-		}
-	}
-	return rows;
+	double ns_pbnjson2 = _BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+				ParsePbnjson(input, OPT_ALL, jschema_all());
+		});
+	cout << "pbnjson (+opts):\t" << ns_pbnjson2 << endl;
+
+	SUCCEED();
 }
 
-void TestPerformance::testParser_data()
-{
-	int rows;
-
-	QTest::addColumn<TestLibrary>("lib");
-	QTest::addColumn<QString>("input");
-	QTest::addColumn<JDOMOptimizationFlags>("opt");
-	QTest::addColumn<jschema_ref>("schema");
-
-	rows = domData(smallInputs, "small dom", CJSON, NO_OPTS);
-	QCOMPARE(rows, 5);
-	rows = domData(smallInputs, "small dom", YAJL, NO_OPTS);
-	QCOMPARE(rows, 5);
-	rows = domData(smallInputs, "small dom", PBNJSON_SAX, NO_OPTS);
-	QCOMPARE(rows, 5);
-	rows = domData(smallInputs, "small dom", PBNJSON, ALL_OPTS);
-	QCOMPARE(rows, 25);
-
-	QCOMPARE(bigInputs.size(), 1);
-	rows = domData(bigInputs, "big dom", CJSON, NO_OPTS);
-	QCOMPARE(rows, 1);
-	rows = domData(bigInputs, "big dom", YAJL, NO_OPTS);
-	QCOMPARE(rows, 1);
-	rows = domData(bigInputs, "big dom", PBNJSON_SAX, NO_OPTS);
-	QCOMPARE(rows, 1);
-	rows = domData(bigInputs, "big dom", PBNJSON, ALL_OPTS);
-	QCOMPARE(rows, 5);
-}
-
-void TestPerformance::testParser()
-{
-	QFETCH(QString, input);
-	QFETCH(TestLibrary, lib);
-	QFETCH(JDOMOptimizationFlags, opt);
-	QFETCH(jschema_ref, schema);
-
-	QByteArray utf8 = input.toUtf8();
-	raw_buffer inputStr = (raw_buffer) { utf8.constData(), utf8.size() };
-	try {
-		if (lib == CJSON) {
-			QBENCHMARK {
-				parseCJSON(inputStr, opt, schema);
-			}
-		} else if (lib == PBNJSON) {
-			QBENCHMARK {
-				parsePBNJSON(inputStr, opt, schema);
-			}
-		} else if (lib == YAJL) {
-			QBENCHMARK {
-				parseYAJL(inputStr, opt, schema);
-			}
-		} else if (lib == PBNJSON_SAX) {
-			QBENCHMARK {
-				parseSAX(inputStr, opt, schema);
-			}
-		} else {
-			// unhandled benchmark type
-			QVERIFY(0 == 1);
-		}
-	} catch (const char *str) {
-		qWarning() << "Test failure: " << str << ".  Skipping benchmark";
-	} catch (...) {
-		qWarning() << "Unhandled test failure.  Skipping benchmark";
-	}
-}
-
-void TestPerformance::testSAX_data()
-{
-
-}
-
-void TestPerformance::testSAX()
-{
-
-}
-
-}
-}
-
-QTEST_APPLESS_MAIN(pbnjson::testc::TestPerformance)
-
+// vim: set noet ts=4 sw=4:

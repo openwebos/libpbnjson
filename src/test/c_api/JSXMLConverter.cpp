@@ -162,10 +162,12 @@ static void serializeObject(QDomNode &out, jvalue_ref jobj, const Namespace &ns,
 	typedef QMap<JValueWrapper, jvalue_ref> JMap;
 	JMap sorted;
 
-	for (jobject_iter i = jobj_iter_init(jobj); jobj_iter_is_valid(i); i = jobj_iter_next(i)) {
-		jobject_key_value keyval;
-		if (!jobj_iter_deref(i, &keyval))
-			throw "invalid iterator";
+	jobject_iter it;
+	jobject_key_value keyval;
+
+	jobject_iter_init(&it, jobj);
+	while (jobject_iter_next(&it, &keyval))
+	{
 		sorted.insert(keyval.key, keyval.value);
 	}
 

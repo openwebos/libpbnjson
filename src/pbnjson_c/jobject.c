@@ -36,7 +36,6 @@
 #include "jobject_internal.h"
 #include "liblog.h"
 #include "jvalue/num_conversion.h"
-#include "linked_list.h"
 
 #ifdef DBG_C_MEM
 #define PJ_LOG_MEM(...) PJ_LOG_INFO(__VA_ARGS__)
@@ -104,11 +103,9 @@ static bool jnumber_to_string_append (jvalue_ref jref, JStreamRef generating);
 static jvalue_ref jnumber_duplicate (jvalue_ref num) NON_NULL(1);
 static inline bool jstring_to_string_append (jvalue_ref jref, JStreamRef generating);
 static inline bool jboolean_to_string_append (jvalue_ref jref, JStreamRef generating);
-
-static inline jobject_iter JO_ITER (struct list_head *p)
-{
-	return (jobject_iter) {p};
-}
+static bool jstring_equal_internal(jvalue_ref str, jvalue_ref other) NON_NULL(1, 2);
+static inline bool jstring_equal_internal2(jvalue_ref str, raw_buffer *other) NON_NULL(1, 2);
+static bool jstring_equal_internal3(raw_buffer *str, raw_buffer *other) NON_NULL(1, 2);
 
 bool jbuffer_equal(raw_buffer buffer1, raw_buffer buffer2)
 {
@@ -214,18 +211,14 @@ jvalue_ref jvalue_duplicate (jvalue_ref val)
 	if (jis_null (val) || val == &JEMPTY_STR) return result;
 
 	if (jis_object (val)) {
-		result = jobject_create_hint (jobject_size_internal (val));
-		jobject_iter i;
+		result = jobject_create_hint (jobject_size (val));
+		jobject_iter it;
 		jobject_key_value pair;
-		jvalue_ref valueCopy;
 
-		for (i = jobj_iter_init (val); jobj_iter_is_valid (i); i = jobj_iter_next (i)) {
-			if (!jobj_iter_deref (i, &pair)) {
-				j_release (&result);
-				result = NULL;
-				break;
-			}
-			valueCopy = jvalue_duplicate (pair.value);
+		jobject_iter_init(&it, val);
+		while (jobject_iter_next(&it, &pair))
+		{
+			jvalue_ref valueCopy = jvalue_duplicate (pair.value);
 			if (!jobject_put (result, jvalue_copy (pair.key), valueCopy)) {
 				j_release (&valueCopy);
 				j_release (&pair.key);
@@ -438,14 +431,24 @@ const char * jvalue_tostring (jvalue_ref val, const jschema_ref schema)
 /************************* JSON OBJECT API **************************************/
 #define DEREF_OBJ(ref) ((ref)->value.val_obj)
 
-static inline int key_hash_raw (raw_buffer *str) NON_NULL(1);
-static inline int key_hash (jvalue_ref key) NON_NULL(1);
+static unsigned long key_hash_raw (raw_buffer const *str) NON_NULL(1);
+static unsigned long key_hash (jvalue_ref key) NON_NULL(1);
 
-static inline int key_hash_raw (raw_buffer *str)
+static unsigned long key_hash_raw (raw_buffer const *str)
 {
-	// TODO: incorporate the length in the hash
+	// djb2 algorithm
+	unsigned long hash = 5381;
+	char const *data = str->m_str;
+	int count = str->m_len;
+	int c = 0;
+
 	assert(str->m_str != NULL);
-	return OBJECT_BUCKET_MODULO(str->m_str[0] + str->m_len);
+	while (count--)
+	{
+		c = *data++;
+		hash = ((hash << 5) + hash) + c;  // hash * 33 + c
+	}
+	return hash;
 }
 
 static bool check_insert_sanity(jvalue_ref parent, jvalue_ref child)
@@ -467,12 +470,11 @@ static bool check_insert_sanity(jvalue_ref parent, jvalue_ref child)
 			}
 		}
 	} else if (jis_object(child)) {
-		for (jobject_iter i = jobj_iter_init(child); jobj_iter_is_valid(i); i = jobj_iter_next (i)) {
-			jobject_key_value key_value;
-			if (!jobj_iter_deref (i, &key_value)) {
-				PJ_LOG_ERR("Internal error, could not dereference");
-				return false;
-			}
+		jobject_iter it;
+		jobject_key_value key_value;
+		jobject_iter_init(&it, child);
+		while (jobject_iter_next(&it, &key_value))
+		{
 			if(!check_insert_sanity(parent, key_value.value)) {
 				return false;
 			}
@@ -484,83 +486,41 @@ static bool check_insert_sanity(jvalue_ref parent, jvalue_ref child)
 
 static void j_destroy_object (jvalue_ref ref)
 {
-	jkey_value_array *toFree, *nextTable;
+	g_hash_table_destroy(DEREF_OBJ(ref).m_members);
+}
 
-	SANITY_CHECK_POINTER(ref);
-	assert(jis_object(ref));
+/* Has table key routines */
+static guint _ObjKeyHash(gconstpointer key)
+{
+	jvalue_ref jkey = (jvalue_ref) key;
+	return key_hash(jkey);
+}
 
-	for (jobject_iter i = jobj_iter_init(ref); jobj_iter_is_valid(i); i = jobj_iter_remove(i));
+static gboolean _ObjKeyEqual(gconstpointer a, gconstpointer b)
+{
+	jvalue_ref ja = (jvalue_ref) a;
+	jvalue_ref jb = (jvalue_ref) b;
+	return jstring_equal_internal(ja, jb);
+}
 
-	toFree = DEREF_OBJ(ref).m_table.m_next;
-	SANITY_KILL_POINTER(DEREF_OBJ(ref).m_table.m_next);
-	SANITY_KILL_POINTER(DEREF_OBJ(ref).m_start.list.prev);
-	SANITY_KILL_POINTER(DEREF_OBJ(ref).m_start.list.next);
-
-	while (toFree) {
-		SANITY_CHECK_MEMORY(toFree, sizeof(jkey_value_array));
-#ifdef DEBUG_FREED_POINTERS
-		for (int i = 0; i < OBJECT_BUCKET_SIZE; i++) {
-//			assert(toFree->m_bucket[i].entry.key == FREED_POINTER || toFree->m_bucket[i].entry.key == NULL);
-//			assert(toFree->m_bucket[i].entry.value == FREED_POINTER || toFree->m_bucket[i].entry.value == NULL);
-		}
-#endif
-
-		nextTable = toFree->m_next;
-		PJ_LOG_MEM("Freeing object bucket array %p", toFree);
-		SANITY_FREE(free, jkey_value_array *, toFree, sizeof(jkey_value_array));
-		toFree = nextTable;
-	}
+static void _ObjKeyValDestroy(gpointer data)
+{
+	jvalue_ref jdata = (jvalue_ref) data;
+	j_release(&jdata);
 }
 
 jvalue_ref jobject_create ()
 {
 	jvalue_ref new_obj = jvalue_create (JV_OBJECT);
 	CHECK_POINTER_RETURN_NULL(new_obj);
-	INIT_LIST_HEAD(&DEREF_OBJ(new_obj).m_start.list);
-	return new_obj;
-}
-
-static jo_keyval_iter* jobject_find_keyval_iter (jkey_value_array *toCheck, raw_buffer *key, jkey_value_array **table) NON_NULL(1);
-static jobject_key_value* jobject_find (jkey_value_array *toCheck, raw_buffer *key, jkey_value_array **table) NON_NULL(1);
-static jobject_key_value* jobject_find2(jkey_value_array *toCheck, jvalue_ref key, jkey_value_array **table) NON_NULL(1);
-static bool jobject_insert_internal (jvalue_ref object, jkey_value_array *table, jobject_key_value item) NON_NULL(1);
-static bool jstring_equal_internal(jvalue_ref str, jvalue_ref other) NON_NULL(1, 2);
-static inline bool jstring_equal_internal2(jvalue_ref str, raw_buffer *other) NON_NULL(1, 2);
-static bool jstring_equal_internal3(raw_buffer *str, raw_buffer *other) NON_NULL(1, 2);
-
-static bool jobject_insert_internal (jvalue_ref object, jkey_value_array *table, jobject_key_value item)
-{
-	int bucket;
-
-	bucket = key_hash (item.key);
-
-	// is a key present at the current spot in the table
-	if (UNLIKELY(table->m_bucket[bucket].entry.key != NULL)) {
-		// is it the same key or just a hash collision?
-		if (LIKELY(!jstring_equal_internal(table->m_bucket[bucket].entry.key, item.key))) {
-			// hash collision - go on to next table
-			if (!table->m_next) {
-				table->m_next = (jkey_value_array *) calloc (1, sizeof(jkey_value_array));
-				CHECK_ALLOC_RETURN_VALUE(table->m_next, false);
-			}
-			return jobject_insert_internal (object, table->m_next, item);
-		}
-		// we're replacing an existing key, so we release our ownership over our existing children
-		j_release(&table->m_bucket[bucket].entry.key);
-		j_release(&table->m_bucket[bucket].entry.value);
-	} else {
-		// only need to add new elements to the linked list - not on replace
-		ladd (& (table->m_bucket [bucket].list), DEREF_OBJ(object).m_start.list.prev);
+	DEREF_OBJ(new_obj).m_members = g_hash_table_new_full(_ObjKeyHash, _ObjKeyEqual,
+	                                                     _ObjKeyValDestroy, _ObjKeyValDestroy);
+	if (!DEREF_OBJ(new_obj).m_members)
+	{
+		free(new_obj);
+		return NULL;
 	}
-
-	table->m_bucket [bucket].entry.key = item.key;
-	table->m_bucket [bucket].entry.value = item.value;
-
-	assert(DEREF_OBJ(object).m_start.entry.key == NULL);
-	assert(DEREF_OBJ(object).m_start.entry.value == NULL);
-	assert(DEREF_OBJ(object).m_start.list.next != NULL);
-
-	return true;
+	return new_obj;
 }
 
 //Helper function for jobject_to_string_append()
@@ -602,12 +562,11 @@ static bool jobject_to_string_append (jvalue_ref jref, JStreamRef generating)
 		return false;
 	}
 
-	for (jobject_iter i = jobj_iter_init (jref); jobj_iter_is_valid (i); i = jobj_iter_next (i)) {
-		jobject_key_value key_value;
-		if (!jobj_iter_deref (i, &key_value)) {
-			generating->string (generating, J_CSTR_TO_BUF("failed to dereference"));
-			return false;
-		}
+	jobject_iter it;
+	jobject_iter_init(&it, jref);
+	jobject_key_value key_value;
+	while (jobject_iter_next(&it, &key_value))
+	{
 		assert(jis_string(key_value.key));
 		if(UNLIKELY(!key_value_to_string_append(key_value, generating)))
 		{
@@ -635,7 +594,7 @@ jvalue_ref jobject_create_var (jobject_key_value item, ...)
 		assert(jis_string(item.key));
 		assert(item.value != NULL);
 
-		if (UNLIKELY(!jobject_insert_internal (new_object, & (DEREF_OBJ(new_object).m_table), item))) {
+		if (UNLIKELY(!jobject_put (new_object, item.key, item.value))) {
 			j_release (&new_object);
 			return jnull();
 		}
@@ -644,7 +603,7 @@ jvalue_ref jobject_create_var (jobject_key_value item, ...)
 		while ( (arg = va_arg (ap, jobject_key_value)).key != NULL) {
 			assert(jis_string(arg.key));
 			assert(arg.value != NULL);
-			if (UNLIKELY(!jobject_insert_internal (new_object, & (DEREF_OBJ(new_object).m_table), arg))) {
+			if (UNLIKELY(!jobject_put (new_object, arg.key, arg.value))) {
 				PJ_LOG_ERR("Failed to insert requested key/value into new object");
 				j_release (&new_object);
 				new_object = jnull();
@@ -659,22 +618,7 @@ jvalue_ref jobject_create_var (jobject_key_value item, ...)
 
 jvalue_ref jobject_create_hint (int capacityHint)
 {
-	jvalue_ref new_object = jobject_create ();
-	jkey_value_array **expansion;
-
-	CHECK_POINTER_RETURN_NULL(new_object);
-
-	expansion = &new_object->value.val_obj.m_table.m_next;
-
-	while (capacityHint > OBJECT_BUCKET_SIZE) {
-		assert (*expansion == NULL);
-		*expansion = calloc (1, sizeof(jkey_value_array));
-		CHECK_ALLOC_RETURN_VALUE(*expansion, new_object);
-		expansion = & ( (*expansion)->m_next);
-		capacityHint -= OBJECT_BUCKET_SIZE;
-	}
-
-	return new_object;
+	return jobject_create();
 }
 
 bool jis_object (jvalue_ref val)
@@ -686,112 +630,55 @@ bool jis_object (jvalue_ref val)
 	return val->m_type == JV_OBJECT;
 }
 
-size_t jobject_size_internal (jvalue_ref obj)
-{
-	// FIXME: use a counter that is updated on insertion/removal instead of iterating every time
-	size_t result = 0;
-
-	SANITY_CHECK_POINTER(obj);
-
-	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), result, "Attempt to retrieve size from something not an object");
-
-	for (jobject_iter i = jobj_iter_init (obj); jobj_iter_is_valid (i); i = jobj_iter_next (i))
-		result++;
-
-	return result;
-}
-
 size_t jobject_size(jvalue_ref obj)
 {
-	return jobject_size_internal(obj);
-}
+	SANITY_CHECK_POINTER(obj);
 
-static jo_keyval_iter* jobject_find_keyval_iter (jkey_value_array *toCheck, raw_buffer *key, jkey_value_array **table)
-{
-	jvalue_ref keyInTable;
-	int bucket;
+	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), 0, "Attempt to retrieve size from something not an object %p", obj);
 
-	SANITY_CHECK_POINTER(key->m_str);
-	SANITY_CHECK_POINTER(table);
-
-	assert(toCheck != NULL);
-	assert(key->m_str != NULL);
-	assert(key->m_len != 0);
-
-	if (table) *table = toCheck;
-
-	while (toCheck) {
-		// VL: I always think an iterator is what should be used here every time I look at this
-		// because for some reason I think I was stupid enough to iterate over all buckets
-		// in the table.  However, I keep reminding myself - this looks at a specific bucket (based off
-		// of the hash of the key) before continuing to the next bucket.  With a good hash algorithm
-		// that is computationally cheap but also efficient at distribution, it'll be way
-		// faster than an iterator.
-
-		SANITY_CHECK_POINTER(toCheck);
-		bucket = key_hash_raw (key);
-
-		keyInTable = toCheck->m_bucket [bucket].entry.key;
-
-		assert(keyInTable != jnull());
-		if (keyInTable)
-		{
-			if (jstring_equal_internal2 (keyInTable, key))
-			{
-				if (table) *table = toCheck;
-				return &toCheck->m_bucket [bucket];
-			}
-		}
-
-		if (table) *table = toCheck;
-		toCheck = toCheck->m_next;
-	}
-
-	return NULL;
-}
-
-static jobject_key_value* jobject_find (jkey_value_array *toCheck, raw_buffer *key, jkey_value_array **table)
-{
-	jo_keyval_iter *keyval_iter = jobject_find_keyval_iter (toCheck, key, table);
-	if (!keyval_iter)
-		return NULL;
-	return &keyval_iter->entry;
+	if (!DEREF_OBJ(obj).m_members)
+		return 0;
+	return g_hash_table_size(DEREF_OBJ(obj).m_members);
 }
 
 bool jobject_get_exists (jvalue_ref obj, raw_buffer key, jvalue_ref *value)
 {
-	jobject_key_value *result;
+	jvalue jkey =
+	{
+		.m_refCnt = 1,
+		.m_type = JV_STR,
+		.value = {
+			.val_str = {
+				.m_data = {
+					.m_str = key.m_str,
+					.m_len = key.m_len,
+				},
+			},
+		},
+	};
 
-	assert(jis_object(obj));
-
-	CHECK_CONDITION_RETURN_VALUE(jis_null(obj), false, "Attempt to cast null %p to object", obj);
-	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), false, "Attempt to cast type %d to object (%d)", obj->m_type, JV_OBJECT);
-
-	result = jobject_find (&DEREF_OBJ(obj).m_table, &key, NULL);
-	if (result != NULL) {
-		if (value) *value = result->value;
-		return true;
-	}
-
-	return false;
+	return jobject_get_exists2(obj, &jkey, value);
 }
 
 bool jobject_get_exists2 (jvalue_ref obj, jvalue_ref key, jvalue_ref *value)
 {
-	jobject_key_value *result;
+	jvalue_ref result;
 
 	assert(jis_object(obj));
 
 	CHECK_CONDITION_RETURN_VALUE(jis_null(obj), false, "Attempt to cast null %p to object", obj);
 	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), false, "Attempt to cast type %d to object (%d)", obj->m_type, JV_OBJECT);
 
-	result = jobject_find2 (&DEREF_OBJ(obj).m_table, key, NULL);
-	if (result != NULL) {
-		if (value) *value = result->value;
-		return true;
-	}
+	if (!DEREF_OBJ(obj).m_members)
+		return false;
 
-	return false;
+	result = g_hash_table_lookup(DEREF_OBJ(obj).m_members, key);
+	if (!result)
+		return false;
+
+	if (value)
+		*value = result;
+	return true;
 }
 
 jvalue_ref jobject_get (jvalue_ref obj, raw_buffer key)
@@ -805,33 +692,35 @@ jvalue_ref jobject_get (jvalue_ref obj, raw_buffer key)
 
 bool jobject_remove (jvalue_ref obj, raw_buffer key)
 {
-	jo_keyval_iter *keyval_iter;
-	jobject_key_value *entry;
-
+	SANITY_CHECK_POINTER(obj);
 	assert(jis_object(obj));
-	assert(key.m_str != NULL);
 
-	CHECK_CONDITION_RETURN_VALUE(jis_null(obj), false, "Attempt to cast null %p to object", obj);
-	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), false, "Attempt to cast type %d to object (%d)", obj->m_type, JV_OBJECT);
+	if (!DEREF_OBJ(obj).m_members)
+		return false;
 
-	keyval_iter = jobject_find_keyval_iter (&DEREF_OBJ(obj).m_table, &key, NULL);
-	if (keyval_iter == NULL) return false;
+	jvalue jkey =
+	{
+		.m_refCnt = 1,
+		.m_type = JV_STR,
+		.value = {
+			.val_str = {
+				.m_data = {
+					.m_str = key.m_str,
+					.m_len = key.m_len,
+				},
+			},
+		},
+	};
 
-	// Unlink the entry from the iteration list
-	ldel(&keyval_iter->list);
-
-	// Remove the entry from the association table
-	entry = &keyval_iter->entry;
-	j_release (& (entry->key));
-	j_release (& (entry->value));
-	entry->key = NULL;
-
-	return true;
+	return g_hash_table_remove(DEREF_OBJ(obj).m_members, &jkey);
 }
 
 bool jobject_set (jvalue_ref obj, raw_buffer key, jvalue_ref val)
 {
 	jvalue_ref newKey, newVal;
+
+	if (!DEREF_OBJ(obj).m_members)
+		return false;
 
 	newVal = jvalue_copy (val);
 	//CHECK_CONDITION_RETURN_VALUE(jis_null(newVal) && !jis_null(val), false, "Failed to create a copy of the value")
@@ -853,8 +742,6 @@ bool jobject_set (jvalue_ref obj, raw_buffer key, jvalue_ref val)
 
 bool jobject_put (jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 {
-	jkey_value_array *table;
-
 	SANITY_CHECK_POINTER(obj);
 	SANITY_CHECK_POINTER(key);
 	SANITY_CHECK_POINTER(val);
@@ -863,11 +750,12 @@ bool jobject_put (jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 	assert(jis_string(key));
 	assert(val != NULL);
 
+	if (!DEREF_OBJ(obj).m_members)
+		return false;
+
 	CHECK_POINTER_RETURN_NULL(key);
 	CHECK_CONDITION_RETURN_VALUE(!jis_string(key), false, "%p is %d not a string (%d)", key, key->m_type, JV_STR);
 	CHECK_CONDITION_RETURN_VALUE(jstring_size(key) == 0, false, "Object instance name is the empty string");
-
-	table = &DEREF_OBJ(obj).m_table;
 
 	if (val == NULL) {
 		PJ_LOG_WARN("Please don't pass in NULL - use jnull() instead");
@@ -879,135 +767,24 @@ bool jobject_put (jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 		return false;
 	}
 
-	jobject_insert_internal (obj, table, jkeyval(key, val));
-
+	g_hash_table_replace(DEREF_OBJ(obj).m_members, key, val);
 	return true;
 }
 
-	// JSON Object iterators
-jobject_iter jobj_iter_init (const jvalue_ref obj)
+// JSON Object iterators
+void jobject_iter_init(jobject_iter *iter, jvalue_ref obj)
 {
 	SANITY_CHECK_POINTER(obj);
-
-	if (obj == NULL)
-		return JO_ITER(NULL);
-
 	assert(jis_object(obj));
+	assert(DEREF_OBJ(obj).m_members);
 
-	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), JO_ITER(NULL), "Cannot iterate over non-object");
-
-	SANITY_CHECK_POINTER(DEREF_OBJ(obj).m_start.list.next);
-
-	return JO_ITER (DEREF_OBJ(obj).m_start.list.next);
+	g_hash_table_iter_init(&iter->m_iter, DEREF_OBJ(obj).m_members);
 }
 
-jobject_iter jobj_iter_init_last(const jvalue_ref obj)
+bool jobject_iter_next(jobject_iter *iter, jobject_key_value *keyval)
 {
-	SANITY_CHECK_POINTER(obj);
-
-	if (obj == NULL)
-		return JO_ITER(NULL);
-
-	assert(jis_object(obj));
-
-	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), JO_ITER(NULL), "Cannot iterator over non-object");
-
-	SANITY_CHECK_POINTER(DEREF_OBJ(obj).m_start.list.prev);
-
-	return JO_ITER (&DEREF_OBJ(obj).m_start.list);
-}
-
-static inline jobject_iter jobj_iter_next_internal(const jobject_iter i)
-{
-	SANITY_CHECK_POINTER(i.m_opaque);
-	SANITY_CHECK_POINTER(((list_head *)(i.m_opaque))->next);
-
-	return (jobject_iter) {((list_head *)(i.m_opaque))->next};
-}
-
-static inline jobject_iter jobj_iter_previous_internal(const jobject_iter i)
-{
-	SANITY_CHECK_POINTER(i.m_opaque);
-	SANITY_CHECK_POINTER(((list_head *)(i.m_opaque))->next);
-
-	return (jobject_iter) {((list_head *)(i.m_opaque))->prev};
-}
-
-jobject_iter jobj_iter_next (const jobject_iter i)
-{
-	if (UNLIKELY(!jobj_iter_is_valid(i))) {
-		PJ_LOG_WARN("Invalid use of API - cannot increment an iterator that isn't valid");
-		assert(false);
-		return i;
-	}
-
-	return jobj_iter_next_internal(i);
-}
-
-jobject_iter jobj_iter_previous (const jobject_iter i)
-{
-	if (UNLIKELY(!jobj_iter_is_valid(i))) {
-		PJ_LOG_WARN("Invalid use of API - cannot decrement an iterator that isn't valid");
-		assert(false);
-		return i;
-	}
-
-	return jobj_iter_previous_internal(i);
-}
-
-bool jobj_iter_is_valid (const jobject_iter i)
-{
-	SANITY_CHECK_POINTER(i.m_opaque);
-	if (i.m_opaque == NULL)
-		return false;
-
-	return NULL != lentry(i.m_opaque, jo_keyval_iter, list)->entry.key;
-}
-
-jobject_iter jobj_iter_remove (jobject_iter i)
-{
-	if (UNLIKELY(!jobj_iter_is_valid(i))) {
-		PJ_LOG_WARN("Invalid use of API - cannot remove the elements when the iterator that isn't valid");
-		assert(false);
-		return i;
-	}
-
-	jobject_iter next = jobj_iter_next_internal(i);
-
-	ldel(i.m_opaque);
-	SANITY_KILL_POINTER(((list_head *)i.m_opaque)->prev);
-	SANITY_KILL_POINTER(((list_head *)i.m_opaque)->next);
-
-	j_release(&lentry(i.m_opaque, jo_keyval_iter, list)->entry.key);
-	j_release(&lentry(i.m_opaque, jo_keyval_iter, list)->entry.value);
-
-	return next;
-}
-
-bool jobj_iter_deref (const jobject_iter i, jobject_key_value *value)
-{
-	SANITY_CHECK_POINTER(value);
-
-	assert(jobj_iter_is_valid(i));
-	assert(value != NULL);
-
-	if (UNLIKELY(!jobj_iter_is_valid(i))) {
-		PJ_LOG_WARN("Invalid use of API - attempt to dereference invalid iterator");
-		return false;
-	}
-
-	memcpy (value, &lentry(i.m_opaque, jo_keyval_iter, list)->entry, sizeof(jobject_key_value));
-
-	assert(jis_string(value->key));
-
-	return true;
-}
-
-bool jobj_iter_equal (const jobject_iter i1, const jobject_iter i2)
-{
-	SANITY_CHECK_POINTER(i1.m_opaque);
-	SANITY_CHECK_POINTER(i2.m_opaque);
-	return (i1.m_opaque != NULL) && (i2.m_opaque != NULL) && i1.m_opaque == i2.m_opaque;
+	return g_hash_table_iter_next(&iter->m_iter,
+	                              (gpointer *)&keyval->key, (gpointer *)&keyval->value);
 }
 
 #undef DEREF_OBJ
@@ -1178,7 +955,7 @@ bool jis_array (jvalue_ref val)
 
 ssize_t jarray_size (jvalue_ref arr)
 {
-	CHECK_CONDITION_RETURN_VALUE(!valid_array(arr), 0, "Attempt to get array size of non-array %p", arr);
+	CHECK_CONDITION_RETURN_VALUE(!valid_array(arr), -1, "Attempt to get array size of non-array %p", arr);
 	return jarray_size_unsafe (arr);
 }
 
@@ -1604,7 +1381,7 @@ static void j_destroy_string (jvalue_ref str)
 	SANITY_CLEAR_VAR(DEREF_STR(str).m_data.m_len, -1);
 }
 
-static inline int key_hash (jvalue_ref key)
+static unsigned long key_hash (jvalue_ref key)
 {
 	assert(jis_string(key));
 	return key_hash_raw (&DEREF_STR(key).m_data);
@@ -1643,12 +1420,6 @@ jvalue_ref jstring_create_copy (raw_buffer str)
 	SANITY_CHECK_JSTR_BUFFER(new_str);
 
 	return new_str;
-}
-
-static jobject_key_value* jobject_find2(jkey_value_array *toCheck, jvalue_ref key, jkey_value_array **table)
-{
-	SANITY_CHECK_JSTR_BUFFER(key);
-	return jobject_find(toCheck, &DEREF_STR(key).m_data, table);
 }
 
 bool jis_string (jvalue_ref str)
