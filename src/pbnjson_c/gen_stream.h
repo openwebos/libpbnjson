@@ -30,6 +30,6 @@ enum TopLevelType {
 
 typedef enum TopLevelType TopLevelType;
 
-PJSON_LOCAL JStreamRef jstreamInternal(jschema_ref schema, TopLevelType type);
+PJSON_LOCAL JStreamRef jstreamInternal(jschema_ref schema, TopLevelType type, bool schemaNecessary);
 
 #endif /* GEN_STREAM_H_ */

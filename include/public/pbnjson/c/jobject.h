@@ -138,6 +138,17 @@ PJSON_API bool jis_null(jvalue_ref val);
  */
 PJSON_API const char *jvalue_tostring(jvalue_ref val, const jschema_ref schema) NON_NULL(1, 2);
 
+/**
+ * This function is similar to a function jvalue_tostring, except that it does not perform schema validation.
+ *
+ * @param val A reference to the JSON object to convert to a string.
+ * @return The string representation of the value with a lifetime equivalent to the value reference, or
+ *		   NULL if there is an error of any kind
+ *
+ * @see jvalue_tostring
+ */
+PJSON_API const char *jvalue_tostring_simple(jvalue_ref val) NON_NULL(1);
+
 /*** JSON Object operations ***/
 /**
  * Create an empty JSON object node.

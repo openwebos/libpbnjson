@@ -97,7 +97,7 @@ static jvalue JEMPTY_STR = {
 	.m_toStringDealloc = NULL
 };
 
-static const char *jvalue_tostring_internal (jvalue_ref val, jschema_ref schema, bool schemaNecessary);
+static const char *jvalue_tostring_internal_layer2 (jvalue_ref val, jschema_ref schema, bool schemaNecessary);
 static bool jvalue_to_string_append (jvalue_ref jref, JStreamRef generating);
 static bool jobject_to_string_append (jvalue_ref jref, JStreamRef generating);
 static bool jarray_to_string_append (jvalue_ref jref, JStreamRef generating);
@@ -368,20 +368,15 @@ jvalue_ref jnull ()
 	return &JNULL;
 }
 
-static const char *jvalue_tostring_internal (jvalue_ref val, jschema_ref schema, bool schemaNecessary)
+static const char *jvalue_tostring_internal_layer2 (jvalue_ref val, jschema_ref schema, bool schemaNecessary)
 {
 	SANITY_CHECK_POINTER(val);
 	CHECK_POINTER_RETURN_VALUE(val, "null");
 
-	if (UNLIKELY(schemaNecessary && jis_null_schema(schema))) {
-		PJ_LOG_ERR("Attempt to generate JSON stream without a schema even though it is mandatory");
-		return NULL;
-	}
-
 	if (!val->m_toString) {
 		bool parseok = false;
 		StreamStatus error;
-		JStreamRef generating = jstreamInternal (schema, TOP_None);
+		JStreamRef generating = jstreamInternal(schema, TOP_None, schemaNecessary);
 		if (generating == NULL) {
 			return NULL;
 		}
@@ -397,19 +392,29 @@ static const char *jvalue_tostring_internal (jvalue_ref val, jschema_ref schema,
 	return val->m_toString;
 }
 
-const char * jvalue_tostring (jvalue_ref val, const jschema_ref schema)
+static const char *jvalue_tostring_internal_layer1 (jvalue_ref val, jschema_ref schema, bool schemaNecessary)
 {
 	if (val->m_toStringDealloc)
 		val->m_toStringDealloc(val->m_toString);
 	val->m_toString = NULL;
 
-	const char* result = jvalue_tostring_internal (val, schema, true);
+	const char* result = jvalue_tostring_internal_layer2 (val, schema, schemaNecessary);
 
 	if (result == NULL) {
 		PJ_LOG_ERR("Failed to generate string from jvalue. Error location: %s", val->m_toString);
 	}
 
 	return result;
+}
+
+const char *jvalue_tostring_simple(jvalue_ref val)
+{
+	return jvalue_tostring_internal_layer1(val, jschema_all(), false);
+}
+
+const char * jvalue_tostring (jvalue_ref val, const jschema_ref schema)
+{
+	return jvalue_tostring_internal_layer1(val, schema, true);
 }
 
 /************************* JSON OBJECT API **************************************/
@@ -572,7 +577,7 @@ static bool jobject_to_string_append (jvalue_ref jref, JStreamRef generating)
 		return false;
 	}
 	if (!jis_object (jref)) {
-		const char *asStr = jvalue_tostring_internal (jref, NULL, false);
+		const char *asStr = jvalue_tostring_internal_layer2 (jref, NULL, false);
 		generating->string (generating, J_CSTR_TO_BUF("Internal error - not an object"));
 		generating->string (generating, j_cstr_to_buffer(asStr));
 		// create invalid JSON on purpose

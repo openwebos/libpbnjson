@@ -57,6 +57,15 @@ public:
 	 * @return The JSON string serialized to a string or the empty string on error (violated schema).
 	 */
 	static std::string serialize(const JValue &val, const JSchema &schema, JResolver *resolver = NULL);
+
+	/**
+	 * Convenience function to wrap call to toString for any JValue, without schema validation
+	 *
+	 * @param val
+	 * @param quoteSingleString If val is type of string, returned string will be surrounded by quotes
+	 * @return The JSON string serialized to a string or the empty string on error.
+	 */
+	static std::string serialize(const JValue &val, bool quoteSingleString);
 private:
 	JResolver *m_resolver;
 };

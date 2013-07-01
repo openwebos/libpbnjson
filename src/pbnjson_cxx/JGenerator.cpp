@@ -52,4 +52,25 @@ std::string JGenerator::serialize(const JValue &val, const JSchema &schema, JRes
 	return serialized;
 }
 
+std::string JGenerator::serialize(const JValue &val, bool quoteSingleString)
+{
+	const char *str = jvalue_tostring_simple(val.peekRaw());
+	if (UNLIKELY(str == NULL)) {
+		return "";
+	}
+
+	if (!quoteSingleString && val.isString())
+	{
+		size_t length = strlen(str);
+		if ( (length >= 2) &&
+			 (str[0] == '"') &&
+			 (str[length-1] == '"') )
+		{
+			 return std::string(str+1, length-2);
+		}
+	}
+
+	return str;
+}
+
 }

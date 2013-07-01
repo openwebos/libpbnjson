@@ -74,6 +74,7 @@ SET( CPPUnitTest
 	TestJValue2
 	TestJValueGTest
 	TestRegression
+	TestJGenerator
 	)
 
 FOREACH(TEST ${CPPUnitTest})

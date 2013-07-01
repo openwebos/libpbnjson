@@ -102,6 +102,109 @@ static void pjson_internal_free(void *ctx, void * ptr)
 	return free(ptr);
 }
 
+static ActualStream* begin_object_simple(ActualStream* stream)
+{
+	SANITY_CHECK_POINTER(stream);
+	CHECK_HANDLE(stream);
+	yajl_gen_map_open(stream->handle);
+	return stream;
+}
+
+static ActualStream* key_object_simple(ActualStream* stream, raw_buffer buf)
+{
+	SANITY_CHECK_POINTER(stream);
+	CHECK_HANDLE(stream);
+	SANITY_CHECK_POINTER(buf.m_str);
+	yajl_gen_string(stream->handle, (const unsigned char *)buf.m_str, buf.m_len);
+	return stream;
+}
+
+
+static ActualStream* end_object_simple(ActualStream* stream)
+{
+	SANITY_CHECK_POINTER(stream);
+	CHECK_HANDLE(stream);
+	yajl_gen_map_close(stream->handle);
+	return stream;
+}
+
+static ActualStream* begin_array_simple(ActualStream* stream)
+{
+	SANITY_CHECK_POINTER(stream);
+	CHECK_HANDLE(stream);
+	yajl_gen_array_open(stream->handle);
+	return stream;
+}
+
+static ActualStream* end_array_simple(ActualStream* stream)
+{
+	SANITY_CHECK_POINTER(stream);
+	CHECK_HANDLE(stream);
+	yajl_gen_array_close(stream->handle);
+	return stream;
+}
+
+static ActualStream* val_num_simple(ActualStream* stream, raw_buffer numstr)
+{
+	SANITY_CHECK_POINTER(stream);
+	SANITY_CHECK_POINTER(numstr.m_str);
+	assert (numstr.m_str != NULL);
+	CHECK_HANDLE(stream);
+	yajl_gen_number(stream->handle, numstr.m_str, numstr.m_len);
+	return stream;
+}
+
+static ActualStream* val_int_simple(ActualStream* stream, int64_t number)
+{
+	char buf[24];
+	int printed;
+	SANITY_CHECK_POINTER(stream);
+	CHECK_HANDLE(stream);
+	printed = snprintf(buf, sizeof(buf), "%" PRId64, number);
+	yajl_gen_number(stream->handle, buf, printed);
+	return stream;
+}
+
+static ActualStream* val_dbl_simple(ActualStream* stream, double number)
+{
+	SANITY_CHECK_POINTER(stream);
+	CHECK_HANDLE(stream);
+	// yajl doesn't print properly (%g doesn't seem to do what it claims to
+	// do or something - fails for 42323.0234234)
+	// let's work around it with the  raw interface by
+	char f[32];
+	int len = snprintf(f, sizeof(f) - 1, "%.14lg", number);
+	yajl_gen_number(stream->handle, f, len);
+	return stream;
+}
+
+static ActualStream* val_str_simple(ActualStream* stream, raw_buffer str)
+{
+	SANITY_CHECK_POINTER(stream);
+	SANITY_CHECK_POINTER(str.m_str);
+	assert(str.m_str != NULL);
+	CHECK_HANDLE(stream);
+	yajl_gen_string(stream->handle, (const unsigned char *)str.m_str, str.m_len);
+
+	return stream;
+}
+
+static ActualStream* val_bool_simple(ActualStream* stream, bool boolean)
+{
+	SANITY_CHECK_POINTER(stream);
+	CHECK_HANDLE(stream);
+	yajl_gen_bool(stream->handle, boolean);
+	return stream;
+}
+
+static ActualStream* val_null_simple(ActualStream* stream)
+{
+	SANITY_CHECK_POINTER(stream);
+	CHECK_HANDLE(stream);
+	yajl_gen_null(stream->handle);
+	return stream;
+}
+
 static ActualStream* begin_object(ActualStream* stream)
 {
 	SANITY_CHECK_POINTER(stream);
@@ -494,6 +597,23 @@ static struct __JStream yajl_stream_generator =
 	(jFinish)finish_stream
 };
 
+static struct __JStream yajl_stream_generator_simple =
+{
+	(jObjectBegin)begin_object_simple,
+	(jObjectKey)key_object_simple,
+	(jObjectEnd)end_object_simple,
+	(jArrayBegin)begin_array_simple,
+	(jArrayEnd)end_array_simple,
+	(jNumber)val_num_simple,
+	(jNumberI)val_int_simple,
+	(jNumberF)val_dbl_simple,
+	(jString)val_str_simple,
+	(jBoolean)val_bool_simple,
+	(jNull)val_null_simple,
+	(jFinish)finish_stream
+};
+
+
 static yajl_callbacks yajl_cb =
 {
 	(pj_yajl_null)dom_null,
@@ -525,13 +645,16 @@ static bool handleUnknownError(void *ctxt, JSAXContextRef parseCtxt)
 	return false;
 }
 
-JStreamRef jstreamInternal(jschema_ref schema, TopLevelType type)
+JStreamRef jstreamInternal(jschema_ref schema, TopLevelType type, bool schemaNecessary)
 {
 	ActualStream* stream = (ActualStream*)calloc(1, sizeof(ActualStream));
 	if (UNLIKELY(stream == NULL)) {
 		return NULL;
 	}
-	memcpy(&stream->stream, &yajl_stream_generator, sizeof(struct __JStream));
+	if (schemaNecessary)
+		memcpy(&stream->stream, &yajl_stream_generator, sizeof(struct __JStream));
+	else
+		memcpy(&stream->stream, &yajl_stream_generator_simple, sizeof(struct __JStream));
 
 #if 0
 	// try to use custom allocators to bypass freeing the buffer & instead passing off
@@ -583,19 +706,19 @@ JStreamRef jstreamInternal(jschema_ref schema, TopLevelType type)
 
 JStreamRef jstream(jschema_ref schema)
 {
-	return jstreamInternal(schema, TOP_None);
+	return jstreamInternal(schema, TOP_None, true);
 }
 
 JStreamRef jstreamObj(jschema_ref schema)
 {
-	JStreamRef opened = jstreamInternal(schema, TOP_Object);
+	JStreamRef opened = jstreamInternal(schema, TOP_Object, true);
 	opened->o_begin(opened);
 	return opened;
 }
 
 JStreamRef jstreamArr(jschema_ref schema)
 {
-	JStreamRef opened = jstreamInternal(schema, TOP_Array);
+	JStreamRef opened = jstreamInternal(schema, TOP_Array, true);
 	opened->a_begin(opened);
 	return opened;
 }
