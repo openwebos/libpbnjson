@@ -42,8 +42,8 @@
 #endif
 
 #ifdef COMPILER_EXPECT
-	#define LIKELY(condition) COMPILER_EXPECT(condition, 1)
-	#define UNLIKELY(condition) COMPILER_EXPECT(condition, 0)
+	#define LIKELY(condition) COMPILER_EXPECT(!!(condition), 1)
+	#define UNLIKELY(condition) COMPILER_EXPECT(!!(condition), 0)
 #else
 	#define LIKELY(condition) (condition)
 	#define UNLIKELY(condition) (condition)

@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-#      Copyright ©2009-2013 Zenith Electronics LLC, a subsidiary of LG Electronics USA, Inc. All Rights Reserved.
+#      Copyright 2012-2013 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,24 +51,12 @@ src(test_cppschema
 	TestSchema.cpp
 )
 
-qt_hdrs(test_regressions
-	TestRegression.h
-)
-
-src(test_regressions
-	TestRegression.cpp
-)
-
 qt_hdrs(test_jvalue
 	TestJValue.h
 )
 
 src(test_jvalue
 	TestJValue.cpp
-)
-
-set(test_regressions_test_list
-	testNOV99444
 )
 
 include_directories(${C_ENGINE_INCDIR})
@@ -78,9 +66,12 @@ add_regular_test(smoketest_mem "C++ Smoke Test of Memory Usage")
 #add_qt_test(test_num_conversion "Numeric conversion Unit Tests")
 add_schema_test(test_cppschema "C++ Number sanity check" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/sanity/ SimpleNumber)
 add_schema_test(test_cppschema "C++ Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/contact/ Contact)
-add_qt_test(test_regressions "Regression testing")
 add_qt_test(test_jvalue "Test JValue class")
 
+
+add_executable(test_regression TestRegression.cpp)
+target_link_libraries(test_regression ${TEST_LIBRARIES} gtest gtest_main pthread)
+add_test(CPP.TestRegression test_regression)
 
 add_executable(test_cppdom TestDOM.cpp)
 target_link_libraries(test_cppdom ${TEST_LIBRARIES} gtest gtest_main pthread)

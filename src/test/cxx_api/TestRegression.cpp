@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+//      Copyright 2012-2013 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,166 +16,135 @@
 //
 // LICENSE@@@
 
-#include "TestRegression.h"
+#include <gtest/gtest.h>
 #include <pbnjson.hpp>
-#include <QtDebug>
 
-Q_DECLARE_METATYPE(std::string);
-Q_DECLARE_FLAGS(QConversionResultFlags, ConversionResult)
+using namespace std;
+using namespace pbnjson;
 
-namespace pjson {
-	namespace testcxx {
-
-static void toString(const pbnjson::JValue& val, std::string& result, bool shouldSucceed = true)
+class NOV99444
+    : public testing::Test
 {
-	using namespace pbnjson;
+protected:
+    string _faulty_schema;
+    string _valid_schema;
+    string _input;
 
-	JGenerator serializer;
-	bool serialized = serializer.toString(val, JSchemaFragment("{}"), result);
-	QCOMPARE(serialized, shouldSucceed);
-}
+    virtual void SetUp()
+    {
+        _faulty_schema =
+        "{"
+            "\"type\" : \"object\","
+            "\"properties\" : {"
+                "\"errorCode\" : {"
+                    "\"type\" : \"integer\";"
+                "}"
+            "}"
+        "}";
 
-TestRegression::TestRegression()
+        _valid_schema =
+        "{"
+            "\"type\" : \"object\","
+            "\"properties\" : {"
+                "\"errorCode\" : {"
+                        "\"type\" : \"integer\""
+                "}"
+            "}"
+        "}";
+
+        JValue obj = Object()
+                   << JValue::KeyValue("returnValue", false)
+                   << JValue::KeyValue("errorCode", -1)
+                   << JValue::KeyValue("errorText", "Launch helper exited with unknown return code 0");
+        ASSERT_TRUE(JGenerator{}.toString(obj, JSchemaFragment("{}"), _input));
+    }
+};
+
+TEST_F(NOV99444, Success)
 {
+    JSchema schema = JSchemaFragment(_valid_schema);
+    JDomParser parser;
+
+    for (int i = 0; i < 10; i++)
+        parser.parse(_input, schema);
+    ASSERT_TRUE(parser.parse(_input, schema));
+
+    JValue json = parser.getDom();
+
+    int error_code;
+    EXPECT_EQ(CONV_OK, json["errorCode"].asNumber<int>(error_code));
+    EXPECT_TRUE(json["errorText"].isString());
 }
 
-TestRegression::~TestRegression()
+TEST_F(NOV99444, Failure)
 {
+    JSchema schema{JSchemaFragment(_faulty_schema)};
+    JDomParser parser;
+
+    for (int i = 0; i < 10; i++)
+        parser.parse(_input, schema);
+    ASSERT_FALSE(parser.parse(_input, schema));
 }
 
-#define USE_PBNJSON using namespace pbnjson
-
-#define INIT_SCHEMA_TEST_DATA       \
-    USE_PBNJSON;                    \
-    initSchemaTest();
-
-void TestRegression::initSchemaTest()
+TEST(SysmgrFailure, Parse)
 {
-	QTest::addColumn<std::string>("rawInput");
-	QTest::addColumn<std::string>("schema");
-	QTest::addColumn<bool>("inputMatchesSchema");
+    // Schema from sysmgr crash
+    string valid_schema = "{\"type\":\"object\",\"properties\":{\"quicklaunch\":{\"type\":\"boolean\",\"optional\":true},\"launcher\":{\"type\":\"boolean\",\"optional\":true},\"universal search\":{\"type\":\"boolean\",\"optional\":true}},\"additionalProperties\":false}";
+    JValue obj = Object()
+                 << JValue::KeyValue("universal search", false)
+                 << JValue::KeyValue("launcher", false);
+    string input;
+    ASSERT_TRUE(JGenerator{}.toString(obj, JSchemaFragment("{}"), input));
+    EXPECT_TRUE(JDomParser{}.parse(input, JSchemaFragment{valid_schema}));
 }
 
-void TestRegression::initTestCase()
+TEST(GF_7251, MemoryLeak)
 {
+    const pbnjson::JSchemaFragment schema("{}");
+
+    string serialized;
+    ASSERT_TRUE(JGenerator{}.toString(pbnjson::Object(), schema, serialized));
+    EXPECT_STREQ("{}", serialized.c_str());
 }
 
-void TestRegression::init()
+TEST(GF_7251, MemoryLeak2)
 {
+    char const *schema = "{\"type\": \"object\","
+                           "\"properties\": {"
+                             "\"key\": {"
+                               "\"type\" : \"boolean\""
+                             "}"
+                           "}"
+                         "}";
+    JValue obj = Object() << JValue::KeyValue("key", "true");
+    string serialized;
+    ASSERT_FALSE(JGenerator{}.toString(obj, JSchemaFragment{schema}, serialized));
+    EXPECT_STREQ("", serialized.c_str());
 }
 
-void TestRegression::cleanup()
+TEST(GF_7251, MemoryLeak3)
 {
+    char const *schema =
+        "{ \"type\": \"object\","
+          "\"properties\": {"
+            "\"hasVideo\":{"
+              "\"optional\":true,"
+              "\"type\": \"object\","
+              "\"properties\": {"
+                "\"state\": {\"type\":\"boolean\"},"
+                "\"mediaId\": {\"type\": \"string\"}"
+              "}"
+            "}"
+          "}"
+        "}";
+
+    JDomParser parser;
+    ASSERT_TRUE(parser.parse("{\"hasVideo\":{\"state\":1,\"mediaId\":\"jtNe8Pn3csslQ6R\"}}", JSchemaFragment("{}")));
+
+    JValue object = parser.getDom();
+    string serialized;
+
+    EXPECT_FALSE(JGenerator{}.toString(object, JSchemaFragment{schema}, serialized));
 }
 
-void TestRegression::cleanupTestCase()
-{
-}
-
-void TestRegression::testNOV99444_data()
-{
-	INIT_SCHEMA_TEST_DATA;
-
-	std::string input;
-
-	std::string faultySchema =
-	"{"
-	        "\"type\" : \"object\","
-	        "\"properties\" : {"
-	                "\"errorCode\" : {"
-	                        "\"type\" : \"integer\";"
-	                "}"
-	        "}"
-	"}";
-
-	std::string validSchema =
-	"{"
-	        "\"type\" : \"object\","
-	        "\"properties\" : {"
-	                "\"errorCode\" : {"
-	                        "\"type\" : \"integer\""
-	                "}"
-	        "}"
-	"}";
-
-	JValue faultyInput;
-
-	faultyInput = Object();
-	faultyInput.put("returnValue", false);
-	faultyInput.put("errorCode", -1);
-	faultyInput.put("errorText", "Launch helper exited with unknown return code 0");
-	toString(faultyInput, input);
-	QTest::newRow("bad schema test") << input << faultySchema << false;
-	QTest::newRow("schema test from bug") << input << validSchema << true;
-}
-
-void TestRegression::testNOV99444()
-{
-	using namespace pbnjson;
-
-	QFETCH(std::string, rawInput);
-	QFETCH(std::string, schema);
-	QFETCH(bool, inputMatchesSchema);
-
-	qDebug() << "Testing" << rawInput.c_str() << "against" << schema.c_str();
-
-	JSchema inputSchema = JSchemaFragment(schema);
-	JDomParser parser;
-
-	for (int i = 0; i < 10; i++) {
-		qDebug() << "Retying" << i << "th time";
-		parser.parse(rawInput, inputSchema);
-	}
-	bool parsed = parser.parse(rawInput, inputSchema);
-	QCOMPARE(parsed, inputMatchesSchema);
-
-	if (!parsed)
-		return;
-
-	JValue json = parser.getDom();
-
-	int errorCode;
-	QCOMPARE(json["errorCode"].asNumber<int>(errorCode), (ConversionResultFlags)CONV_OK);
-
-	if (errorCode != 0) {
-		QVERIFY(json["errorText"].isString());
-	} else {
-		QVERIFY(json["errorText"].isNull());
-	}
-}
-
-void TestRegression::testSysmgrFailure_data()
-{
-	INIT_SCHEMA_TEST_DATA;
-
-	JValue faultyInput;
-	std::string input;
-	std::string validSchema;
-
-	validSchema = "{\"type\":\"object\",\"properties\":{\"quicklaunch\":{\"type\":\"boolean\",\"optional\":true},\"launcher\":{\"type\":\"boolean\",\"optional\":true},\"universal search\":{\"type\":\"boolean\",\"optional\":true}},\"additionalProperties\":false}";
-	faultyInput = Object();
-	faultyInput.put("universal search", false);
-	faultyInput.put("launcher", false);
-	toString(faultyInput, input);
-
-	QTest::newRow("schema test from sysmgr crash") << input << validSchema << true;
-}
-
-void TestRegression::testSysmgrFailure()
-{
-	using namespace pbnjson;
-
-	QFETCH(std::string, rawInput);
-	QFETCH(std::string, schema);
-	QFETCH(bool, inputMatchesSchema);
-
-	JSchema inputSchema = JSchemaFragment(schema);
-	JDomParser parser;
-	bool parsed = parser.parse(rawInput, inputSchema);
-	QCOMPARE(parsed, inputMatchesSchema);
-}
-
-	}
-}
-
-QTEST_APPLESS_MAIN(pjson::testcxx::TestRegression)
+// vim: set et ts=4 sw=4:

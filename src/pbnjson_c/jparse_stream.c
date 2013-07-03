@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 Hewlett-Packard Development Company, L.P.
+//      Copyright 2012-2013 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -207,15 +207,19 @@ int dom_object_start(JSAXContextRef ctxt)
 	if (data->m_prev != NULL) {
 		if (jis_array(data->m_prev->m_value)) {
 			assert(data->m_value == NULL);
-			jarray_append(data->m_prev->m_value, newParent);
+			jarray_append(data->m_prev->m_value, jvalue_copy(newParent));
 		} else {
 			assert(jis_object(data->m_prev->m_value));
-			CHECK_CONDITION_RETURN_VALUE(!jis_string(data->m_value), 0, "improper place for a child object");
-			jobject_put(data->m_prev->m_value, data->m_value, newParent);
+			if (UNLIKELY(!jis_string(data->m_value)))
+			{
+				PJ_LOG_ERR("improper place for a child object");
+				j_release(&newParent);
+				return 0;
+			}
+			jobject_put(data->m_prev->m_value, data->m_value, jvalue_copy(newParent));
 		}
 	}
 
-	// not using reference counting here on purpose
 	data->m_value = newParent;
 
 	return 1;
@@ -250,7 +254,11 @@ int dom_object_end(JSAXContextRef ctxt)
 	assert(data->m_prev != NULL);
 	changeDOMContext(ctxt, data->m_prev);
 	if (data->m_prev->m_prev != NULL)
+	{
+		j_release(&data->m_prev->m_value);
+		// 0xdeadbeef may be written in debug mode, which fools the code
 		data->m_prev->m_value = NULL;
+	}
 	free(data);
 
 	return 1;
@@ -278,7 +286,7 @@ int dom_array_start(JSAXContextRef ctxt)
 	if (data->m_prev != NULL) {
 		if (jis_array(data->m_prev->m_value)) {
 			assert(data->m_value == NULL);
-			jarray_append(data->m_prev->m_value, newParent);
+			jarray_append(data->m_prev->m_value, jvalue_copy(newParent));
 		} else {
 			assert(jis_object(data->m_prev->m_value));
 			if (UNLIKELY(!jis_string(data->m_value))) {
@@ -286,11 +294,10 @@ int dom_array_start(JSAXContextRef ctxt)
 				j_release(&newParent);
 				return 0;
 			}
-			jobject_put(data->m_prev->m_value, data->m_value, newParent);
+			jobject_put(data->m_prev->m_value, data->m_value, jvalue_copy(newParent));
 		}
 	}
 
-	// not using reference counting here on purpose
 	data->m_value = newParent;
 
 	return 1;
@@ -306,10 +313,33 @@ int dom_array_end(JSAXContextRef ctxt)
 	assert(data->m_prev != NULL);
 	changeDOMContext(ctxt, data->m_prev);
 	if (data->m_prev->m_prev != NULL)
+	{
+		j_release(&data->m_prev->m_value);
 		data->m_prev->m_value = NULL;
+	}
 	free(data);
 
 	return 1;
+}
+
+static void dom_cleanup(DomInfo *dom_info)
+{
+	while (dom_info)
+	{
+		DomInfo *cur_dom_info = dom_info;
+		dom_info = dom_info->m_prev;
+
+		j_release(&cur_dom_info->m_value);
+		free(cur_dom_info);
+	}
+}
+
+void dom_cleanup_from_jsax(JSAXContextRef ctxt)
+{
+	if (!ctxt)
+		return;
+
+	dom_cleanup(getDOMContext(ctxt));
 }
 
 jvalue_ref jdom_parse_ex(raw_buffer input, JDOMOptimizationFlags optimizationMode, JSchemaInfoRef schemaInfo, bool allowComments)
@@ -340,30 +370,7 @@ jvalue_ref jdom_parse_ex(raw_buffer input, JDOMOptimizationFlags optimizationMod
 		// cleanup so there's no memory leak
 		PJ_LOG_ERR("state machine indicates invalid input");
 		parsedOK = false;
-		DomInfo *ctxt = domCtxt;
-		DomInfo *parentCtxt;
-		while (ctxt) {
-#ifdef _DEBUG
-			if (ctxt == topLevelContext) {
-				assert(ctxt->m_prev == NULL);
-			} else {
-				assert(ctxt->m_prev != NULL);
-			}
-#endif
-
-			parentCtxt = ctxt->m_prev;
-
-			// top-level json value can only be an object or array,
-			// thus we do not need to check that we aren't releasing topLevelContext->m_value.
-			// the only other object type that m_value will contain is string (representing the key of an object).
-			//if (ctxt->m_value && !jis_array(ctxt->m_value) && !jis_object(ctxt->m_value)) {
-			if (ctxt->m_value && jis_string(ctxt->m_value)) {
-				j_release(&ctxt->m_value);
-			}
-			free(ctxt);
-
-			ctxt = parentCtxt;
-		}
+		dom_cleanup(domCtxt);
 		topLevelContext = NULL;
 	}
 
@@ -371,7 +378,6 @@ jvalue_ref jdom_parse_ex(raw_buffer input, JDOMOptimizationFlags optimizationMod
 
 	if (!parsedOK) {
 		PJ_LOG_ERR("Parser failure");
-		j_release(&result);
 		return jnull();
 	}
 

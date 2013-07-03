@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 Hewlett-Packard Development Company, L.P.
+//      Copyright (c) 20012-2013 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -398,8 +398,7 @@ static void destroy_stream(ActualStream* stream)
 
 	if(stream->ctxt)
 	{
-		if(stream->ctxt->ctxt)
-			free(stream->ctxt->ctxt);
+		dom_cleanup_from_jsax(stream->ctxt);
 
 		if(stream->ctxt->m_validation)
 			validation_destroy(&stream->ctxt->m_validation);

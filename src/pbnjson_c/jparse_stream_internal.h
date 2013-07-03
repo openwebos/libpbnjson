@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2012 Hewlett-Packard Development Company, L.P.
+//      Copyright 2012-2013 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,6 +45,7 @@ int dom_object_key(JSAXContextRef ctxt, const char *key, size_t keyLen);
 int dom_object_end(JSAXContextRef ctxt);
 int dom_array_start(JSAXContextRef ctxt);
 int dom_array_end(JSAXContextRef ctxt);
+void dom_cleanup_jsax(JSAXContextRef ctxt);
 
 int my_bounce_start_map(void *ctxt);
 int my_bounce_map_key(void *ctxt, const unsigned char *str, yajl_size_t strLen);
