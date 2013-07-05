@@ -45,7 +45,7 @@ int dom_object_key(JSAXContextRef ctxt, const char *key, size_t keyLen);
 int dom_object_end(JSAXContextRef ctxt);
 int dom_array_start(JSAXContextRef ctxt);
 int dom_array_end(JSAXContextRef ctxt);
-void dom_cleanup_jsax(JSAXContextRef ctxt);
+void dom_cleanup_from_jsax(JSAXContextRef ctxt);
 
 int my_bounce_start_map(void *ctxt);
 int my_bounce_map_key(void *ctxt, const unsigned char *str, yajl_size_t strLen);
