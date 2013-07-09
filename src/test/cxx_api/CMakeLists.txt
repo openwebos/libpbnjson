@@ -75,6 +75,7 @@ SET( CPPUnitTest
 	TestJValueGTest
 	TestRegression
 	TestJGenerator
+	TestSchemaKeywords
 	)
 
 FOREACH(TEST ${CPPUnitTest})
@@ -82,3 +83,5 @@ FOREACH(TEST ${CPPUnitTest})
 	target_link_libraries(${TEST} ${TEST_LIBRARIES} gtest gtest_main pthread)
 	add_test(CPP.${TEST} ${TEST})
 ENDFOREACH()
+
+file(COPY "../schemas" DESTINATION "./data")

@@ -1,0 +1,9 @@
+{
+    "name" : "extended",
+    "type" : "object",
+    "extends" : {"$ref" : "base.json"},
+    "properties":
+    {
+        "sField" : {"type" : "string"}
+    }
+}
