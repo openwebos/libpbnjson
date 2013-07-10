@@ -302,7 +302,7 @@ static bool resolveSchema(SchemaWrapperRef schema, SchemaResolutionRef resolver)
 		int lastElement = jarray_size(schema->m_validation) - 1;
 		TRACE_STATE_ARRAY("removing %p w/ refCnt %d", schema->m_validation, jarray_get(schema->m_validation, lastElement), jarray_get(schema->m_validation, lastElement)->m_refCnt);
 		jarray_remove(schema->m_validation, lastElement);
-		if (!jarray_splice_append(schema->m_validation, resolvedRemote->m_validation, SPLICE_TRANSFER)) {
+		if (!jarray_splice_append(schema->m_validation, resolvedRemote->m_validation, SPLICE_COPY)) {
 			PJ_SCHEMA_ERR("Failed to append resolved schema for %.*s", RB_PRINTF(refStr));
 			jschema_release_internal(&resolvedRemote);
 			return false;

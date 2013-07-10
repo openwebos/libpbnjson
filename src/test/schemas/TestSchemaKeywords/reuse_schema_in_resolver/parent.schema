@@ -1,0 +1,11 @@
+{
+    "id": "parent",
+    "type": "object",
+    "properties": {
+        "mychild": {
+            "extends": {
+                "$ref": "child"
+            }
+        }
+    }
+}

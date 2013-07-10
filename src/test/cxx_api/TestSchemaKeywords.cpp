@@ -41,7 +41,8 @@ public:
 	}
 };
 
-TEST(Schemakeywords, extends) {
+TEST(Schemakeywords, extends)
+{
 
 	pj::JSchemaFile schema("./data/schemas/TestSchemaKeywords/extends/extended.json");
 	ASSERT_TRUE(schema.isInitialized());
@@ -57,6 +58,51 @@ TEST(Schemakeywords, extends) {
 		pj::JValue json = pj::Object() << pj::JValue::KeyValue("iField", "text");
 		EXPECT_EQ("", pj::JGenerator::serialize(json, schema, &resolver));
 	}
+}
+
+class ChildResolver : public pbnjson::JResolver
+{
+public:
+	ChildResolver()
+	:
+	m_schema(pbnjson::JSchemaFile("./data/schemas/TestSchemaKeywords/reuse_schema_in_resolver/child.schema"))
+	{
+	}
+
+	pbnjson::JSchema resolve(const ResolutionRequest &request, JSchemaResolutionResult &result)
+	{
+		if (request.resource() != "child")
+		{
+			result = SCHEMA_IO_ERROR;
+			return pbnjson::JSchema::NullSchema();
+		}
+
+		result = SCHEMA_RESOLVED;
+		return m_schema;
+	}
+
+private:
+	pbnjson::JSchema m_schema;
+};
+
+
+TEST(Schemakeywords, reuse_schema_in_resolver)
+{
+
+	pj::JSchemaFile schema("./data/schemas/TestSchemaKeywords/reuse_schema_in_resolver/parent.schema");
+	ASSERT_TRUE(schema.isInitialized());
+
+	ChildResolver resolver;
+
+	std::string data = "{\n";
+	data += "\"mychild\" : {\n";
+	data += "\"name\" : \"Jone Doe\"\n";
+	data += "}\n}";
+
+	pbnjson::JDomParser parser1(&resolver);
+	EXPECT_TRUE(parser1.parse(data.c_str(), schema, NULL));
+	pbnjson::JDomParser parser2(&resolver);
+	EXPECT_TRUE(parser2.parse(data.c_str(), schema, NULL));
 }
 
 } // namespace testcxx

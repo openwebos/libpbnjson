@@ -1,0 +1,9 @@
+{
+    "id": "child",
+    "type": "object",
+    "properties": {
+        "name": {
+            "type": "string"
+        }
+    }
+}
