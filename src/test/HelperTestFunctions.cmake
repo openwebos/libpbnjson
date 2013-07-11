@@ -16,46 +16,6 @@
 #
 # LICENSE@@@
 
-find_package(Valgrind)
-
-# Variable compatibility with existing build scripts
-# Deprecated in favour of setting WITH_VALGRIND to 'memcheck'
-if(DEFINED MEMCHK)
-	set(WITH_VALGRIND "memcheck" CACHE STRING "When running unit tests, the tool to use when running valgrind (memcheck, callgrind, etc)")
-else()
-	set(WITH_VALGRIND "" CACHE STRING "When running unit tests, the tool to use when running valgrind (memcheck, callgrind, etc)")
-endif()
-
-set(VALGRIND_TOOL ${WITH_VALGRIND})
-
-set(WITH_VALGRIND_memcheck_OPTIONS --leak-check=full --error-exitcode=127 CACHE STRING "The options to pass when running memcheck")
-set(WITH_VALGRIND_callgrind_OPTIONS "" CACHE STRING "The options to pass when running callgrind")
-
-if(VALGRIND_FOUND AND VALGRIND_TOOL)
-	# G_SLICE=always-malloc is needed for testing w/ valgrind
-	# properly (otherwise tests may provide false positives due to
-	# Qt using Glib & the slice allocator never freeing memory)
-	# Setting test environment variables from CMake are only supported
-	# as of 2.8
-	if(CMAKE_MAJOR_VERSION EQUAL 2 AND CMAKE_MINOR_VERSION LESS 8)
-		macro(conf_valgrind_env test_name)
-			set(SUPRESS_GSLICE_WARNING $ENV{SUPRESS_GSLICE_WARNING})
-			if (NOT SUPRESS_GSLICE_WARNING)
-				message(WARNING "CMake version is too old - you need to manually set G_SLICE=always-malloc when running the tests under valgrind (set SUPRESS_GSLICE_WARNING env variable to suppress this warning)")
-			endif()
-		endmacro()
-	else()
-		macro(conf_valgrind_env test_name)
-			set_property(TEST '${${test_name}}' APPEND PROPERTY ENVIRONMENT
-				"G_SLICE=always-malloc"
-			)
-		endmacro()
-	endif()
-else()
-	macro(conf_valgrind_env test_name)
-	endmacro()
-endif()
-
 # Locate Qt for testing
 # Qt4 preamble
 find_package(Qt4 4.5 COMPONENTS QtCore QtTest)
@@ -115,46 +75,20 @@ macro(src exe_name)
 	set(${exe_name}_src ${ARGN})
 endmacro()
 
-# Variable compatibility with existing build scripts
-# Deprecated in favour of setting WITH_PERFORMANCE_TESTS
-if(DEFINED ADD_PERFORMANCE_TEST)
-	set(WITH_PERFORMANCE_TESTS ${ADD_PERFORMANCE_TEST} CACHE BOOL "Include performance unit tests")
-else()
-	set(WITH_PERFORMANCE_TESTS FALSE CACHE BOOL "Include performance unit tests")
-endif()
-
-macro(conf_valgrind_prefix)
-	if (NOT VALGRIND_FOUND AND VALGRIND_TOOL)
-		message(FATAL_ERROR "Requesting running tests under valgrind, but valgrind not found")
-	elseif(VALGRIND_TOOL)
-		if(NOT VALGRIND_TOOL STREQUAL "callgrind" AND NOT VALGRIND_TOOL STREQUAL "memcheck" AND NOT VALGRIND_TOOL STREQUAL "cachegrind" AND NOT VALGRIND_TOOL STREQUAL "massif" AND NOT VALGRIND_TOOL STREQUAL "helgrind")
-			message(WARNING "Valgrind tool ${VALGRIND_TOOL} not recognized")
-		elseif(NOT DEFINED WITH_VALGRIND_${VALGRIND_TOOL}_OPTIONS)
-			message(WARNING "Valgrind tool ${VALGRIND_TOOL} doesn't have any options specified")
-		endif()
-
-		set(VALGRIND_OPTIONS "${WITH_VALGRIND_${VALGRIND_TOOL}_OPTIONS}")
-		set(cmd_prefix valgrind --tool=${VALGRIND_TOOL} ${VALGRIND_OPTIONS})
-	else()
-		unset(cmd_prefix)
-	endif()
-endmacro()
-
 if(QT_FOUND)
 	# exe_name - the name of the executable
 	#            make sure you use qt_hdrs & src macros so that variable naming is consistent
 	# test_name - the friendly name of the test
 	# ... - An optional list of command line arguments to pass to the executable
 	function(add_qt_test exe_name test_name)
-		conf_valgrind_prefix()
 
 		if(NOT TARGET ${exe_name})
 			# Specify MOC
 			qt4_wrap_cpp(${exe_name}_mocsrc ${${exe_name}_qthdrs})
-			
+
 			# Create executable
 			add_executable(${exe_name} ${${exe_name}_src} ${${exe_name}_mocsrc})
-			
+
 			# Libraries to link against
 			target_link_libraries(${exe_name}
 				${QT_LIBRARIES}
@@ -163,21 +97,13 @@ if(QT_FOUND)
 		endif()
 
 		if(NOT DEFINED ${exe_name}_test_list)
-			if (VALGRIND_TOOL)
-				set(test_name "Valgrind ${VALGRIND_TOOL}: ${test_name}")
-			endif()
-			string(REPLACE " " "\\ " test_name ${test_name}) 
+			string(REPLACE " " "\\ " test_name ${test_name})
 			add_test('${test_name}' ${cmd_prefix} ${CMAKE_CURRENT_BINARY_DIR}/${exe_name} ${ARGN})
-			conf_valgrind_env(test_name)
 		else()
 			foreach(test_name ${${exe_name}_test_list})
 				set(tmp_test_name "${test_name} : ${test_name}")
-				if(VALGRIND_TOOL)
-					set(tmp_test_name "Valgrind ${VALGRIND_TOOL}: ${tmp_test_name}")
-				endif()
-				string(REPLACE " " "\\ " tmp_test_name ${tmp_test_name}) 
+				string(REPLACE " " "\\ " tmp_test_name ${tmp_test_name})
 				add_test('${tmp_test_name}' ${cmd_prefix} ${CMAKE_CURRENT_BINARY_DIR}/${exe_name} ${test_name})
-				conf_valgrind_env(tmp_test_name)
 			endforeach()
 		endif()
 	endfunction()
@@ -226,12 +152,11 @@ endif()
 # test_name - the friendly name of the test
 # ... - An optional list of command line arguments to pass to the executable
 function(add_regular_test exe_name test_name)
-    conf_valgrind_prefix()
 
     if(NOT TARGET ${exe_name})
 	# Create executable
 	add_executable(${exe_name} ${${exe_name}_src})
-	
+
 	# Libraries to link against
 	target_link_libraries(${exe_name}
 		${TEST_LIBRARIES}
@@ -239,22 +164,13 @@ function(add_regular_test exe_name test_name)
     endif()
 
     if(NOT DEFINED ${exe_name}_test_list)
-	if(VALGRIND_TOOL)
-		set(test_name "Valgrind: ${test_name}")
-	endif()
-	string(REPLACE " " "\\ " test_name ${test_name}) 
-	add_test('${test_name}' ${cmd_prefix} ${CMAKE_CURRENT_BINARY_DIR}/${exe_name} ${ARGN})
-	conf_valgrind_env(test_name)
+		string(REPLACE " " "\\ " test_name ${test_name})
+		add_test('${test_name}' ${cmd_prefix} ${CMAKE_CURRENT_BINARY_DIR}/${exe_name} ${ARGN})
     else()
-	foreach(test_name ${${exe_name}_test_list})
-		set(tmp_test_name "${test_name} : ${test_name}")
-		if (VALGRIND_TOOL)
-			set(tmp_test_name "Valgrind: ${tmp_test_name}")
-		endif()
-		string(REPLACE " " "\\ " tmp_test_name ${tmp_test_name}) 
-		add_test('${tmp_test_name}' ${cmd_prefix} ${CMAKE_CURRENT_BINARY_DIR}/${exe_name} ${test_name})
-		#set_property(TEST '${tmp_test_name}' APPEND PROPERTY ENVIRONMENT G_SLICE=always-malloc)
-		conf_valgrind_env(tmp_test_name)
-	endforeach()
+		foreach(test_name ${${exe_name}_test_list})
+			set(tmp_test_name "${test_name} : ${test_name}")
+			string(REPLACE " " "\\ " tmp_test_name ${tmp_test_name})
+			add_test('${tmp_test_name}' ${cmd_prefix} ${CMAKE_CURRENT_BINARY_DIR}/${exe_name} ${test_name})
+		endforeach()
     endif()
 endfunction()
