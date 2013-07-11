@@ -38,11 +38,12 @@ typedef bool (*jerror_parsing)(void *ctxt, JSAXContextRef parseCtxt);
 typedef bool (*jerror_schema)(void *ctxt, JSAXContextRef parseCtxt);
 typedef bool (*jerror_misc)(void *ctxt, JSAXContextRef parseCtxt);
 
-typedef struct JErrorCallbacks {
-    jerror_parsing m_parser; /// there was an error parsing the input
-    jerror_schema m_schema; /// there was an error validating the input against the schema
-    jerror_misc m_unknown; /// some other error occured while parsing
-    void *m_ctxt;	/// user-specified context to use
+typedef struct JErrorCallbacks
+{
+	jerror_parsing m_parser; /// there was an error parsing the input
+	jerror_schema m_schema; /// there was an error validating the input against the schema
+	jerror_misc m_unknown; /// some other error occured while parsing
+	void *m_ctxt;	/// user-specified context to use
 } *JErrorCallbacksRef;
 
 #ifdef __cplusplus

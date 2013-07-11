@@ -55,7 +55,7 @@ extern "C" {
  *
  * NOTE: Any unspecified behaviours listed are not an exhaustive list (and do not necessarily appear as a NOTE but will be attempted to be documented as such).
  * Any usage of the API that isn't explicitly documented, or is marked as simply the current implementation of unspecified behaviour,
- * is considered unspecified and suceptible to breakage at any time.  If a particular unspecified behaviour is necessary, please contact the maintainer to 
+ * is considered unspecified and suceptible to breakage at any time.  If a particular unspecified behaviour is necessary, please contact the maintainer to
  * update the documentation & change the API if appropriate.  Unspecified behaviour may result in crashes or incorrect program behaviour.
  *
  * NOTE: It is unspecified the actual value that a reference to a JSON null value will have (it is possible for it to be different from a C NULL & it is in the current implementation).
@@ -110,12 +110,12 @@ PJSON_API void j_release(jvalue_ref *val);
  * or release ownership on this reference since the implementation must guarantee that this reference has static
  * program scope.
  *
- * NOTE: Do not use this to test for whether or not a 
+ * NOTE: Do not use this to test for whether or not a
  */
 PJSON_API jvalue_ref jnull() PURE_FUNC;
 
 /**
- * Lets the caller determine whether or not the reference is 
+ * Lets the caller determine whether or not the reference is
  * @param val A reference to a JSON value
  * @return true if val is a reference to a JSON null value.  false otherwise
  */
@@ -261,7 +261,7 @@ PJSON_API jvalue_ref jobject_get(jvalue_ref obj, raw_buffer key);
 
 /**
  * Remove any key/value association in the object with the specified key value.
- * 
+ *
  * @param key The key to use
  * @param obj The reference to the parent object.
  * @return True if there was an association under key.  False if there was not or obj was not an object.
@@ -270,11 +270,11 @@ PJSON_API bool jobject_remove(jvalue_ref obj, raw_buffer key);
 
 /**
  * Associate val with key in object obj.  The object associates a copy of val.
- * 
+ *
  * NOTE: It is unspecified whether or not changes to val after being set are reflected in the structure under obj.
- * NOTE: The RFC specifes behaviour is unspecified if key is already present within the object.  The implementation 
+ * NOTE: The RFC specifes behaviour is unspecified if key is already present within the object.  The implementation
  *       behaviour is that existing key/value pairs are replaced (insert/replace semantics).
- * 
+ *
  * @param obj The JSON object to insert into
  * @param key The key to use for the association
  * @param val The reference to a JSON object containing the value to associate with key
@@ -288,7 +288,7 @@ PJSON_API bool jobject_set(jvalue_ref obj, raw_buffer key, jvalue_ref val);
  * if you do not have ownership of val to begin with.
  *
  * NOTE: Behaviour of library is undefined when changes to key or val occur after transferring ownership to obj
- * NOTE: The RFC specifes behaviour is unspecified if key is already present within the object.  The implementation 
+ * NOTE: The RFC specifes behaviour is unspecified if key is already present within the object.  The implementation
  *       behaviour is that existing key/value pairs are replaced (insert/replace semantics).
  *
  * @param obj The JSON object to insert into
@@ -791,7 +791,7 @@ PJSON_API jvalue_ref jnumber_create_f64(double number);
 PJSON_API jvalue_ref jnumber_create_i32(int32_t number);
 /**
  * Create a JSON reference to a value representing the requested number.
- * 
+ *
  * @param number The number the JSON value should represent
  * @return A reference to a JSON number representing the requested value.
  */

@@ -114,12 +114,13 @@ typedef struct SAXInjector {
 	InjectorType m_type;	/// the type used to generate
 } SAXInjector;
 
-struct __JSAXContext {
-        void *ctxt;
-        yajl_callbacks *m_handlers;
-        ValidationStateRef m_validation;
-        JErrorCallbacksRef m_errors;
-        ErrorStateRef m_errorstate;
+struct __JSAXContext
+{
+	void *ctxt;
+	yajl_callbacks *m_handlers;
+	ValidationStateRef m_validation;
+	JErrorCallbacksRef m_errors;
+	ErrorStateRef m_errorstate;
 };
 
 #endif /* JSCHEMA_TYPES_INTERNAL_H_ */

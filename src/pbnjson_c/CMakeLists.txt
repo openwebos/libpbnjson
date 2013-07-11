@@ -30,8 +30,8 @@ check_symbol_exists("__assert_fail" "assert.h" HAVE_ASSERT_FAIL)
 check_function_exists(strnlen HAVE_STRNLEN)
 check_function_exists(isatty HAVE_ISATTY)
 
-# Check for GCC atomics	
-check_cxx_source_compiles(	
+# Check for GCC atomics
+check_cxx_source_compiles(
 	"int main() {
 		int f;
 		__sync_fetch_and_add(&f, 1);

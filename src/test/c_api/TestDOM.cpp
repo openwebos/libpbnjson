@@ -67,7 +67,7 @@ TEST(TestDOM, ObjectSimple)
 	EXPECT_TRUE(jobject_get_exists(simpleObject, J_CSTR_TO_BUF("def"), &jnum));
 	int32_t num(-1);
 	EXPECT_EQ(jnumber_get_i32(jnum, &num), CONV_OK);
-    EXPECT_EQ(num, 5463);
+	EXPECT_EQ(num, 5463);
 }
 
 // sanity check that assumptions about limits of double storage

@@ -37,7 +37,7 @@ typedef struct {
 } *jarray_opts;
 
 typedef enum {
-	SPLICE_NOCHANGE,	/// the splice doesn't have any affect on the ownership of the elements
+	SPLICE_NOCHANGE,    /// the splice doesn't have any affect on the ownership of the elements
 	SPLICE_TRANSFER, /// the ownership of the spliced elements gets transferred to the new array (the old array loses ownership)
 	SPLICE_COPY, /// the new array retains a copy of the individual elements from the first array
 } JSpliceOwnership;
@@ -49,15 +49,15 @@ typedef enum {
  */
 typedef struct {
 	const char *m_str;
-	size_t m_len;	/// this MUST be the number of characters in m_str not including any terminating nulls.
+	size_t m_len;   /// this MUST be the number of characters in m_str not including any terminating nulls.
 } raw_buffer;
 
 /**
  * A structure representing a key/value pair in a JSON object.
  */
 typedef struct {
-    jvalue_ref key;
-    jvalue_ref value;
+	jvalue_ref key;
+	jvalue_ref value;
 } jobject_key_value;
 
 typedef void (*jdeallocator)(void *buffer);

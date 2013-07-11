@@ -26,7 +26,7 @@
 using namespace std;
 
 class JobjRemove
-    : public testing::Test
+	: public testing::Test
 {
 protected:
 	virtual void SetUp()

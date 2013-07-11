@@ -53,7 +53,8 @@ class JValueArrayElement;
  * @li Null: As a string, "null" (without quotes).
  * @see http://www.json.org
  */
-class PJSONCXX_API JValue {
+class PJSONCXX_API JValue
+{
 	friend class JDomParser;
 	friend class JGenerator;
 	friend JValue Object();
@@ -80,12 +81,13 @@ private:
 	const char * asCString() const;
 
 protected:
-
-	jvalue_ref peekRaw() const {
+	jvalue_ref peekRaw() const
+	{
 		return m_jval;
 	}
 
-	jvalue_ref grabOwnership() {
+	jvalue_ref grabOwnership()
+	{
 		jvalue_ref transferred = m_jval;
 		m_jval = JNULL.m_jval;
 		return transferred;

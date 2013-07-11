@@ -56,7 +56,7 @@ if(QT_FOUND)
 		message(FATAL_ERROR "Qt4 found, but QtCore component wasn't - tests will not compile")
 	endif()
 
-	######################### HELPER FUNCTIONS ############################    
+	######################### HELPER FUNCTIONS ############################
 	# exe_name - the name of the executable
 	# ... - A list of headers to MOC
 	# defines the variable ${exe_name}_qthdrs to the given list
