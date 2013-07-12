@@ -167,7 +167,6 @@ extern "C" {
 #include "pbnjson/c/japi.h"
 #include "pbnjson/c/jobject.h"
 #include "pbnjson/c/jschema.h"
-#include "pbnjson/c/jgen_stream.h"
 #include "pbnjson/c/jparse_stream.h"
 
 #ifdef __cplusplus

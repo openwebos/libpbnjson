@@ -53,7 +53,6 @@
 #error "Compiling with the wrong options"
 #endif
 
-#include <jgen_stream.h>
 #include "gen_stream.h"
 
 #include "liblog.h"
@@ -366,9 +365,14 @@ static const char *jvalue_tostring_internal_layer2 (jvalue_ref val, JSchemaInfoR
 	CHECK_POINTER_RETURN_VALUE(val, "null");
 
 	if (!val->m_toString) {
+
+		if (schemaNecessary && !jvalue_check_schema(val, schemainfo)) {
+			return NULL;
+		}
+
 		bool parseok = false;
 		StreamStatus error;
-		JStreamRef generating = jstreamInternalWithInfo(schemainfo, TOP_None, schemaNecessary);
+		JStreamRef generating = jstreamInternal(TOP_None);
 		if (generating == NULL) {
 			return NULL;
 		}

@@ -19,8 +19,11 @@
 #ifndef GEN_STREAM_H_
 #define GEN_STREAM_H_
 
-#include <jgen_stream.h>
-#include <japi.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include "jschema_types.h"
+#include "japi.h"
+#include "jgen_types.h"
 
 enum TopLevelType {
 	TOP_None,
@@ -30,7 +33,6 @@ enum TopLevelType {
 
 typedef enum TopLevelType TopLevelType;
 
-PJSON_LOCAL JStreamRef jstreamInternal(jschema_ref schema, TopLevelType type, bool schemaNecessary);
-PJSON_LOCAL JStreamRef jstreamInternalWithInfo(JSchemaInfoRef schemainfo, TopLevelType type, bool schemaNecessary);
+PJSON_LOCAL JStreamRef jstreamInternal(TopLevelType type);
 
 #endif /* GEN_STREAM_H_ */

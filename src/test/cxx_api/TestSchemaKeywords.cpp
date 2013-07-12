@@ -50,14 +50,16 @@ TEST(Schemakeywords, extends)
 	myJResolver resolver;
 
 	{
-		pj::JValue json = pj::Object() << pj::JValue::KeyValue("iField", 1);
-		EXPECT_NE("", pj::JGenerator::serialize(json, schema, &resolver));
+		pj::JValue json = pj::Object() << pj::JValue::KeyValue("iField", "text");
+		EXPECT_FALSE(pj::JValidator::isValid(json, schema, resolver));
 	}
 
 	{
-		pj::JValue json = pj::Object() << pj::JValue::KeyValue("iField", "text");
-		EXPECT_EQ("", pj::JGenerator::serialize(json, schema, &resolver));
+		pj::JValue json = pj::Object() << pj::JValue::KeyValue("iField", 1);
+		EXPECT_TRUE(pj::JValidator::isValid(json, schema, resolver));
 	}
+
+
 }
 
 class ChildResolver : public pbnjson::JResolver
@@ -103,6 +105,29 @@ TEST(Schemakeywords, reuse_schema_in_resolver)
 	EXPECT_TRUE(parser1.parse(data.c_str(), schema, NULL));
 	pbnjson::JDomParser parser2(&resolver);
 	EXPECT_TRUE(parser2.parse(data.c_str(), schema, NULL));
+}
+
+TEST(JValidator, IsValid_2_params)
+{
+
+	pj::JSchemaFile schema("./data/schemas/TestSchemaKeywords/extends/base.json");
+	ASSERT_TRUE(schema.isInitialized());
+
+	{
+		pj::JValue json = pj::Object() << pj::JValue::KeyValue("iField", 1);
+		EXPECT_TRUE(pj::JValidator::isValid(json, schema));
+	}
+
+	{
+		pj::JValue json = pj::Object() << pj::JValue::KeyValue("sField", "test");
+		EXPECT_TRUE(pj::JValidator::isValid(json, schema));
+	}
+
+	{
+		pj::JValue json = pj::Object() << pj::JValue::KeyValue("iField", true);
+		EXPECT_FALSE(pj::JValidator::isValid(json, schema));
+	}
+
 }
 
 } // namespace testcxx

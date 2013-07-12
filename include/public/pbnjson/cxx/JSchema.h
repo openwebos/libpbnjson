@@ -137,6 +137,7 @@ public:
 	friend class JGenerator;
 	friend class JDomParser;
 	friend class JSchemaResolverWrapper;
+	friend class JValidator;
 };
 
 }

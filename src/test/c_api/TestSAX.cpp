@@ -190,56 +190,6 @@ static int sax_null(JSAXContextRef ctxt)
 	else l << "N";
 	return 1;
 }
-static void generate(jvalue_ref jval, JStreamRef s)
-{
-	if (jis_object(jval)) {
-		s->o_begin(s);
-		typedef QMap<JValueWrapper, jvalue_ref> JObject;
-		JObject sorted;
-
-		jobject_iter it;
-		jobject_key_value keyval;
-		jobject_iter_init(&it, jval);
-		while (jobject_iter_next(&it, &keyval))
-		{
-			if (!jis_string(keyval.key))
-				throw "invalid key";
-			sorted.insert(keyval.key, keyval.value);
-		}
-
-		for (JObject::const_iterator i = sorted.constBegin(); i != sorted.constEnd(); i++) {
-			s->o_key(s, jstring_get_fast(i.key()));
-			generate(i.value(), s);
-		}
-		s->o_end(s);
-	} else if (jis_array(jval)) {
-		s->a_begin(s);
-		for (ssize_t i = 0; i < jarray_size(jval); i++)
-			generate(jarray_get(jval, i), s);
-		s->a_end(s);
-	} else if (jis_string(jval)) {
-		s->string(s, jstring_get_fast(jval));
-	} else if (jis_number(jval)) {
-		raw_buffer asStr;
-		int64_t integer;
-		double floating;
-		if (CONV_OK == jnumber_get_raw(jval, &asStr) && asStr.m_str != NULL)
-			s->number(s, asStr);
-		else if (CONV_OK == jnumber_get_i64(jval, &integer))
-			s->integer(s, integer);
-		else if (CONV_OK == jnumber_get_f64(jval, &floating))
-			s->floating(s, floating);
-		else
-			throw "No error-free storage for this number?";
-	} else if (jis_null(jval)) {
-		s->null_value(s);
-	} else {
-		bool val;
-		if (CONV_OK != jboolean_get(jval, &val))
-			throw "unrecognized type";
-		s->boolean(s, val);
-	}
-}
 
 TestSAX::TestSAX() {
 	// TODO Auto-generated constructor stub
@@ -510,16 +460,12 @@ void TestSAX::testGenerator()
 
 	try {
 		QDomDocument expectedXML;
-		JStreamRef generator = jstream(jschema_all());
-		generate(genInstructions, generator);
-		StreamStatus result;
-		auto_cptr<char> output(generator->finish(generator, &result));
+		const char *output = jvalue_tostring_simple(genInstructions);
 		if (output == NULL) {
-			qWarning() << "Failure to generate output:" << result;
+			qWarning() << "Failure to generate output";
 			throw "Unable to generate output";
 		}
 		generatedOutput = QByteArray::fromRawData(output, strlen(output));
-		QCOMPARE(QString(generatedOutput), rawJSON);
 
 		QDomDocument generatedXML = JSXMLConverter::convert(generatedOutput);
 		QString err;

@@ -58,6 +58,7 @@ class PJSONCXX_API JValue
 {
 	friend class JDomParser;
 	friend class JGenerator;
+	friend class JValidator;
 	friend JValue Object();
 	friend JValue Array();
 

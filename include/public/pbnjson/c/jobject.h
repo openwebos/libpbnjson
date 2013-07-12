@@ -122,6 +122,17 @@ PJSON_API jvalue_ref jnull() PURE_FUNC;
 PJSON_API bool jis_null(jvalue_ref val);
 
 /**
+ * Check validity of jvalue against schema. The function is able to solve external references. In order to check
+ * schema with externals, provide a propriate resolver.
+ *
+ * @param val A reference to the JSON object to check
+ * @param schema A schema with resolver
+ * @return true if val is valid against schema
+ *
+ */
+PJSON_API bool jvalue_check_schema(jvalue_ref val, const JSchemaInfoRef schema) NON_NULL(1, 2);
+
+/**
  * Equivalent to JSON.stringify within Javascript.  Converts the JSON value to it's equivalent
  * string representation that is ready to be transferred across the wire (with all appropriate escaping and quoting performed).
  * The c-string returned has a lifetime equivalent at least to the lifetime of the reference provided.

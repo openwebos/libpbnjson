@@ -169,7 +169,7 @@ static QFile* map(QString path, raw_buffer &fData)
 		goto map_failed;
 	}
 
-	if (f->size() > std::numeric_limits<typeof(fData.m_len)>::max()) {
+	if (static_cast<size_t>(f->size()) > std::numeric_limits<typeof(fData.m_len)>::max()) {
 		message = "is too big";
 		goto map_failed;
 	}
@@ -243,7 +243,7 @@ static JSchemaResolutionResult simpleResolver(JSchemaResolverRef resolver, jsche
 	}
 
 	raw_buffer readSchema;
-	if (resourceData.size() > std::numeric_limits<typeof(readSchema.m_len)>::max()) {
+	if (static_cast<size_t>(resourceData.size()) > std::numeric_limits<typeof(readSchema.m_len)>::max()) {
 		qWarning() << "Schema" << lookupPath.absoluteFilePath() << "is too big";
 		return SCHEMA_GENERIC_ERROR;
 	}

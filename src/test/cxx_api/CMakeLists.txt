@@ -68,6 +68,8 @@ add_schema_test(test_cppschema "C++ Number sanity check" ${CMAKE_CURRENT_SOURCE_
 add_schema_test(test_cppschema "C++ Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/contact/ Contact)
 add_qt_test(test_jvalue "Test JValue class")
 
+file(GLOB_RECURSE PROJECT_HEADERS ${CMAKE_SOURCE_DIR}/*.h )
+
 SET(CPPUnitTest
 	TestDOM2
 	TestJArray
@@ -79,7 +81,7 @@ SET(CPPUnitTest
 	)
 
 FOREACH(TEST ${CPPUnitTest})
-	add_executable(${TEST} ${TEST}.cpp)
+	add_executable(${TEST} ${TEST}.cpp ${PROJECT_HEADERS})
 	target_link_libraries(${TEST} ${TEST_LIBRARIES} gtest gtest_main pthread)
 	add_test(CPP.${TEST} ${TEST})
 ENDFOREACH()
