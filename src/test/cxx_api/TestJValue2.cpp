@@ -55,7 +55,7 @@ TEST(TestJValue, IteratorAdvance)
 		char key = 'a' + i;
 		obj.put(string(&key, &key + 1), JValue(i));
 	}
-	ASSERT_EQ(obj.objectSize(), 10);
+	ASSERT_EQ(10, obj.objectSize());
 
 	JValue::ObjectIterator it1 = obj.begin();
 	for (int i = 1; i != 5; ++i)
@@ -64,4 +64,13 @@ TEST(TestJValue, IteratorAdvance)
 		JValue::KeyValue kv2 = *(obj.begin() + i);
 		EXPECT_TRUE(kv1 == kv2);
 	}
+}
+
+TEST(TestJValue, NonIterable)
+{
+	ASSERT_THROW(Array().begin(), JValue::InvalidType);
+	ASSERT_THROW(JValue(true).begin(), JValue::InvalidType);
+	ASSERT_THROW(JValue("hello").begin(), JValue::InvalidType);
+	ASSERT_THROW(JValue(13).begin(), JValue::InvalidType);
+	ASSERT_NO_THROW(Object().begin());
 }

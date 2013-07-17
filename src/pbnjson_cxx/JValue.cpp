@@ -54,10 +54,10 @@ JValue::JValue(jvalue_ref toOwn)
 		m_jval = JNULL.m_jval;
 }
 
-JValue::JValue(jvalue_ref parsed, std::string input)
+JValue::JValue(jvalue_ref parsed, std::string const &input)
 	: m_jval(parsed), m_input(input)
 {
-	// if this assertion doesn't hole the optimization parameters in parse are
+	// if this assertion doesn't hold, the optimization parameters in parse are
 	// invalid.
 	assert(input.c_str() == m_input.c_str());
 	PJ_DBG_CXX_STR(std::cerr << "Have handle to string at " << (void*)m_input.c_str() << std::endl);
@@ -354,7 +354,7 @@ bool JValue::put(size_t index, const JValue& value)
 	m_children.push_back(value.m_input);
 	m_children.insert(m_children.end(), value.m_children.begin(), value.m_children.end());
 #endif
-	return jarray_put(m_jval, index, jvalue_copy(value.peekRaw()));
+	return jarray_set(m_jval, index, value.peekRaw());
 }
 
 bool JValue::put(const std::string& key, const JValue& value)
@@ -369,7 +369,7 @@ bool JValue::put(const JValue& key, const JValue& value)
 	m_children.push_back(key.m_input);
 	m_children.insert(m_children.end(), value.m_children.begin(), value.m_children.end());
 #endif
-	return jobject_put(m_jval, jvalue_copy(key.peekRaw()), jvalue_copy(value.peekRaw()));
+	return jobject_set2(m_jval, key.peekRaw(), value.peekRaw());
 }
 
 JValue& JValue::operator<<(const JValue& element)
@@ -395,7 +395,7 @@ bool JValue::append(const JValue& value)
 	}
 	m_children.insert(m_children.end(), value.m_children.begin(), value.m_children.end());
 #endif
-	return jarray_append(m_jval, jvalue_copy(value.peekRaw()));
+	return jarray_set(m_jval, jarray_size(m_jval), value.peekRaw());
 }
 
 bool JValue::hasKey(const std::string& key) const
@@ -573,13 +573,16 @@ JValue::ObjectIterator::ObjectIterator()
 }
 
 JValue::ObjectIterator::ObjectIterator(jvalue_ref parent)
-	: _parent(jvalue_copy(parent))
+	: _parent(0)
 	, _at_end(false)
 {
 	_key_value.key = 0;
 	_key_value.value = 0;
 
-	jobject_iter_init(&_it, _parent);
+	if (UNLIKELY(!jobject_iter_init(&_it, parent)))
+		throw InvalidType("Can't iterate over non-object");
+
+	_parent = jvalue_copy(parent);
 	_at_end = !jobject_iter_next(&_it, &_key_value);
 }
 

@@ -664,8 +664,6 @@ bool jobject_get_exists2 (jvalue_ref obj, jvalue_ref key, jvalue_ref *value)
 {
 	jvalue_ref result;
 
-	assert(jis_object(obj));
-
 	CHECK_CONDITION_RETURN_VALUE(jis_null(obj), false, "Attempt to cast null %p to object", obj);
 	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), false, "Attempt to cast type %d to object (%d)", obj->m_type, JV_OBJECT);
 
@@ -683,17 +681,20 @@ bool jobject_get_exists2 (jvalue_ref obj, jvalue_ref key, jvalue_ref *value)
 
 jvalue_ref jobject_get (jvalue_ref obj, raw_buffer key)
 {
-	jvalue_ref result;
-	assert_msg(jis_object(obj), "%p is not an object", obj);
+	jvalue_ref result = NULL;
+
 	assert(key.m_str != NULL);
-	if (jobject_get_exists (obj, key, &result)) return result;
+	if (jobject_get_exists (obj, key, &result))
+		return result;
 	return jnull ();
 }
 
 bool jobject_remove (jvalue_ref obj, raw_buffer key)
 {
 	SANITY_CHECK_POINTER(obj);
-	assert(jis_object(obj));
+
+	CHECK_CONDITION_RETURN_VALUE(jis_null(obj), false, "Attempt to cast null %p to object", obj);
+	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), false, "Attempt to cast type %d to object (%d)", obj->m_type, JV_OBJECT);
 
 	if (!DEREF_OBJ(obj).m_members)
 		return false;
@@ -740,19 +741,44 @@ bool jobject_set (jvalue_ref obj, raw_buffer key, jvalue_ref val)
 	return true;
 }
 
+bool jobject_set2(jvalue_ref obj, jvalue_ref key, jvalue_ref val)
+{
+	jvalue_ref new_key = jvalue_copy (key);
+	if (UNLIKELY(!new_key))
+	{
+		PJ_LOG_ERR("Failed to create a copy of key %p", key);
+		return false;
+	}
+
+	jvalue_ref new_val = jvalue_copy (val);
+	if (UNLIKELY(!new_val))
+	{
+		PJ_LOG_ERR("Failed to create a copy of val %p", val);
+		j_release(&new_key);
+		return false;
+	}
+
+	if (UNLIKELY(!jobject_put(obj, new_key, new_val)))
+	{
+		j_release(&new_key);
+		j_release(&new_val);
+		return false;
+	}
+	return true;
+}
+
 bool jobject_put (jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 {
 	SANITY_CHECK_POINTER(obj);
 	SANITY_CHECK_POINTER(key);
 	SANITY_CHECK_POINTER(val);
 
-	assert(jis_object(obj));
-	assert(jis_string(key));
 	assert(val != NULL);
 
 	if (!DEREF_OBJ(obj).m_members)
 		return false;
 
+	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), false, "%p is %d not an object (%d)", obj, obj->m_type, JV_OBJECT);
 	CHECK_POINTER_RETURN_NULL(key);
 	CHECK_CONDITION_RETURN_VALUE(!jis_string(key), false, "%p is %d not a string (%d)", key, key->m_type, JV_STR);
 	CHECK_CONDITION_RETURN_VALUE(jstring_size(key) == 0, false, "Object instance name is the empty string");
@@ -772,13 +798,15 @@ bool jobject_put (jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 }
 
 // JSON Object iterators
-void jobject_iter_init(jobject_iter *iter, jvalue_ref obj)
+bool jobject_iter_init(jobject_iter *iter, jvalue_ref obj)
 {
 	SANITY_CHECK_POINTER(obj);
-	assert(jis_object(obj));
-	assert(DEREF_OBJ(obj).m_members);
+
+	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), false, "Cannot iterate over non-object");
+	CHECK_CONDITION_RETURN_VALUE(!DEREF_OBJ(obj).m_members, false, "The object isn't iterable");
 
 	g_hash_table_iter_init(&iter->m_iter, DEREF_OBJ(obj).m_members);
+	return true;
 }
 
 bool jobject_iter_next(jobject_iter *iter, jobject_key_value *keyval)
@@ -803,28 +831,12 @@ static inline bool jarray_expand_capacity (jvalue_ref arr, ssize_t newSize) NON_
 static bool jarray_expand_capacity_unsafe (jvalue_ref arr, ssize_t newSize) NON_NULL(1);
 static void jarray_remove_unsafe (jvalue_ref arr, ssize_t index) NON_NULL(1);
 
-static bool valid_array (jvalue_ref array) NON_NULL(1);
-static bool valid_array (jvalue_ref array)
-{
-	SANITY_CHECK_POINTER(array);
-	assert(jis_array(array));
-
-	CHECK_CONDITION_RETURN_VALUE(!jis_array(array), false, "Attempt to append into non-array %p", array);
-
-	return true;
-}
-
-static bool valid_index (ssize_t index)
-{
-	CHECK_CONDITION_RETURN_VALUE(index < 0, false, "Negative array index %zd", index);
-	return true;
-}
-
 static bool valid_index_bounded (jvalue_ref arr, ssize_t index) NON_NULL(1);
 static bool valid_index_bounded (jvalue_ref arr, ssize_t index)
 {
-	CHECK_CONDITION_RETURN_VALUE(!valid_array(arr), false, "Trying to test index bounds test on non-array");
-	if (UNLIKELY(!valid_index(index))) return false;
+	SANITY_CHECK_POINTER(arr);
+	CHECK_CONDITION_RETURN_VALUE(!jis_array(arr), false, "Trying to test index bounds on non-array %p", arr);
+	CHECK_CONDITION_RETURN_VALUE(index < 0, false, "Negative array index %zd", index);
 
 	CHECK_CONDITION_RETURN_VALUE(index >= jarray_size(arr), false, "Index %zd out of bounds of array size %zd", index, jarray_size(arr));
 
@@ -955,7 +967,8 @@ bool jis_array (jvalue_ref val)
 
 ssize_t jarray_size (jvalue_ref arr)
 {
-	CHECK_CONDITION_RETURN_VALUE(!valid_array(arr), -1, "Attempt to get array size of non-array %p", arr);
+	SANITY_CHECK_POINTER(arr);
+	CHECK_CONDITION_RETURN_VALUE(!jis_array(arr), 0, "Attempt to get array size of non-array %p", arr);
 	return jarray_size_unsafe (arr);
 }
 
@@ -994,7 +1007,7 @@ static inline void jarray_size_set_unsafe (jvalue_ref arr, ssize_t newSize)
 
 static jvalue_ref* jarray_get_unsafe (jvalue_ref arr, ssize_t index)
 {
-	assert(valid_array(arr));
+	assert(jis_array(arr));
 	assert(index >= 0);
 	assert(index < DEREF_ARR(arr).m_capacity);
 
@@ -1009,7 +1022,6 @@ jvalue_ref jarray_get (jvalue_ref arr, ssize_t index)
 {
 	jvalue_ref result;
 
-	CHECK_CONDITION_RETURN_VALUE(!valid_array(arr), 0, "Attempt to get array size of non-array %p", arr);
 	CHECK_CONDITION_RETURN_VALUE(!valid_index_bounded(arr, index), jnull(), "Attempt to get array element from %p with out-of-bounds index value %zd", arr, index);
 
 	result = * (jarray_get_unsafe (arr, index));
@@ -1049,10 +1061,6 @@ static void jarray_remove_unsafe (jvalue_ref arr, ssize_t index)
 
 bool jarray_remove (jvalue_ref arr, ssize_t index)
 {
-	assert(valid_array(arr));
-	assert(valid_index_bounded(arr, index));
-
-	CHECK_CONDITION_RETURN_VALUE(!valid_array(arr), false, "Attempt to get array size of non-array %p", arr);
 	CHECK_CONDITION_RETURN_VALUE(!valid_index_bounded(arr, index), jnull(), "Attempt to get array element from %p with out-of-bounds index value %zd", arr, index);
 
 	jarray_remove_unsafe (arr, index);
@@ -1125,8 +1133,6 @@ bool jarray_set (jvalue_ref arr, ssize_t index, jvalue_ref val)
 {
 	jvalue_ref arr_val;
 
-	assert(jis_array(arr));
-
 	CHECK_CONDITION_RETURN_VALUE(!jis_array(arr), false, "Attempt to get array size of non-array %p", arr);
 	CHECK_CONDITION_RETURN_VALUE(index < 0, false, "Attempt to set array element for %p with negative index value %zd", arr, index);
 
@@ -1143,8 +1149,6 @@ bool jarray_set (jvalue_ref arr, ssize_t index, jvalue_ref val)
 
 bool jarray_put (jvalue_ref arr, ssize_t index, jvalue_ref val)
 {
-	assert(jis_array(arr));
-
 	CHECK_CONDITION_RETURN_VALUE(!jis_array(arr), false, "Attempt to insert into non-array %p", arr);
 	CHECK_CONDITION_RETURN_VALUE(index < 0, false, "Attempt to insert array element for %p with negative index value %zd", arr, index);
 
@@ -1161,12 +1165,7 @@ bool jarray_append (jvalue_ref arr, jvalue_ref val)
 	SANITY_CHECK_POINTER(val);
 	SANITY_CHECK_POINTER(arr);
 
-	assert(jis_array(arr));
-	assert(jis_null(val) || jis_object(val) ||
-			jis_array(val) || jis_string(val) ||
-			jis_number(val) || jis_boolean(val));
 	CHECK_CONDITION_RETURN_VALUE(!jis_array(arr), false, "Attempt to append into non-array %p", arr);
-	CHECK_CONDITION_RETURN_VALUE(!valid_array(arr), false, "Attempt to append into non-array %p", arr);
 
 	if (UNLIKELY(val == NULL)) {
 		PJ_LOG_WARN("incorrect API use - please pass an actual reference to a JSON null if that's what you want - assuming that's the case");
@@ -1195,9 +1194,8 @@ bool jarray_insert(jvalue_ref arr, ssize_t index, jvalue_ref val)
 	ssize_t j;
 
 	SANITY_CHECK_POINTER(arr);
-	assert(arr != NULL);
 
-	CHECK_CONDITION_RETURN_VALUE(!valid_array(arr), false, "Array to insert into isn't a valid reference to a JSON DOM node: %p", arr);
+	CHECK_CONDITION_RETURN_VALUE(!jis_array(arr), false, "Array to insert into isn't a valid reference to a JSON DOM node: %p", arr);
 	CHECK_CONDITION_RETURN_VALUE(index < 0, false, "Invalid index - must be >= 0: %zd", index);
 
 	if (!check_insert_sanity(arr, val)) {
@@ -1253,7 +1251,8 @@ bool jarray_splice (jvalue_ref array, ssize_t index, ssize_t toRemove, jvalue_re
 		CHECK_CONDITION_RETURN_VALUE(!valid_index_bounded(array, index), false, "Splice index is invalid");
 		CHECK_CONDITION_RETURN_VALUE(!valid_index_bounded(array, index + toRemove - 1), false, "To remove amount is out of bounds of array");
 	} else {
-		CHECK_CONDITION_RETURN_VALUE(!valid_array(array), false, "Array isn't valid");
+		SANITY_CHECK_POINTER(array);
+		CHECK_CONDITION_RETURN_VALUE(!jis_array(array), false, "Array isn't valid %p", array);
 		if (index < 0) index = 0;
 	}
 	CHECK_CONDITION_RETURN_VALUE(begin >= end, false, "Invalid range to copy from second array: [%zd, %zd)", begin, end); // set notation
@@ -1856,10 +1855,6 @@ ConversionResultFlags jnumber_get_i32 (jvalue_ref num, int32_t *number)
 {
 	SANITY_CHECK_POINTER(num);
 
-	assert(num != NULL);
-	assert(number != NULL);
-	assert(jis_number(num));
-
 	CHECK_POINTER_RETURN_VALUE(num, CONV_BAD_ARGS);
 	CHECK_POINTER_RETURN_VALUE(number, CONV_BAD_ARGS);
 	CHECK_CONDITION_RETURN_VALUE(!jis_number(num), CONV_BAD_ARGS, "Trying to access %d as a number", num->m_type);
@@ -1883,10 +1878,6 @@ ConversionResultFlags jnumber_get_i32 (jvalue_ref num, int32_t *number)
 ConversionResultFlags jnumber_get_i64 (jvalue_ref num, int64_t *number)
 {
 	SANITY_CHECK_POINTER(num);
-
-	assert(num != NULL);
-	assert(number != NULL);
-	assert(jis_number(num));
 
 	CHECK_POINTER_RETURN_VALUE(num, CONV_BAD_ARGS);
 	CHECK_POINTER_RETURN_VALUE(number, CONV_BAD_ARGS);
@@ -1913,10 +1904,6 @@ ConversionResultFlags jnumber_get_f64 (jvalue_ref num, double *number)
 {
 	SANITY_CHECK_POINTER(num);
 
-	assert(num != NULL);
-	assert(number != NULL);
-	assert(jis_number(num));
-
 	CHECK_POINTER_RETURN_VALUE(num, CONV_BAD_ARGS);
 	CHECK_POINTER_RETURN_VALUE(number, CONV_BAD_ARGS);
 	CHECK_CONDITION_RETURN_VALUE(!jis_number(num), CONV_BAD_ARGS, "Trying to access %d as a number", num->m_type);
@@ -1941,10 +1928,6 @@ ConversionResultFlags jnumber_get_f64 (jvalue_ref num, double *number)
 ConversionResultFlags jnumber_get_raw (jvalue_ref num, raw_buffer *result)
 {
 	SANITY_CHECK_POINTER(num);
-
-	assert(num != NULL);
-	assert(result != NULL);
-	assert(jis_number(num));
 
 	CHECK_POINTER_RETURN_VALUE(num, CONV_BAD_ARGS);
 	CHECK_POINTER_RETURN_VALUE(result, CONV_BAD_ARGS);

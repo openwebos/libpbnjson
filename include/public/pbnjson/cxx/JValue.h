@@ -30,6 +30,7 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <stdexcept>
 
 #include <stdint.h>
 #include <unistd.h>	// for ssize_t
@@ -71,7 +72,7 @@ private:
 #endif
 
 	JValue(jvalue_ref toOwn);
-	JValue(jvalue_ref parsed, std::string input);
+	JValue(jvalue_ref parsed, std::string const &input);
 
 	static JValue& Null()
 	{
@@ -94,6 +95,12 @@ protected:
 	}
 
 public:
+
+	struct InvalidType
+		: std::runtime_error
+	{
+		InvalidType(std::string const &arg) : std::runtime_error(arg) { }
+	};
 
 	/**
 	 * Convenience alias for representing a key/value pair within a JSON object.

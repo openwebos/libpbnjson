@@ -260,8 +260,8 @@ static inline bool jobject_containskey2(jvalue_ref obj, jvalue_ref key)
  * Grab a reference to a JSON value within the parent object that has the specified key.
  * Ownership remains with obj.
  *
- * Convenience wrapper if you don't care to distinguish between the key not being present, and it containing
- * a null.
+ * Convenience wrapper if you don't care to distinguish between the key not being present,
+ * the obj not being a JSON object, and it containing a null.
  *
  * @param obj The reference to the parent object to retrieve the value from
  * @param key The name of the key in the JSON object to retrieve the value for
@@ -292,9 +292,24 @@ PJSON_API bool jobject_remove(jvalue_ref obj, raw_buffer key);
  * @param key The key to use for the association
  * @param val The reference to a JSON object containing the value to associate with key
  * @return True if the association was made, false otherwise.  Failure may occur for any number of reasons
- * (e.g. key is already present in the object, failure to allocate memory, etc)
+ * (e.g. key is already present in the object, obj is not a JSON object, failure to allocate memory, etc)
  */
 PJSON_API bool jobject_set(jvalue_ref obj, raw_buffer key, jvalue_ref val);
+
+/**
+ * Associate val with key in object obj.  The object associates a copy of key and val.
+ *
+ * NOTE: It is unspecified whether or not changes to val after being set are reflected in the structure under obj.
+ * NOTE: The RFC specifes behaviour is unspecified if key is already present within the object.  The implementation
+ *       behaviour is that existing key/value pairs are replaced (insert/replace semantics).
+ *
+ * @param obj The JSON object to insert into
+ * @param key The reference to a JSON string containing the key for the association
+ * @param val The reference to a JSON object containing the value to associate with key
+ * @return True if the association was made, false otherwise.  Failure may occur for any number of reasons
+ * (e.g. key is already present in the object, obj is not a JSON object, failure to allocate memory, etc)
+ */
+PJSON_API bool jobject_set2(jvalue_ref obj, jvalue_ref key, jvalue_ref val);
 
 /**
  * Associate val with key in object obj.  The object takes over ownership of val.  It is an error to call this
@@ -310,7 +325,7 @@ PJSON_API bool jobject_set(jvalue_ref obj, raw_buffer key, jvalue_ref val);
  * @param val The reference to the JSON object to associate with the key
  *            NOTE: Behaviour is undefined if val is a NULL pointer.
  * @return True if the association was made, false otherwise.  Failure may occur for any number of reasons
- * (e.g. key is already present in the object, failure to allocate memory, etc)
+ * (e.g. key is already present in the object, obj is not a JSON object, failure to allocate memory, etc)
  */
 PJSON_API bool jobject_put(jvalue_ref obj, jvalue_ref key, jvalue_ref val);
 
@@ -334,8 +349,9 @@ PJSON_API size_t jobject_size(jvalue_ref obj);
  *
  * @param iter Pointer to an iterator instance to be initialized
  * @param obj The JSON object to iterate over
+ * @return true if iterator was created, false if the JSON value isn't an object.
  */
-PJSON_API void jobject_iter_init(jobject_iter *iter, jvalue_ref obj);
+PJSON_API bool jobject_iter_init(jobject_iter *iter, jvalue_ref obj);
 
 /**
  * Obtain key-value pair of the object, advance the iterator to the next pair.

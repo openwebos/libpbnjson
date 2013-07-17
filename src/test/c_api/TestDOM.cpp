@@ -70,6 +70,22 @@ TEST(TestDOM, ObjectSimple)
 	EXPECT_EQ(num, 5463);
 }
 
+TEST(TestDOM, ObjectMisuse)
+{
+	jvalue_ref arr = manage(jarray_create(NULL));
+	EXPECT_FALSE(jobject_set2(arr, manage(j_cstr_to_jval("abc")), manage(j_cstr_to_jval("hello"))));
+	EXPECT_FALSE(jobject_get_exists(arr, J_CSTR_TO_BUF("abc"), NULL));
+	jvalue_ref memb = jobject_get(arr, J_CSTR_TO_BUF("abc"));
+	EXPECT_TRUE(memb == jnull());
+	EXPECT_FALSE(jobject_remove(arr, J_CSTR_TO_BUF("abc")));
+}
+
+TEST(TestDOM, ArrayMisuse)
+{
+	jvalue_ref obj = manage(jobject_create());
+	EXPECT_FALSE(jarray_set(obj, jarray_size(obj), manage(j_cstr_to_jval("abc"))));
+}
+
 // sanity check that assumptions about limits of double storage
 // are correct
 static const int64_t maxDblPrecision = 0x1FFFFFFFFFFFFFLL;

@@ -421,7 +421,7 @@ TEST(TestDOM, Boolean)
 
 	JValue non_empty_obj = Object() << JValue::KeyValue("nothing", JValue());
 	EXPECT_EQ(non_empty_obj.asBool(v), CONV_NOT_A_BOOLEAN);
-	EXPECT_EQ(non_empty_obj.asBool(), true);
+	EXPECT_TRUE(non_empty_obj.asBool());
 
 	JValue arr = Array();
 	EXPECT_EQ(arr.asBool(v), CONV_NOT_A_BOOLEAN);
