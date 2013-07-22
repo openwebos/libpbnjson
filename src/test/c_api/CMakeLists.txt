@@ -127,3 +127,6 @@ ENDFOREACH()
 
 add_executable(TestPerformance TestPerformance.cpp)
 target_link_libraries(TestPerformance ${TEST_LIBRARIES} gtest gtest_main pthread)
+
+add_executable(TestJobjectPerformance TestJobjectPerformance.cpp)
+target_link_libraries(TestJobjectPerformance ${TEST_LIBRARIES} gtest gtest_main)

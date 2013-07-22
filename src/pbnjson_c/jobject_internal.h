@@ -36,51 +36,7 @@ typedef enum {
 	JV_OBJECT,
 } JValueType;
 
-typedef struct PJSON_LOCAL {
-	bool value;
-} jbool;
-
-typedef enum {
-	NUM_RAW,
-	NUM_FLOAT,
-	NUM_INT,
-} JNumType;
-
-typedef struct PJSON_LOCAL {
-	union {
-		raw_buffer raw;
-		double floating;
-		int64_t integer;
-	} value;
-	JNumType m_type;
-	ConversionResultFlags m_error;
-	jdeallocator m_rawDealloc;
-} jnum;
-
-typedef struct PJSON_LOCAL {
-	jdeallocator m_dealloc;
-	raw_buffer m_data;
-} jstring;
-
-typedef struct PJSON_LOCAL {
-	jvalue_ref m_smallBucket[ARRAY_BUCKET_SIZE];
-	jvalue_ref *m_bigBucket;
-	ssize_t m_size;
-	ssize_t m_capacity;
-} jarray;
-
-typedef struct PJSON_LOCAL {
-	GHashTable *m_members;
-} jobject;
-
 struct jvalue {
-	union {
-		jbool val_bool;
-		jnum val_num;
-		jstring val_str;
-		jarray val_array;
-		jobject val_obj;
-	} value;
 	JValueType m_type;
 	ssize_t m_refCnt;
 	char *m_toString;
@@ -91,16 +47,83 @@ struct jvalue {
 
 typedef struct PJSON_LOCAL jvalue jvalue;
 
+typedef struct PJSON_LOCAL {
+	// m_value should always be the first field
+	jvalue m_value;
+	bool value;
+} jbool;
+
+_Static_assert(offsetof(jbool, m_value) == 0, "jbool and jbool.m_value should have the same addresses");
+
+typedef enum {
+	NUM_RAW,
+	NUM_FLOAT,
+	NUM_INT,
+} JNumType;
+
+typedef struct PJSON_LOCAL {
+	// m_value should always be the first field
+	jvalue m_value;
+	union {
+		raw_buffer raw;
+		double floating;
+		int64_t integer;
+	} value;
+	JNumType m_type;
+	ConversionResultFlags m_error;
+	jdeallocator m_rawDealloc;
+} jnum;
+
+_Static_assert(offsetof(jnum, m_value) == 0, "jnum and jnum.m_value should have the same addresses");
+
+typedef struct PJSON_LOCAL {
+	// m_value should always be the first field
+	jvalue m_value;
+	jdeallocator m_dealloc;
+	raw_buffer m_data;
+} jstring;
+
+_Static_assert(offsetof(jstring, m_value) == 0, "jstring and jstring.m_value should have the same addresses");
+
+typedef struct PJSON_LOCAL {
+	// m_value should always be the first field
+	jvalue m_value;
+	jvalue_ref m_smallBucket[ARRAY_BUCKET_SIZE];
+	jvalue_ref *m_bigBucket;
+	ssize_t m_size;
+	ssize_t m_capacity;
+} jarray;
+
+_Static_assert(offsetof(jarray, m_value) == 0, "jarray and jarray.m_value should have the same addresses");
+
+typedef struct PJSON_LOCAL {
+	// m_value should always be the first field
+	jvalue m_value;
+	GHashTable *m_members;
+} jobject;
+
+_Static_assert(offsetof(jobject, m_value) == 0, "jobject and jobject.m_value should have the same addresses");
+
 extern PJSON_LOCAL jvalue JNULL;
 
 PJSON_LOCAL bool jobject_init(jobject *obj);
 
 extern PJSON_LOCAL int64_t jnumber_deref_i64(jvalue_ref num);
 
-extern PJSON_LOCAL bool jboolean_deref(jvalue_ref boolean);
+extern PJSON_LOCAL bool jboolean_deref_to_value(jvalue_ref boolean);
 
 extern PJSON_LOCAL bool jbuffer_equal(raw_buffer buffer1, raw_buffer buffer2);
 
 extern PJSON_LOCAL raw_buffer jnumber_deref_raw(jvalue_ref num);
+
+inline static jbool* jboolean_deref(jvalue_ref boolean) { return (jbool*)boolean; }
+
+inline static jnum* jnum_deref(jvalue_ref num) { return (jnum*)num; }
+
+inline static jstring* jstring_deref(jvalue_ref str) { return (jstring*)str; }
+
+inline static jarray* jarray_deref(jvalue_ref array) { return (jarray*)array; }
+
+inline static jobject* jobject_deref(jvalue_ref array) { return (jobject*)array; }
 
 #endif /* JOBJECT_INTERNAL_H_ */

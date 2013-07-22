@@ -21,10 +21,6 @@
 #include "jparse_stream_internal.h"
 
 
-#define DEREF_NUM(ref) ((ref)->value.val_num)
-#define DEREF_STR(ref) ((ref)->value.val_str)
-#define DEREF_BOOL(ref) ((ref)->value.val_bool)
-
 static JSAXContextRef check_schema_context_create(JSchemaInfoRef schemainfo);
 static void check_schema_context_free(JSAXContextRef checkContext);
 static bool check_schema_jvalue_internal (jvalue_ref jref, JSAXContextRef schemainfo);
@@ -97,7 +93,7 @@ static bool check_schema_jobject (jvalue_ref jref, JSAXContextRef checkContext)
 //Helper function for jobject_to_string_append()
 static bool check_schema_jkeyvalue (jobject_key_value jref, JSAXContextRef checkContext)
 {
-	raw_buffer buf = jref.key->value.val_str.m_data;
+	raw_buffer buf = jstring_deref(jref.key)->m_data;
 	if (!jschema_key(checkContext, checkContext->m_validation, j_str_to_buffer((char *)buf.m_str, buf.m_len))) {
 		return false;
 	}
@@ -132,15 +128,15 @@ static bool check_schema_jnumber (jvalue_ref jref, JSAXContextRef checkContext)
 	char buf[32];
 	int printed;
 
-	switch (DEREF_NUM(jref).m_type) {
+	switch (jnum_deref(jref)->m_type) {
 		case NUM_RAW:
-			return jschema_num(checkContext, checkContext->m_validation, DEREF_NUM(jref).value.raw);
+			return jschema_num(checkContext, checkContext->m_validation, jnum_deref(jref)->value.raw);
 		case NUM_FLOAT:
-			printed = snprintf(buf, sizeof(buf) - 1, "%.14lg", DEREF_NUM(jref).value.floating);
+			printed = snprintf(buf, sizeof(buf) - 1, "%.14lg", jnum_deref(jref)->value.floating);
 			return jschema_num(checkContext, checkContext->m_validation, j_str_to_buffer(buf, printed));
 			break;
 		case NUM_INT:
-			printed = snprintf(buf, sizeof(buf), "%" PRId64,  DEREF_NUM(jref).value.integer);
+			printed = snprintf(buf, sizeof(buf), "%" PRId64,  jnum_deref(jref)->value.integer);
 			return jschema_num(checkContext, checkContext->m_validation, j_str_to_buffer(buf, printed));
 		default:
 			return false;
@@ -151,23 +147,23 @@ static bool check_schema_jnumber (jvalue_ref jref, JSAXContextRef checkContext)
 
 static bool check_schema_jstring (jvalue_ref jref, JSAXContextRef checkContext)
 {
-	return jschema_str(checkContext, checkContext->m_validation, DEREF_STR(jref).m_data);
+	return jschema_str(checkContext, checkContext->m_validation, jstring_deref(jref)->m_data);
 }
 
 static bool check_schema_jbool (jvalue_ref jref, JSAXContextRef checkContext)
 {
-	return jschema_bool(checkContext, checkContext->m_validation, DEREF_BOOL(jref).value);
+	return jschema_bool(checkContext, checkContext->m_validation, jboolean_deref(jref)->value);
 }
 
 static bool check_schema_jvalue_internal (jvalue_ref jref, JSAXContextRef checkContext)
 {
 	switch (jref->m_type) {
-		case JV_NULL	: return check_schema_jnull(jref, checkContext);
-		case JV_OBJECT	: return check_schema_jobject(jref, checkContext);
-		case JV_ARRAY	: return check_schema_jarray (jref, checkContext);
-		case JV_NUM		: return check_schema_jnumber (jref, checkContext);
-		case JV_STR		: return check_schema_jstring (jref, checkContext);
-		case JV_BOOL	: return check_schema_jbool (jref, checkContext);
+		case JV_NULL   : return check_schema_jnull(jref, checkContext);
+		case JV_OBJECT : return check_schema_jobject(jref, checkContext);
+		case JV_ARRAY  : return check_schema_jarray (jref, checkContext);
+		case JV_NUM    : return check_schema_jnumber (jref, checkContext);
+		case JV_STR    : return check_schema_jstring (jref, checkContext);
+		case JV_BOOL   : return check_schema_jbool (jref, checkContext);
 	}
 
 	return false;

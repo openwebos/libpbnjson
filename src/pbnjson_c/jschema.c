@@ -1069,7 +1069,7 @@ static bool push_next_array_state(ValidationStateRef parseState)
 			additionalProperties = jobject_get(arraySchema, J_CSTR_TO_BUF(SK_MORE_PROPS));
 			if (jis_null(additionalProperties) || jis_boolean(additionalProperties)) {
 				bool additionalAllowed = jis_null(additionalProperties) ?
-						DEFAULT_ADDITIONAL_PROPERTIES_VALUE : jboolean_deref(additionalProperties);
+						DEFAULT_ADDITIONAL_PROPERTIES_VALUE : jboolean_deref_to_value(additionalProperties);
 				if (!additionalAllowed) {
 					PJ_SCHEMA_ERR("No more properties in schema allowed");
 					goto schema_gen_failure;
@@ -1446,7 +1446,7 @@ bool jschema_key(JSAXContextRef sax, ValidationStateRef parseState, raw_buffer o
 		specificSchema = jobject_get(schemaToValidate, J_CSTR_TO_BUF(SK_MORE_PROPS));
 		if (jis_null(specificSchema) || jis_boolean(specificSchema)) {
 			bool additionalAllowed = jis_null(specificSchema) ?
-					DEFAULT_ADDITIONAL_PROPERTIES_VALUE : jboolean_deref(specificSchema);
+					DEFAULT_ADDITIONAL_PROPERTIES_VALUE : jboolean_deref_to_value(specificSchema);
 			if (additionalAllowed) {
 				// append the empty object (match everything)
 				assert(!jis_all_schema_hierarchy(valueSchema->m_validation));
@@ -1774,7 +1774,7 @@ bool jschema_bool(JSAXContextRef sax, ValidationStateRef parseState, bool truth)
 			jvalue_ref enumValue;
 			for (ssize_t j = jarray_size(enums) - 1; j >= 0; j--) {
 				enumValue = jarray_get(enums, j);
-				if (jis_boolean(enumValue) && jboolean_deref(enumValue) == truth)
+				if (jis_boolean(enumValue) && jboolean_deref_to_value(enumValue) == truth)
 					goto enum_found;
 			}
 
@@ -1876,34 +1876,36 @@ bool jis_null_schema(SchemaWrapperRef schema)
 }
 
 #if !BYPASS_SCHEMA
-static struct jvalue DEFAULT_SCHEMA = {
+static jobject DEFAULT_SCHEMA = {
+	.m_value = {
 		.m_type = JV_OBJECT,
 		.m_refCnt = 1,
 		.m_toString = "{}",
 		.m_toStringDealloc = NULL,
-		.value.val_obj = {.m_members = NULL},
-	};
+	},
+	.m_members = NULL,
+};
 
-static struct jvalue DEFAULT_SCHEMA_STACK = {
-	.m_type = JV_ARRAY,
-	.m_refCnt = 1,
-	.m_toString = "[{}]",
-	.m_toStringDealloc = NULL,
-	.value.val_array = {
-			.m_smallBucket = {
-				&DEFAULT_SCHEMA, NULL
-			},
-			.m_bigBucket = NULL,
-			.m_size = 1,
-			.m_capacity = 16
-	}
+static jarray DEFAULT_SCHEMA_STACK = {
+	.m_value = {
+		.m_type = JV_ARRAY,
+		.m_refCnt = 1,
+		.m_toString = "[{}]",
+		.m_toStringDealloc = NULL,
+	},
+	.m_smallBucket = {
+		&DEFAULT_SCHEMA.m_value, NULL
+	},
+	.m_bigBucket = NULL,
+	.m_size = 1,
+	.m_capacity = 16
 };
 
 static void j_release_wrapper(jvalue_ref *value)
 {
 	assert(value != NULL);
 	SANITY_CHECK_POINTER(*value);
-	if (LIKELY(*value != &DEFAULT_SCHEMA_STACK && *value != &DEFAULT_SCHEMA))
+	if (LIKELY(*value != &DEFAULT_SCHEMA_STACK.m_value && *value != &DEFAULT_SCHEMA.m_value))
 		j_release(value);
 	SANITY_KILL_POINTER(*value);
 }
@@ -1911,17 +1913,17 @@ static void j_release_wrapper(jvalue_ref *value)
 static bool jis_all_schema_hierarchy(jvalue_ref value)
 {
 	assert(!jis_empty_schema_dom(value));
-	return value == &DEFAULT_SCHEMA_STACK;
+	return value == &DEFAULT_SCHEMA_STACK.m_value;
 }
 
 static bool jis_empty_schema_dom(jvalue_ref value)
 {
-	return value == &DEFAULT_SCHEMA;
+	return value == &DEFAULT_SCHEMA.m_value;
 }
 
 static SchemaWrapper ALL_SCHEMA = {
 	.m_refCnt = 1,
-	.m_validation = &DEFAULT_SCHEMA_STACK,
+	.m_validation = &DEFAULT_SCHEMA_STACK.m_value,
 #if ALLOW_LOCAL_REFS
 	.m_top = &DEFAULT_SCHEMA
 #endif

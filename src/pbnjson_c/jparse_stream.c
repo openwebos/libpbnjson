@@ -919,10 +919,10 @@ static inline bool jsax_parse_inject_internal(JSAXContextRef ctxt, jvalue_ref ke
 		}
 		case JV_NUM:
 		{
-			assert (value->value.val_num.m_type == NUM_RAW);
+			assert (jnum_deref(value)->m_type == NUM_RAW);
 			// this numeric string should have come directly from a schema - we don't do any conversion internally.
 			// how did this state occur?
-			CHECK_CONDITION_RETURN_VALUE(value->value.val_num.m_type != NUM_RAW, false, "Some internal problem parsing schema");
+			CHECK_CONDITION_RETURN_VALUE(jnum_deref(value)->m_type != NUM_RAW, false, "Some internal problem parsing schema");
 
 			str = jnumber_deref_raw(value);
 			if (UNLIKELY(!cbs->yajl_number(ctxt, str.m_str, str.m_len)))
@@ -932,7 +932,7 @@ static inline bool jsax_parse_inject_internal(JSAXContextRef ctxt, jvalue_ref ke
 		}
 		case JV_BOOL:
 		{
-			if (UNLIKELY(!cbs->yajl_boolean(ctxt, jboolean_deref(value))))
+			if (UNLIKELY(!cbs->yajl_boolean(ctxt, jboolean_deref_to_value(value))))
 				return false;
 			break;
 		}
