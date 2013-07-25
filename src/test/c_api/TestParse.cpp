@@ -16,201 +16,88 @@
 //
 // LICENSE@@@
 
-#include "TestParse.h"
-#include <QTest>
-#include <QtDebug>
-#include <QMetaType>
+#include <gtest/gtest.h>
 #include <iostream>
 #include <cassert>
 #include <limits>
 #include <execinfo.h>
-#include <QList>
-#include <QString>
-#include <QFileInfo>
-
 #include <pbnjson.h>
+#include <memory>
+#include <algorithm>
 
-#include "../QBacktrace.h"
+void j_release_ref(jvalue * val) {
+	j_release(&val);
+}
 
-Q_DECLARE_METATYPE(jvalue_ref);
-Q_DECLARE_METATYPE(ConversionResult);
-Q_DECLARE_METATYPE(bool);
+void jschema_release_ref(jschema_ref val) {
+	jschema_release(&val);
+}
 
-#if 0
-	CONV_OK = 0,
-	CONV_POSITIVE_OVERFLOW = 0x1, /// - the value for integers MUST be clamped to the largest representable number. for doubles, it will be positive infinity
-	CONV_NEGATIVE_OVERFLOW = 0x2, /// - the value for integers MUST be clamped to the smallest representable number. for doubles, it will be negative infinity
-/** CONV_POSITIVE_OVERFLOW | CONV_NEGATIVE_OVERFLOW */
-#define CONV_OVERFLOW (CONV_POSITIVE_OVERFLOW | CONV_NEGATIVE_OVERFLOW)
-	CONV_INFINITY = 0x4, ///  the value for integers MUST be clamped to the largest representable number
-#define CONV_POSITIVE_INFINITY (CONV_POSITIVE_OVERFLOW | CONV_INFINITY)
-#define CONV_NEGATIVE_INFINITY (CONV_NEGATIVE_OVERFLOW | CONV_INFINITY)
-	CONV_PRECISION_LOSS = 0x8, /// bit is set if a double is requested but the int cannot be represented perfectly or an int is requested but the double has floating point
-	CONV_NOT_A_NUM = 0x10, /// non-0 value + CONV_NOT_A_NUM = there's an integer approximation
-	CONV_NOT_A_STRING = 0x20, /// returned if the type is not a string - the raw string representation is still returned as appropriate
-	CONV_NOT_A_BOOLEAN = 0x40, /// returned if the type is not a boolean - the value written is always the boolean approximation
-	CONV_NOT_A_RAW_NUM = 0x80, /// if an attempt is made to get the raw number from a JSON Number backed by a numeric primitive
-	CONV_BAD_ARGS = 0x40000000, /// if the provided arguments are bogous (MUST NOT OVERLAP WITH ANY OTHER ERROR CODES)
-	CONV_GENERIC_ERROR = 0x80000000 /// if some other unspecified error occured (MUST NOT OVERLAP WITH ANY OTHER ERROR CODES)
-#endif
-
-static const char* conv_result_str(ConversionResult res)
+template<class Val>
+struct jptr_generic : public std::shared_ptr<Val>
 {
-	switch (res) {
-	case CONV_OK:
-		return "ok";
-	case CONV_POSITIVE_OVERFLOW:
-		return "+ overflow";
-	case CONV_NEGATIVE_OVERFLOW:
-		return "- overflow";
-	case CONV_INFINITY:
-		return "infinity";
-	case CONV_PRECISION_LOSS:
-		return "precision loss";
-	case CONV_NOT_A_NUM:
-		return "not a number";
-	case CONV_NOT_A_STRING:
-		return "not a string";
-	case CONV_NOT_A_BOOLEAN:
-		return "not a boolean";
-	case CONV_NOT_A_RAW_NUM:
-		return "not a raw num";
-	case CONV_BAD_ARGS:
-		return "bad args";
-	case CONV_GENERIC_ERROR:
-		return "generic error";
-	default:
-		return "unknown error";
+	template<class Del>
+	jptr_generic(Val * val, Del del)
+		: std::shared_ptr<Val>(val, del)
+	{
 	}
-}
 
-static std::string result_str(ConversionResultFlags res) __attribute__((unused));
-static std::string result_str(ConversionResultFlags res)
-{
-	std::string result;
-
-	if (res == CONV_OK)
-		return conv_result_str(CONV_OK);
-
-#define CHECK_ERR(flag) \
-	do {\
-		if (res & (flag)) result += conv_result_str(flag);\
-	} while (0)
-
-	CHECK_ERR(CONV_POSITIVE_OVERFLOW);
-	CHECK_ERR(CONV_NEGATIVE_OVERFLOW);
-	CHECK_ERR(CONV_INFINITY);
-	CHECK_ERR(CONV_PRECISION_LOSS);
-	CHECK_ERR(CONV_NOT_A_NUM);
-	CHECK_ERR(CONV_NOT_A_STRING);
-	CHECK_ERR(CONV_NOT_A_BOOLEAN);
-	CHECK_ERR(CONV_NOT_A_RAW_NUM);
-	CHECK_ERR(CONV_BAD_ARGS);
-	CHECK_ERR(CONV_GENERIC_ERROR);
-
-	return result;
-
-#undef CHECK_ERR
-}
-
-#define PRINT_BACKTRACE(fd, size) \
-		do {\
-			void *tracePtrs[size];\
-			int count;\
-			count = backtrace(tracePtrs, size);\
-			backtrace_symbols_fd(tracePtrs, count, fd);\
-		} while(0)
-
-#define MY_VERIFY(statement) \
-do {\
-    if (!QTest::qVerify((statement), #statement, "", __FILE__, __LINE__)) { \
-    	PRINT_BACKTRACE(STDERR_FILENO, 16);\
-    	/*qDebug() << "\n\t" << getBackTrace().join("\n\t") << "\n";*/\
-		throw TestFailure();\
-    } \
-} while (0)
-
-#define MY_COMPARE(actual, expected) \
-do {\
-    if (!QTest::qCompare(actual, expected, #actual, #expected, __FILE__, __LINE__)) { \
-    	PRINT_BACKTRACE(STDERR_FILENO, 16);\
-    	/*qDebug() << "\n\t" << getBackTrace().join("\n\t") << "\n";*/\
-        throw TestFailure();\
-    } \
-} while (0)
-
-namespace pjson {
-namespace testc {
-
-class TestFailure
-{
-
+	const jptr_generic & operator=(Val * jval) {
+		reset(jval);
+		return *this;
+	}
 };
 
-TestParse::TestParse()
+struct jptr_value : public jptr_generic<jvalue>
 {
-}
+	jptr_value()
+		: jptr_generic(0, j_release_ref)
+	{
 
-TestParse::~TestParse()
-{
-
-}
-
-void TestParse::initTestCase()
-{
-	m_managed.clear();
-	m_managedSchemas.clear();
-}
-
-void TestParse::init()
-{
-}
-
-void TestParse::cleanup()
-{
-}
-
-void TestParse::cleanupTestCase()
-{
-	for (size_t i = 0; i < m_managed.size(); i++) {
-		qDebug() << "unmanaging" << m_managed[i];
-		j_release(&m_managed[i]);
 	}
 
-	for (size_t i = 0; i < m_managedSchemas.size(); i++) {
-		jschema_release(&m_managedSchemas[i]);
+	jptr_value(jvalue * val)
+		: jptr_generic(val, j_release_ref)
+	{
 	}
-}
 
-void TestParse::testParseDoubleAccuracy()
+	operator jvalue_ref() {
+		return get();
+	}
+};
+
+struct jptr_schema : public jptr_generic<jschema>
 {
+	jptr_schema()
+		: jptr_generic(0, jschema_release_ref)
+	{
+
+	}
+
+	jptr_schema(jschema * val)
+		: jptr_generic(val, jschema_release_ref)
+	{
+	}
+
+	operator jschema_ref() {
+		return get();
+	}
+};
+
+TEST(TestParse, testParseDoubleAccuracy) {
+
 	std::string jsonRaw("{\"errorCode\":0,\"timestamp\":1.268340607585E12,\"latitude\":37.390067,\"longitude\":-122.037626,\"horizAccuracy\":150,\"heading\":0,\"velocity\":0,\"altitude\":0,\"vertAccuracy\":0}");
 	JSchemaInfo schemaInfo;
 
-	jvalue_ref parsed;
 	double longitude;
 
 	jschema_info_init(&schemaInfo, jschema_all(), NULL, NULL);
 
-	parsed = manage(jdom_parse(j_cstr_to_buffer(jsonRaw.c_str()), DOMOPT_NOOPT, &schemaInfo));
-	QVERIFY(jis_object(parsed));
-	QVERIFY(jis_number(jobject_get(parsed, J_CSTR_TO_BUF("longitude"))));
-	QCOMPARE(jnumber_get_f64(jobject_get(parsed, J_CSTR_TO_BUF("longitude")), &longitude), (ConversionResultFlags)CONV_OK);
-	QCOMPARE(longitude, -122.037626);
-}
-
-void TestParse::testParseFile_data()
-{
-	QTest::addColumn<QString>("file_name");
-
-	QList<QString> files;
-	files << "file_parse_test"
-	;
-
-	Q_FOREACH(QString file, files) {
-		std::string tag = file.toStdString();
-		QTest::newRow(tag.c_str()) << file;
-	}
+	jptr_value parsed{ jdom_parse(j_cstr_to_buffer(jsonRaw.c_str()), DOMOPT_NOOPT, &schemaInfo) };
+	ASSERT_TRUE(jis_object(parsed));
+	EXPECT_TRUE(jis_number(jobject_get(parsed, J_CSTR_TO_BUF("longitude"))));
+	EXPECT_EQ((ConversionResultFlags)CONV_OK, jnumber_get_f64(jobject_get(parsed, J_CSTR_TO_BUF("longitude")), &longitude));
+	EXPECT_EQ(-122.037626, longitude);
 }
 
 static bool identical(jvalue_ref obj1, jvalue_ref obj2)
@@ -295,33 +182,29 @@ static bool identical(jvalue_ref obj1, jvalue_ref obj2)
 	return false;
 }
 
-void TestParse::testParseFile()
+void TestParse_testParseFile(const std::string &fileNameSignature)
 {
-	QFETCH(QString, file_name);
+	std::string jsonInput = fileNameSignature + ".json";
+	std::string jsonSchema = fileNameSignature + ".schema";
 
-	QString appName = QCoreApplication::arguments().at(0);
-	QString filePrefix = QFileInfo(appName).absolutePath() + "/";
-	std::string jsonInput = (filePrefix + file_name + ".json").toStdString();
-	std::string jsonSchema = (filePrefix + file_name + ".schema").toStdString();
+	jptr_schema schema = jschema_parse_file(jsonSchema.c_str(), NULL);
+	ASSERT_TRUE (schema != NULL);
 
 	JSchemaInfo schemaInfo;
-	jvalue_ref inputNoMMap;
-	jvalue_ref inputMMap;
-
-	jschema_ref schema = manage(jschema_parse_file(jsonSchema.c_str(), NULL));
-	QVERIFY(schema != NULL);
-
 	jschema_info_init(&schemaInfo, schema, NULL, NULL);
-	inputNoMMap = manage(jdom_parse_file(jsonInput.c_str(), &schemaInfo, JFileOptNoOpt));
-	QVERIFY(!jis_null(inputNoMMap));
 
-	inputMMap = manage(jdom_parse_file(jsonInput.c_str(), &schemaInfo, JFileOptMMap));
-	QVERIFY(!jis_null(inputMMap));
+	jptr_value inputNoMMap { jdom_parse_file(jsonInput.c_str(), &schemaInfo, JFileOptNoOpt) };
+	EXPECT_FALSE(jis_null(inputNoMMap));
 
-	QVERIFY(identical(inputNoMMap, inputMMap));
+	jptr_value inputMMap { jdom_parse_file(jsonInput.c_str(), &schemaInfo, JFileOptMMap) };
+	EXPECT_FALSE(jis_null(inputMMap));
+
+	EXPECT_TRUE(identical(inputNoMMap, inputMMap));
 }
 
-}
+TEST(TestParse, testParseFile)
+{
+	std::vector<std::string> tasks = {"file_parse_test"};
+	for (const auto &task : tasks) TestParse_testParseFile(task);
 }
 
-QTEST_MAIN(pjson::testc::TestParse);

@@ -403,7 +403,8 @@ static bool jdomEquivalent(const QDomElement &actual, const QDomElement &expecte
 	if (actualLocalName == "object") {
 		NECESSARY(expected.hasAttributeNS(nsObj.uri, "length"));
 		NECESSARY(actual.hasAttributeNS(nsObj.uri, "length"));
-		int numChildren = actual.attributeNS(nsObj.uri, "length", "0").toInt();
+		QString qStr = actual.attributeNS(nsObj.uri, "length", "0");
+		int numChildren = atoi(qStr.toStdString().c_str());
 		int actualChildren = 0;
 		EQ_ATTR3(nsObj, "length");
 		QDomElement aChild = actual.firstChildElement();
@@ -421,7 +422,8 @@ static bool jdomEquivalent(const QDomElement &actual, const QDomElement &expecte
 		}
 		EQUIVALENT(actualChildren, numChildren, actual.tagName());
 	} else if (actualLocalName == "array") {
-		int numChildren = actual.attributeNS(nsArr.uri, "length", "0").toInt();
+		QString qStr = actual.attributeNS(nsArr.uri, "length", "0");
+		int numChildren = atoi(qStr.toStdString().c_str());
 		NECESSARY(expected.hasAttributeNS(nsArr.uri, "length"));
 		NECESSARY(actual.hasAttributeNS(nsArr.uri, "length"));
 		int actualChildren = 0;

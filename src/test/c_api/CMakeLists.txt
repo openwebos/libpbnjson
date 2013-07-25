@@ -60,13 +60,6 @@ endforeach()
 
 
 ######################### THE UNIT TESTS ############################
-qt_hdrs(test_parse
-	TestParse.h
-)
-
-src(test_parse
-	TestParse.cpp)
-
 qt_hdrs(test_sax
 	TestSAX.h
 )
@@ -112,7 +105,6 @@ set(test_schema2_test_list
 	testSchemaReuse
 )
 
-add_qt_test(test_parse "Parser logic")
 add_qt_test(test_sax "SAX API")
 add_qt_test(test_schema2 "Schema sanity checks")
 add_regular_test(smoketest_mem_badinput "C memory leak smoke test for parsing invalid input")
@@ -121,6 +113,7 @@ add_schema_test(test_schema "Number sanity check" ${CMAKE_CURRENT_SOURCE_DIR}/..
 add_schema_test(test_schema "Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/contact/ Contact)
 
 SET(UnitTest
+	TestParse
 	TestDOM
 	TestJobject
 	TestYAJL
