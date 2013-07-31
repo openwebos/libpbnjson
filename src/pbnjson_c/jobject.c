@@ -509,7 +509,7 @@ static void _ObjKeyValDestroy(gpointer data)
 
 jvalue_ref jobject_create ()
 {
-	jobject* new_obj = g_new0(jobject, 1);
+	jobject *new_obj = (jobject *) calloc(1, sizeof(jobject));
 	CHECK_ALLOC_RETURN_NULL(new_obj);
 	jvalue_init((jvalue_ref)new_obj, JV_OBJECT);
 	new_obj->m_members = g_hash_table_new_full(_ObjKeyHash, _ObjKeyEqual,
@@ -899,7 +899,7 @@ static bool jarray_to_string_append (jvalue_ref jref, JStreamRef generating)
 
 jvalue_ref jarray_create (jarray_opts opts)
 {
-	jarray* new_array = g_new0(jarray, 1);
+	jarray *new_array = (jarray *) calloc(1, sizeof(jarray));
 	CHECK_ALLOC_RETURN_NULL(new_array);
 	jvalue_init((jvalue_ref)new_array, JV_ARRAY);
 
@@ -1441,7 +1441,7 @@ jvalue_ref jstring_create_nocopy_full (raw_buffer val, jdeallocator buffer_deall
 		return &JEMPTY_STR.m_value;
 	}
 
-	jstring* new_string = g_new0(jstring, 1);
+	jstring *new_string = (jstring *) calloc(1, sizeof(jstring));
 	CHECK_ALLOC_RETURN_NULL(new_string);
 	jvalue_init((jvalue_ref)new_string, JV_STR);
 
@@ -1642,7 +1642,7 @@ jvalue_ref jnumber_create_unsafe (raw_buffer str, jdeallocator strFree)
 	CHECK_POINTER_RETURN_VALUE(str.m_str, jnull());
 	CHECK_CONDITION_RETURN_VALUE(str.m_len == 0, jnull(), "Invalid length parameter for numeric string %s", str.m_str);
 
-	jnum* new_number = g_new0(jnum, 1);
+	jnum *new_number = (jnum *) calloc(1, sizeof(jnum));
 	CHECK_ALLOC_RETURN_NULL(new_number);
 	jvalue_init((jvalue_ref)new_number, JV_NUM);
 
@@ -1659,7 +1659,7 @@ jvalue_ref jnumber_create_f64 (double number)
 	CHECK_CONDITION_RETURN_VALUE(isnan(number), jnull(), "NaN has no representation in JSON");
 	CHECK_CONDITION_RETURN_VALUE(isinf(number), jnull(), "Infinity has no representation in JSON");
 
-	jnum* new_number = g_new0(jnum, 1);
+	jnum *new_number = (jnum *) calloc(1, sizeof(jnum));
 	CHECK_ALLOC_RETURN_NULL(new_number);
 	jvalue_init((jvalue_ref)new_number, JV_NUM);
 
@@ -1677,7 +1677,7 @@ jvalue_ref jnumber_create_i32 (int32_t number)
 
 jvalue_ref jnumber_create_i64 (int64_t number)
 {
-	jnum* new_number = g_new0(jnum, 1);
+	jnum *new_number = (jnum *) calloc(1, sizeof(jnum));
 	CHECK_ALLOC_RETURN_NULL(new_number);
 	jvalue_init((jvalue_ref)new_number, JV_NUM);
 
@@ -1690,7 +1690,7 @@ jvalue_ref jnumber_create_i64 (int64_t number)
 
 jvalue_ref jnumber_create_converted(raw_buffer raw)
 {
-	jnum* new_number = g_new0(jnum, 1);
+	jnum *new_number = (jnum *) calloc(1, sizeof(jnum));
 	CHECK_ALLOC_RETURN_NULL(new_number);
 	jvalue_init((jvalue_ref)new_number, JV_NUM);
 
@@ -1964,7 +1964,7 @@ bool jis_boolean (jvalue_ref jval)
 
 jvalue_ref jboolean_create (bool value)
 {
-	jbool* new_bool = g_new0(jbool, 1);
+	jbool *new_bool = (jbool *) calloc(1, sizeof(jbool));
 	CHECK_ALLOC_RETURN_NULL(new_bool);
 	jvalue_init((jvalue_ref)new_bool, JV_BOOL);
 	new_bool->value = value;
