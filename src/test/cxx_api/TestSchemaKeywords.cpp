@@ -109,7 +109,6 @@ TEST(Schemakeywords, reuse_schema_in_resolver)
 
 TEST(JValidator, IsValid_2_params)
 {
-
 	pj::JSchemaFile schema("./data/schemas/TestSchemaKeywords/extends/base.json");
 	ASSERT_TRUE(schema.isInitialized());
 
@@ -128,6 +127,31 @@ TEST(JValidator, IsValid_2_params)
 		EXPECT_FALSE(pj::JValidator::isValid(json, schema));
 	}
 
+}
+
+TEST(JValidator, MinMaxLength)
+{
+	using namespace pbnjson;
+
+	JSchema schema = JSchemaFragment(
+		"{"
+		    "\"type\" : \"object\","
+		    "\"properties\" : {"
+		        "\"a\" : {"
+		            "\"type\" : \"string\","
+		            "\"maxLength\" : 5"
+		        "},"
+		        "\"b\" : {"
+		            "\"type\" : \"string\","
+		            "\"minLength\" : 5"
+		        "}"
+		    "}"
+		"}"
+		);
+	EXPECT_TRUE(JValidator::isValid(Object() << JValue::KeyValue("a", "Hello"), schema));
+	EXPECT_FALSE(JValidator::isValid(Object() << JValue::KeyValue("a", "Hello, world!"), schema));
+	EXPECT_TRUE(JValidator::isValid(Object() << JValue::KeyValue("b", "Hello"), schema));
+	EXPECT_FALSE(JValidator::isValid(Object() << JValue::KeyValue("b", "Hell"), schema));
 }
 
 } // namespace testcxx

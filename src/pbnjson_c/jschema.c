@@ -1533,6 +1533,7 @@ bool jschema_str(JSAXContextRef sax, ValidationStateRef parseState, raw_buffer s
 			if (str.m_len < specifiedLen) {
 				PJ_SCHEMA_ERR("String '%.*s' doesn't meet the minimum length of %"PRId64,
 						RB_PRINTF(str), specifiedLen);
+				goto schema_failure;
 			}
 		}
 		property = jobject_get(schemaToCheck, J_CSTR_TO_BUF(SK_MAX_LEN));
@@ -1552,6 +1553,7 @@ bool jschema_str(JSAXContextRef sax, ValidationStateRef parseState, raw_buffer s
 			if (str.m_len > specifiedLen) {
 				PJ_SCHEMA_ERR("String '%.*s' doesn't meet the minimum length of %"PRId64,
 						RB_PRINTF(str), specifiedLen);
+				goto schema_failure;
 			}
 		}
 		property = jobject_get(schemaToCheck, J_CSTR_TO_BUF(SK_ENUM));
