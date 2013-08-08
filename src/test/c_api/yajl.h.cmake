@@ -20,5 +20,6 @@
 #define HAVE_YAJL YAJL_FOUND
 
 #if YAJL_FOUND
+#include <yajl/yajl_version.h>
 #include <yajl/yajl_parse.h>
 #endif

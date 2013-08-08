@@ -483,10 +483,6 @@ typedef struct __JSAXContext PJSAXContext;
 
 static PJSAXCallbacks no_callbacks = { 0 };
 
-static void bounce_breakpoint()
-{
-}
-
 #define DEREF_CALLBACK(callback, ...) \
 	do { \
 		if (callback != NULL) return callback(__VA_ARGS__); \
@@ -500,10 +496,10 @@ static void bounce_breakpoint()
 
 int my_bounce_start_map(void *ctxt)
 {
-	bounce_breakpoint();
 	PJ_LOG_TRACE("{");
 
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	spring->empty = false;
 #if !BYPASS_SCHEMA
 #if SHORTCUT_SCHEMA_ALL
 	if (spring->m_validation->m_state->m_schema != jschema_all())
@@ -520,10 +516,10 @@ int my_bounce_start_map(void *ctxt)
 
 int my_bounce_map_key(void *ctxt, const unsigned char *str, yajl_size_t strLen)
 {
-	bounce_breakpoint();
 	PJ_LOG_TRACE("%.*s", strLen, str);
 
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	spring->empty = false;
 #if !BYPASS_SCHEMA
 #if SHORTCUT_SCHEMA_ALL
 	if (spring->m_validation->m_state->m_schema != jschema_all())
@@ -540,10 +536,10 @@ int my_bounce_map_key(void *ctxt, const unsigned char *str, yajl_size_t strLen)
 
 int my_bounce_end_map(void *ctxt)
 {
-	bounce_breakpoint();
 	PJ_LOG_TRACE("}");
 
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	spring->empty = false;
 #if !BYPASS_SCHEMA
 #if SHORTCUT_SCHEMA_ALL
 	if (spring->m_validation->m_state->m_schema != jschema_all())
@@ -560,10 +556,10 @@ int my_bounce_end_map(void *ctxt)
 
 int my_bounce_start_array(void *ctxt)
 {
-	bounce_breakpoint();
 	PJ_LOG_TRACE("[");
 
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	spring->empty = false;
 #if !BYPASS_SCHEMA
 #if SHORTCUT_SCHEMA_ALL
 	if (spring->m_validation->m_state->m_schema != jschema_all())
@@ -580,10 +576,10 @@ int my_bounce_start_array(void *ctxt)
 
 int my_bounce_end_array(void *ctxt)
 {
-	bounce_breakpoint();
 	PJ_LOG_TRACE("]");
 
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	spring->empty = false;
 #if !BYPASS_SCHEMA
 #if SHORTCUT_SCHEMA_ALL
 	if (spring->m_validation->m_state->m_schema != jschema_all())
@@ -600,10 +596,10 @@ int my_bounce_end_array(void *ctxt)
 
 int my_bounce_string(void *ctxt, const unsigned char *str, yajl_size_t strLen)
 {
-	bounce_breakpoint();
 	PJ_LOG_TRACE("%.*s", strLen, str);
 
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	spring->empty = false;
 #if !BYPASS_SCHEMA
 #if SHORTCUT_SCHEMA_ALL
 	if (spring->m_validation->m_state->m_schema != jschema_all())
@@ -622,10 +618,10 @@ int my_bounce_string(void *ctxt, const unsigned char *str, yajl_size_t strLen)
 
 int my_bounce_number(void *ctxt, const char *numberVal, yajl_size_t numberLen)
 {
-	bounce_breakpoint(numberVal);
 	PJ_LOG_TRACE("%.*s", numberLen, numberVal);
 
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	spring->empty = false;
 #if !BYPASS_SCHEMA
 #if SHORTCUT_SCHEMA_ALL
 	if (spring->m_validation->m_state->m_schema != jschema_all())
@@ -644,10 +640,10 @@ int my_bounce_number(void *ctxt, const char *numberVal, yajl_size_t numberLen)
 
 int my_bounce_boolean(void *ctxt, int boolVal)
 {
-	bounce_breakpoint();
 	PJ_LOG_TRACE("%s", (boolVal ? "true" : "false"));
 
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	spring->empty = false;
 #if !BYPASS_SCHEMA
 #if SHORTCUT_SCHEMA_ALL
 	if (spring->m_validation->m_state->m_schema != jschema_all())
@@ -664,10 +660,10 @@ int my_bounce_boolean(void *ctxt, int boolVal)
 
 int my_bounce_null(void *ctxt)
 {
-	bounce_breakpoint("null");
 	PJ_LOG_TRACE("null");
 
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	spring->empty = false;
 #if !BYPASS_SCHEMA
 #if SHORTCUT_SCHEMA_ALL
 	if (spring->m_validation->m_state->m_schema != jschema_all())
@@ -765,6 +761,7 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 		.m_handlers = &yajl_cb,
 		.m_errors = schemaInfo->m_errHandler,
 		.errorDescription = NULL,
+		.empty = true,
 	};
 #if !BYPASS_SCHEMA
 	internalCtxt.m_validation = jschema_init(schemaInfo);
@@ -803,6 +800,14 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 
 	switch (parseResult) {
 		case yajl_status_ok:
+			// Special case for YAJL 2.0 to support parser failure on empty JSON input
+			if (internalCtxt.empty)
+			{
+				if (ERR_HANDLER_FAILED(schemaInfo->m_errHandler, m_parser, &internalCtxt))
+				{
+					goto parse_failure;
+				}
+			}
 			break;
 		case yajl_status_client_canceled:
 			if (ERR_HANDLER_FAILED(schemaInfo->m_errHandler, m_unknown, &internalCtxt))

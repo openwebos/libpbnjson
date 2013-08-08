@@ -122,6 +122,7 @@ struct __JSAXContext
 	JErrorCallbacksRef m_errors;
 	ErrorStateRef m_errorstate;
 	char *errorDescription;
+	bool empty;
 };
 
 #endif /* JSCHEMA_TYPES_INTERNAL_H_ */

@@ -54,11 +54,24 @@ void ParseYajl(raw_buffer const &input)
 {
 	yajl_callbacks nocb = { 0 };
 	unique_ptr<remove_pointer<yajl_handle>::type, void(*)(yajl_handle)>
-		handle{yajl_alloc(&nocb, NULL, NULL, NULL), &yajl_free};
+		handle{
+#if YAJL_VERSION < 20000
+			yajl_alloc(&nocb, NULL, NULL, NULL),
+#else
+			yajl_alloc(&nocb, NULL, NULL),
+#endif
+			&yajl_free
+		};
 
 	ASSERT_EQ(yajl_status_ok,
 		yajl_parse(handle.get(), (const unsigned char *)input.m_str, input.m_len));
-	ASSERT_EQ(yajl_status_ok, yajl_parse_complete(handle.get()));
+	ASSERT_EQ(yajl_status_ok,
+#if YAJL_VERSION < 20000
+	          yajl_parse_complete(handle.get())
+#else
+	          yajl_complete_parse(handle.get())
+#endif
+	          );
 }
 #endif // HAVE_YAJL
 

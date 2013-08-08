@@ -194,7 +194,6 @@ private:
 	std::stack<std::string> m_keyStack;
 	std::stack<DocumentState> m_stateStack;
 	JErrorHandler* m_errors;
-	JResolver* m_resolver;
 
 	friend class SaxBounce;
 };

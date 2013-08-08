@@ -17,6 +17,7 @@
 // LICENSE@@@
 
 #include <gtest/gtest.h>
+#include <yajl/yajl_version.h>
 #include <yajl/yajl_gen.h>
 #include <yajl/yajl_parse.h>
 #include <memory>
@@ -49,14 +50,23 @@ struct MyCtxt
 namespace {
 
 int yos(void *ctxt) { ((MyCtxt *)ctxt)->map_open++; return 1; }
+#if YAJL_VERSION < 20000
 int yok(void *ctxt, const unsigned char *s, unsigned int len) { ((MyCtxt *)ctxt)->map_key++; return 1; }
+#else
+int yok(void *ctxt, const unsigned char *s, size_t len) { ((MyCtxt *)ctxt)->map_key++; return 1; }
+#endif
 int yoc(void *ctxt) { ((MyCtxt *)ctxt)->map_close++; return 1; }
 
 int yas(void *ctxt) { ((MyCtxt *)ctxt)->array_open++; return 1; }
 int yac(void *ctxt) { ((MyCtxt *)ctxt)->array_close++; return 1; }
 
-int ys(void *ctxt, const unsigned char * s, unsigned int l) { ((MyCtxt *)ctxt)->string++; return 1; }
+#if YAJL_VERSION < 20000
 int yn(void *ctxt, const char *n, unsigned int l) { ((MyCtxt *)ctxt)->number++; return 1; }
+int ys(void *ctxt, const unsigned char * s, unsigned int l) { ((MyCtxt *)ctxt)->string++; return 1; }
+#else
+int yn(void *ctxt, const char *n, size_t l) { ((MyCtxt *)ctxt)->number++; return 1; }
+int ys(void *ctxt, const unsigned char * s, size_t l) { ((MyCtxt *)ctxt)->string++; return 1; }
+#endif
 int yb(void *ctxt, int) { ((MyCtxt *)ctxt)->boolean++; return 1; }
 int yN(void *ctxt) { ((MyCtxt *)ctxt)->null++; return 1; }
 
@@ -80,17 +90,34 @@ static yajl_callbacks my_cb =
 TEST(YAJL, Generator)
 {
 	unique_ptr<remove_pointer<yajl_gen>::type, void(*)(yajl_gen)>
-		g{yajl_gen_alloc(NULL, NULL), yajl_gen_free};
+		g{
+#if YAJL_VERSION < 20000
+			yajl_gen_alloc(NULL, NULL),
+#else
+			yajl_gen_alloc(NULL),
+#endif
+			yajl_gen_free
+		};
 	yajl_gen_map_open(g.get());
 	yajl_gen_map_close(g.get());
 
 	const unsigned char* buf;
+#if YAJL_VERSION < 20000
 	unsigned int len;
+#else
+	size_t len;
+#endif
 	ASSERT_EQ(yajl_gen_get_buf(g.get(), &buf, &len), yajl_gen_status_ok);
 	EXPECT_EQ(len, 2);
 	EXPECT_STREQ(reinterpret_cast<char const *>(buf), "{}");
 
-	g.reset(yajl_gen_alloc(NULL, NULL));
+	g.reset(
+#if YAJL_VERSION < 20000
+	        yajl_gen_alloc(NULL, NULL)
+#else
+	        yajl_gen_alloc(NULL)
+#endif
+	        );
 	yajl_gen_map_open(g.get());
 	yajl_gen_string(g.get(), reinterpret_cast<const unsigned char*>("TEST"), sizeof("TEST") - 1);
 	yajl_gen_number(g.get(), "53", sizeof("53") - 1);
@@ -110,10 +137,22 @@ TEST(YAJL, Parser)
 		MyCtxt expect = { 1, 0, 1 };
 
 		MyCtxt ctxt = { 0 };
-		h.reset(yajl_alloc(&my_cb, 0, 0, &ctxt));
+		h.reset(
+#if YAJL_VERSION < 20000
+		        yajl_alloc(&my_cb, 0, 0, &ctxt)
+#else
+		        yajl_alloc(&my_cb, 0, &ctxt)
+#endif
+		        );
 		ASSERT_EQ(yajl_status_ok,
 			yajl_parse(h.get(), reinterpret_cast<unsigned char const *>(input), strlen(input)));
-		EXPECT_EQ(yajl_status_ok, yajl_parse_complete(h.get()));
+		EXPECT_EQ(yajl_status_ok,
+#if YAJL_VERSION < 20000
+		          yajl_parse_complete(h.get())
+#else
+		          yajl_complete_parse(h.get())
+#endif
+		          );
 		EXPECT_EQ(expect, ctxt);
 	}
 
@@ -122,10 +161,22 @@ TEST(YAJL, Parser)
 		MyCtxt expect = { 0, 0, 0, 1, 1, 0, 0, 0, 0 };
 
 		MyCtxt ctxt = { 0 };
-		h.reset(yajl_alloc(&my_cb, 0, 0, &ctxt));
+		h.reset(
+#if YAJL_VERSION < 20000
+		        yajl_alloc(&my_cb, 0, 0, &ctxt)
+#else
+		        yajl_alloc(&my_cb, 0, &ctxt)
+#endif
+		        );
 		ASSERT_EQ(yajl_status_ok,
 			yajl_parse(h.get(), reinterpret_cast<unsigned char const *>(input), strlen(input)));
-		EXPECT_EQ(yajl_status_ok, yajl_parse_complete(h.get()));
+		EXPECT_EQ(yajl_status_ok,
+#if YAJL_VERSION < 20000
+		          yajl_parse_complete(h.get())
+#else
+		          yajl_complete_parse(h.get())
+#endif
+		          );
 		EXPECT_EQ(expect, ctxt);
 	}
 
@@ -134,10 +185,22 @@ TEST(YAJL, Parser)
 		MyCtxt expect = { 1, 4, 1, 0, 0, 1, 1, 1, 1 };
 
 		MyCtxt ctxt = { 0 };
-		h.reset(yajl_alloc(&my_cb, 0, 0, &ctxt));
+		h.reset(
+#if YAJL_VERSION < 20000
+		        yajl_alloc(&my_cb, 0, 0, &ctxt)
+#else
+		        yajl_alloc(&my_cb, 0, &ctxt)
+#endif
+		        );
 		ASSERT_EQ(yajl_status_ok,
 			yajl_parse(h.get(), reinterpret_cast<unsigned char const *>(input), strlen(input)));
-		EXPECT_EQ(yajl_status_ok, yajl_parse_complete(h.get()));
+		EXPECT_EQ(yajl_status_ok,
+#if YAJL_VERSION < 20000
+		          yajl_parse_complete(h.get())
+#else
+		          yajl_complete_parse(h.get())
+#endif
+		          );
 		EXPECT_EQ(expect, ctxt);
 	}
 
@@ -146,10 +209,22 @@ TEST(YAJL, Parser)
 		MyCtxt expect = { 1, 0, 1, 2, 2, 2, 2, 2, 2 };
 
 		MyCtxt ctxt = { 0 };
-		h.reset(yajl_alloc(&my_cb, 0, 0, &ctxt));
+		h.reset(
+#if YAJL_VERSION < 20000
+		        yajl_alloc(&my_cb, 0, 0, &ctxt)
+#else
+		        yajl_alloc(&my_cb, 0, &ctxt)
+#endif
+		        );
 		ASSERT_EQ(yajl_status_ok,
 			yajl_parse(h.get(), reinterpret_cast<unsigned char const *>(input), strlen(input)));
-		EXPECT_EQ(yajl_status_ok, yajl_parse_complete(h.get()));
+		EXPECT_EQ(yajl_status_ok,
+#if YAJL_VERSION < 20000
+		          yajl_parse_complete(h.get())
+#else
+		          yajl_complete_parse(h.get())
+#endif
+		          );
 		EXPECT_EQ(expect, ctxt);
 	}
 
@@ -159,10 +234,22 @@ TEST(YAJL, Parser)
 		MyCtxt expect = { 2, 3, 2, 2, 2, 4, 4, 2, 2};
 
 		MyCtxt ctxt = { 0 };
-		h.reset(yajl_alloc(&my_cb, 0, 0, &ctxt));
+		h.reset(
+#if YAJL_VERSION < 20000
+		        yajl_alloc(&my_cb, 0, 0, &ctxt)
+#else
+		        yajl_alloc(&my_cb, 0, &ctxt)
+#endif
+		        );
 		ASSERT_EQ(yajl_status_ok,
 			yajl_parse(h.get(), reinterpret_cast<unsigned char const *>(input), strlen(input)));
-		EXPECT_EQ(yajl_status_ok, yajl_parse_complete(h.get()));
+		EXPECT_EQ(yajl_status_ok,
+#if YAJL_VERSION < 20000
+		          yajl_parse_complete(h.get())
+#else
+		          yajl_complete_parse(h.get())
+#endif
+		          );
 		EXPECT_EQ(expect, ctxt);
 	}
 }
