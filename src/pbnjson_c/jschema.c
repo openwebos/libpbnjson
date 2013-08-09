@@ -721,6 +721,7 @@ static void determinePossibilities(SchemaStateRef state)
 			state->m_allowedTypes = parsed;
 		}
 		if (!jis_null(typeParameter = jobject_get(parent, J_CSTR_TO_BUF(SK_DISALLLOWED)))) {
+			parsed = determinePossibilities_internal(0, typeParameter);
 			if ((parsed & state->m_disallowedTypes) != state->m_disallowedTypes) {
 				// if the child doesn't specify at least all of its parent disallowed types, then it can allow more
 				PJ_LOG_WARN("Schema type specified in %zd from top conflicts with one of its parent disallowed types - violates more restricting schema rule for inheritance", i);
