@@ -380,5 +380,71 @@ TEST(JValidator, DisallowedTypes)
 	EXPECT_FALSE(JValidator::isValid(Object() << JValue::KeyValue("any", Object()), schema));
 }
 
+TEST(JValidator, AdditionalPropertiesDisallowed)
+{
+	using namespace pbnjson;
+
+	JSchema schema = JSchemaFragment(
+		"{"
+			"\"type\" : \"object\","
+			"\"properties\" : {"
+				"\"str\" : {}"
+			"},"
+			"\"additionalProperties\" : false"
+		"}"
+		);
+
+	EXPECT_TRUE(JValidator::isValid(Object() << JValue::KeyValue("str", "hello"), schema));
+	EXPECT_FALSE(JValidator::isValid(Object() << JValue::KeyValue("str2", "hello"), schema));
+}
+
+TEST(JValidator, AdditionalPropertiesAllowed)
+{
+	using namespace pbnjson;
+
+	JSchema schema = JSchemaFragment(
+		"{"
+			"\"type\" : \"object\","
+			"\"properties\" : {"
+				"\"str\" : {}"
+			"},"
+			"\"additionalProperties\" : true"
+		"}"
+		);
+
+	EXPECT_TRUE(JValidator::isValid(Object() << JValue::KeyValue("str", "hello"), schema));
+	EXPECT_TRUE(JValidator::isValid(Object() << JValue::KeyValue("str2", "hello"), schema));
+}
+
+TEST(JValidator, AdditionalPropertiesSchema)
+{
+	using namespace pbnjson;
+
+	JSchema schema = JSchemaFragment(
+		"{"
+			"\"type\" : \"object\","
+			"\"properties\" : {"
+				"\"str\" : {}"
+			"},"
+			"\"additionalProperties\" : {"
+				"\"type\" : \"object\","
+				"\"properties\" : {"
+					"\"num\" : {"
+						"\"type\" : \"number\""
+					"}"
+				"}"
+			"}"
+		"}"
+		);
+
+	EXPECT_TRUE(JValidator::isValid(Object() << JValue::KeyValue("str", "hello"), schema));
+	EXPECT_FALSE(JValidator::isValid(Object() << JValue::KeyValue("add", "hello"), schema));
+	EXPECT_FALSE(JValidator::isValid(Object() << JValue::KeyValue("add", 1), schema));
+	EXPECT_TRUE(JValidator::isValid(Object() << JValue::KeyValue("add", Object()), schema));
+	EXPECT_TRUE(JValidator::isValid(Object() << JValue::KeyValue("add", Object() << JValue::KeyValue("num", 1)), schema));
+	EXPECT_FALSE(JValidator::isValid(Object() << JValue::KeyValue("add", Object() << JValue::KeyValue("num", "hello")), schema));
+	EXPECT_TRUE(JValidator::isValid(Object() << JValue::KeyValue("add", Object() << JValue::KeyValue("str", "hello")), schema));
+}
+
 } // namespace testcxx
 } // namespace pjson
