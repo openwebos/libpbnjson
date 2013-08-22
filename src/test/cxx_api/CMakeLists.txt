@@ -78,6 +78,7 @@ SET(CPPUnitTest
 	TestRegression
 	TestJGenerator
 	TestSchemaKeywords
+	TestErrorHandler
 	)
 
 FOREACH(TEST ${CPPUnitTest})

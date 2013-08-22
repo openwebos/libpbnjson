@@ -75,7 +75,7 @@ static bool __err_unknown(void *ctxt, JSAXContextRef parseCtxt)
 	JDomParser *parser = static_cast<JDomParser *>(ctxt);
 	JErrorHandler* handler = parser->getErrorHandler();
 	if (handler)
-		handler->misc(parser, "unknown error parsing");
+		handler->misc(parser, parseCtxt->errorDescription == NULL ? "unknown error parsing" : parseCtxt->errorDescription);
 	return false;
 }
 

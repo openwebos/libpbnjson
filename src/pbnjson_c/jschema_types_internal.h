@@ -121,6 +121,7 @@ struct __JSAXContext
 	ValidationStateRef m_validation;
 	JErrorCallbacksRef m_errors;
 	ErrorStateRef m_errorstate;
+	char *errorDescription;
 };
 
 #endif /* JSCHEMA_TYPES_INTERNAL_H_ */

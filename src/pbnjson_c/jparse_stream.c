@@ -764,6 +764,7 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 		.ctxt = (ctxt != NULL ? *ctxt : NULL),
 		.m_handlers = &yajl_cb,
 		.m_errors = schemaInfo->m_errHandler,
+		.errorDescription = NULL,
 	};
 #if !BYPASS_SCHEMA
 	internalCtxt.m_validation = jschema_init(schemaInfo);
@@ -819,8 +820,13 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchem
 #endif
 		case yajl_status_error:
 		default:
+			internalCtxt.errorDescription = (char*)yajl_get_error(handle, 1, (unsigned char *)input.m_str, input.m_len);;
 			if (ERR_HANDLER_FAILED(schemaInfo->m_errHandler, m_unknown, &internalCtxt))
+			{
+				yajl_free_error(handle, (unsigned char*)internalCtxt.errorDescription);
 				goto parse_failure;
+			}
+			yajl_free_error(handle, (unsigned char*)internalCtxt.errorDescription);
 
 			PJ_LOG_WARN("Client claims they handled an unknown error in '%.*s'", (int)input.m_len, input.m_str);
 			break;
