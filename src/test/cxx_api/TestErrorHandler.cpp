@@ -60,7 +60,7 @@ struct ErrorHandlerCounter : pbnjson::JErrorHandler
 		++schemaCounter;
 	}
 
-	virtual void misc(pbnjson::JParser *, const std::string &)
+	virtual void misc(pbnjson::JParser *, const std::string &reason)
 	{
 		++miscCounter;
 		errorDescription = reason;

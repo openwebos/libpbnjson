@@ -402,6 +402,32 @@ public:
 	//@}
 
 	/**
+	* Remove any key/value association in the object with the specified key value.
+	*
+	* @param key The key to use
+	* @return True if there was an association under key. False if there was not.
+	*/
+	bool remove(const char *key);
+
+	/**
+	* Remove any key/value association in the object with the specified key value.
+	*
+	* @param key The key to use
+	* @return True if there was an association under key. False if there was not.
+	* @see remove(const char *)
+	*/
+	bool remove(const std::string &key);
+
+	/**
+	* Remove any key/value association in the object with the specified key value.
+	*
+	* @param key The key to use
+	* @return True if there was an association under key. False if there was not.
+	* @see remove(const char *)
+	*/
+	bool remove(const JValue &key);
+
+	/**
 	 * Convenience method for appending an element to an array.
 	 *
 	 * If this isn't an array or some other error during insertion occurred, then the return is a JSON null.

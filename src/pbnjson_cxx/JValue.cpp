@@ -372,6 +372,27 @@ bool JValue::put(const JValue& key, const JValue& value)
 	return jobject_set2(m_jval, key.peekRaw(), value.peekRaw());
 }
 
+bool JValue::remove(const char *key)
+{
+	raw_buffer buf;
+	buf.m_str = key;
+	buf.m_len = strlen(key);
+	return jobject_remove(m_jval, buf);
+}
+
+bool JValue::remove(const std::string &key)
+{
+	raw_buffer buf;
+	buf.m_str = key.c_str();
+	buf.m_len = key.length();
+	return jobject_remove(m_jval, buf);
+}
+
+bool JValue::remove(const JValue &key)
+{
+	return jobject_remove(m_jval, jstring_get_fast(key.m_jval));
+}
+
 JValue& JValue::operator<<(const JValue& element)
 {
 	if (!append(element))

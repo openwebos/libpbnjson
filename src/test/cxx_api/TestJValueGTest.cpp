@@ -134,6 +134,27 @@ TEST(JValue, hasKey) {
 	}
 }
 
+TEST(JValue, remove)
+{
+	{
+		pj::JValue json = pj::Object() << pj::JValue::KeyValue("int32_t", int32_t(1)) <<
+										  pj::JValue::KeyValue("int64_t", int64_t(1)) <<
+										  pj::JValue::KeyValue("double", 1.0) <<
+										  pj::JValue::KeyValue("string", "test") <<
+										  pj::JValue::KeyValue("bool", true);
+		EXPECT_TRUE(json.remove("int32_t"));
+		EXPECT_FALSE(json.remove("int32_t"));
+		EXPECT_TRUE(json.remove(std::string("int64_t")));
+		EXPECT_TRUE(json.remove(pj::JValue("double")));
+		EXPECT_FALSE(json.remove(pj::JValue(1)));
+	}
+
+	{
+		pj::JValue json = pj::Object();
+		EXPECT_FALSE(json.remove(""));
+	}
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
