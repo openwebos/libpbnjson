@@ -390,6 +390,8 @@ bool JValue::remove(const std::string &key)
 
 bool JValue::remove(const JValue &key)
 {
+	if (!jis_string(key.m_jval))
+		return false;
 	return jobject_remove(m_jval, jstring_get_fast(key.m_jval));
 }
 
