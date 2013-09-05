@@ -44,54 +44,13 @@ namespace pbnjson {
  * For now though, this class is the recommended mechanism for utilizing schemas.
  * </palm-internal-comment>
  */
-class PJSONCXX_API JSchemaFile : public JSchema
+class PJSONCXX_API JSchemaFile
+	: public JSchema
 {
 private:
-	struct Map {
-		void *data;
-		int64_t size;
-	};
-
-	class MMapResource : public JSchema::Resource {
-	public:
-		/**
-		  * \p schemaFile The mmap backing the schema
-		  * \p schema The parsed schema representation of the file.
-		  *           This resources takes ownership over the schema.
-		  *           Do not use the schema directly afterwards.
-		  */
-		MMapResource(Map &schemaFile, jschema_ref schema);
-		~MMapResource();
-	};
-
-
-	static bool initSchemaMap(int fd, Map& map);
-	static JSchema::Resource* createSchemaMap(int fd);
 	static JSchema::Resource* createSchemaMap(const std::string &path);
 
 public:
-	/**
-	 * Create a schema representation from a C FILE object.
-	 * The ownership of the FILE object remains with the caller -
-	 * closing it is the responsibility of the opener (this will not
-	 * automatically close it for you).
-	 *
-	 * NOTE: you must supply a file object representing a mmap'able file.
-	 *
-	 * @see isInitialized
-	 */
-	JSchemaFile(FILE *f);
-
-	/**
-	 * Create a schema representation from file descriptor.
-	 *
-	 * The
-	 * NOTE: you must supply a file object representing a mmap'able file.
-	 *
-	 * @see isInitialized
-	 */
-	JSchemaFile(int fileno);
-
 	/**
 	 * Create a schema representation from the file with the given path.
 	 *

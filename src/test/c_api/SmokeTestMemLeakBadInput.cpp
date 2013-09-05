@@ -16,20 +16,18 @@
 //
 // LICENSE@@@
 
+#include <gtest/gtest.h>
 #include <pbnjson.h>
 #include <assert.h>
 
-int main()
+TEST(MemLeak, BadInput)
 {
-#define MALFORMED_INPUT "{\"a\", [,]}"
-	raw_buffer bad_input = J_CSTR_TO_BUF(MALFORMED_INPUT);
 	JSchemaInfo schemaInfo;
 	jschema_info_init(&schemaInfo, jschema_all(), NULL, NULL);
 
+	raw_buffer bad_input = J_CSTR_TO_BUF("{\"a\", [,]}");
 	jvalue_ref parsed = jdom_parse(bad_input, DOMOPT_NOOPT, &schemaInfo);
-	assert(jis_null(parsed));
+	EXPECT_TRUE(jis_null(parsed));
 	j_release(&parsed);
-
-	return 0;
 }
 

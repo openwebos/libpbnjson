@@ -19,7 +19,6 @@
 #include "gen_stream.h"
 #include "jobject.h"
 #include "jcallbacks.h"
-#include "jschema_internal.h"
 #include "jschema_types_internal.h"
 #include "jparse_stream_internal.h"
 

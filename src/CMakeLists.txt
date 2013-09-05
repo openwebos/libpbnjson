@@ -16,32 +16,6 @@
 #
 # LICENSE@@@
 
-# Project-wide information for the language bindings to find common directories
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/src/CMakeModules/ ${CMAKE_MODULE_PATH})
-
-macro(pick_engine_name variable_name static_value shared_value static_engine)
-	if(${static_engine})
-		set(${variable_name} ${static_value})
-		message("${variable_name} is linking to static engine ${${variable_name}}")
-	else()
-		set(${variable_name} ${shared_value})
-		message("${variable_name} is linking to shared engine ${${variable_name}}")
-	endif()
-endmacro()
-
-set(C_ENGINE yajl)
-set(STATIC_C_ENGINE FALSE)
-set(CXX_ENGINE yajl)
-set(STATIC_CXX_ENGINE FALSE)
-
-pick_engine_name(C_ENGINE_LIBNAME STATIC_C_ENGINE ${C_ENGINE}_s ${C_ENGINE} STATIC_C_ENGINE)
-pick_engine_name(CXX_ENGINE_LIBNAME ${CXX_ENGINE}_s ${CXX_ENGINE} STATIC_CXX_ENGINE)
-
-# Configure the compilers for the libraries
-
-message(STATUS "C engine's include directory is ${C_ENGINE_INCDIR}")
-message(STATUS "C++ engine's include directory is ${CXX_ENGINE_INCDIR}")
-
 add_definitions(-D_GNU_SOURCE)
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LOWER)
 set(WITH_DEBUG_POINTERS TRUE CACHE BOOL "In debug builds, perform extra checks on pointer manipulations")
@@ -65,22 +39,6 @@ else()
 endif()
 
 webos_add_linker_options(ALL --no-undefined)
-
-# Build the JSON engine for the C library
-
-# If the C++ JSON engine being used is different from the C one, then build it too
-# CMake doesn't seem to be able to handle the same directory being added twice
-if(DEFINED CXX_ENGINE AND NOT ${C_ENGINE} STREQUAL ${CXX_ENGINE})
-	add_subdirectory(pjson_engine/${CXX_ENGINE})
-endif()
-
-# Note that the default is WITH_SCHEMA enabled but WITH_PCRE disabled
-set(WITH_SCHEMA TRUE CACHE BOOL "Build with schema support.  If built without, no input will fail schema validation.")
-set(WITH_PCRE FALSE CACHE BOOL "Build with PCRE support in schemas")
-
-if(WITH_PCRE AND NOT WITH_SCHEMA)
-	message(FATAL_ERROR "Conflicting option: WITH_PCRE enabled but WITH_SCHEMA isn't")
-endif()
 
 set(WITH_TESTS FALSE CACHE BOOL "Control building of unit tests")
 

@@ -17,97 +17,19 @@
 // LICENSE@@@
 
 #include <JSchemaFile.h>
+#include <pbnjson.h>
 
 #include <cstdio>
 #include <cassert>
 
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-
 #include "../pbnjson_c/liblog.h"
-
-#include <pbnjson.h>
 
 namespace pbnjson {
 
-JSchemaFile::MMapResource::MMapResource(Map &schemaFile, jschema_ref schema)
-	: JSchema::Resource(new Map(schemaFile), schema, JSchema::Resource::TakeSchema)
-{
-}
-
-JSchemaFile::MMapResource::~MMapResource()
-{
-	Map *schemaMap = static_cast<Map *>(data());
-	munmap(schemaMap->data, schemaMap->size);
-	delete schemaMap;
-}
-
 JSchema::Resource* JSchemaFile::createSchemaMap(const std::string &path)
 {
-	Resource *result;
-	int fd = open(path.c_str(), O_RDONLY);
-	result = createSchemaMap(fd);
-	close(fd);
-	return result;
-}
-
-JSchema::Resource* JSchemaFile::createSchemaMap(int fd)
-{
-	Map map;
-	if (!initSchemaMap(fd, map))
-		return NULL;
-
-	raw_buffer schemaContents;
-	schemaContents.m_str = (char *)map.data;
-	schemaContents.m_len = map.size;
-
-	jschema_ref parsed = jschema_parse(schemaContents, JSCHEMA_INPUT_OUTLIVES_DOM | JSCHEMA_DOM_INPUT_NOCHANGE, NULL);
-
-	return new MMapResource(map, parsed);
-}
-
-bool JSchemaFile::initSchemaMap(int fd, Map &map)
-{
-	if (fd < 0) {
-		// TODO: Log error
-		return false;
-	}
-
-	struct stat finfo;
-	if (-1 == fstat(fd, &finfo)) {
-		// TODO: Log error
-		return false;
-	}
-
-	if (finfo.st_size <= 0 || !S_ISREG(finfo.st_mode)) {
-		// TODO: Log error
-		return false;
-	}
-
-	void *data = mmap(NULL, finfo.st_size, PROT_READ, MAP_PRIVATE | MAP_NORESERVE, fd, 0);
-	if (MAP_FAILED == data) {
-		// TODO: Log error
-		return false;
-	}
-
-	// let tell the kernel to be very conservative with the memory
-	// map until it's actually used
-	madvise(data, finfo.st_size, MADV_SEQUENTIAL | MADV_DONTNEED);
-
-	map.data = data;
-	map.size = finfo.st_size;
-	return true;
-}
-
-JSchemaFile::JSchemaFile(FILE *f)
-	: JSchema(createSchemaMap(fileno(f)))
-{
-}
-
-JSchemaFile::JSchemaFile(int fd)
-	: JSchema(createSchemaMap(fd))
-{
+	jschema_ref schema = jschema_parse_file(path.c_str(), NULL);
+	return new Resource(schema, Resource::TakeSchema);
 }
 
 JSchemaFile::JSchemaFile(const std::string& path)
@@ -125,4 +47,3 @@ JSchemaFile::~JSchemaFile()
 }
 
 }
-

@@ -26,7 +26,6 @@
 #include <compiler/throw_attribute.h>
 #include <compiler/noreturn_attribute.h>
 #include <compiler/builtins.h>
-#include <assert_compat.h>
 
 #ifdef __cplusplus
 extern "C" {

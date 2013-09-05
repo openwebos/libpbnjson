@@ -67,7 +67,6 @@ PJSON_API jschema_ref jschema_copy(jschema_ref schema) NON_NULL(1);
  */
 PJSON_API jschema_ref jschema_duplicate(jschema_ref schema) NON_NULL(1);
 
-#if 0
 /**
  * Resolves any and all external references.  This is an expensive operation and you should consider carefully
  * whether or not you need it.  After a successful call to this method, the schema is guaranteed to be
@@ -79,8 +78,7 @@ PJSON_API jschema_ref jschema_duplicate(jschema_ref schema) NON_NULL(1);
  * @return True if the schema resolved fully, false if some error occured.
  *         If some error occurred, you will typically want to remember to free the reference before-hand.
  */
-PJSON_API bool jschema_resolve(jschema_ref schema) NON_NULL(1);
-#endif
+PJSON_API bool jschema_resolve(JSchemaInfoRef schema_info) NON_NULL(1);
 
 /**
  * NOTE: you should only release those schema you parsed or are sure that you have gotten ownership over.

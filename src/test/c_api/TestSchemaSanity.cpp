@@ -16,63 +16,152 @@
 //
 // LICENSE@@@
 
-#include "TestSchemaSanity.h"
-#include <QTest>
-#include <QtDebug>
+#include <gtest/gtest.h>
+#include <pbnjson.h>
+#include <string>
 
-Q_DECLARE_METATYPE(raw_buffer);
+using namespace std;
 
-namespace pjson {
+namespace {
 
-	namespace testc {
-		TestSchemaSanity::TestSchemaSanity()
-		{
-		}
 
-		TestSchemaSanity::~TestSchemaSanity() {
-			// TODO Auto-generated destructor stub
-		}
+class TestNumberSanity : public ::testing::Test
+{
+protected:
+	static jschema_ref schema;
+	static JSchemaInfo schema_info;
+	jvalue_ref parsed;
 
-		void TestSchemaSanity::initTestCase()
-		{
-		}
+	static void SetUpTestCase()
+	{
+		schema = jschema_parse(j_cstr_to_buffer(
+			"{"
+				"\"type\": \"array\","
+				"\"items\": { \"type\": \"number\" },"
+				"\"minItems\": 1,"
+				"\"maxItems\": 1"
+			"}"
+			), 0, NULL);
 
-		void TestSchemaSanity::init()
-		{
-		}
-
-		void TestSchemaSanity::cleanup()
-		{
-		}
-
-		void TestSchemaSanity::cleanupTestCase()
-		{
-		}
-
-		void TestSchemaSanity::testSimpleSchema()
-		{
-			JSchemaInfo schemaInfo;
-			jschema_info_init(&schemaInfo, jschema_all(), NULL, NULL);
-			QVERIFY(jsax_parse(NULL, J_CSTR_TO_BUF("[]"), &schemaInfo));
-			QVERIFY(jsax_parse(NULL, J_CSTR_TO_BUF("{}"), &schemaInfo));
-		}
-
-		void TestSchemaSanity::testSchemaReuse()
-		{
-			jschema_ref all = jschema_parse(J_CSTR_TO_BUF("{}"), JSCHEMA_DOM_NOOPT, NULL);
-			JSchemaInfo schemaInfo;
-			jschema_info_init(&schemaInfo, all, NULL, NULL);
-
-			for (int i = 0; i < 10; i++)
-				QVERIFY(jsax_parse(NULL, J_CSTR_TO_BUF("{}"), &schemaInfo));
-
-			for (int i = 0; i < 10; i++)
-				QVERIFY(jsax_parse(NULL, J_CSTR_TO_BUF("[]"), &schemaInfo));
-
-			jschema_release(&all);
-		}
+		ASSERT_TRUE(schema != NULL);
+		jschema_info_init(&schema_info, schema, NULL, NULL);
 	}
 
+	static void TearDownTestCase()
+	{
+		jschema_release(&schema);
+	}
+
+	virtual void SetUp()
+	{
+		parsed = NULL;
+	}
+
+	virtual void TearDown()
+	{
+		j_release(&parsed);
+	}
+};
+
+jschema_ref TestNumberSanity::schema = NULL;
+JSchemaInfo TestNumberSanity::schema_info;
+
+} // namespace
+
+TEST_F(TestNumberSanity, Invalid0)
+{
+	const raw_buffer INPUT = j_cstr_to_buffer(" ");
+
+	EXPECT_FALSE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
 }
 
-QTEST_APPLESS_MAIN(pjson::testc::TestSchemaSanity);
+TEST_F(TestNumberSanity, Invalid1)
+{
+	const raw_buffer INPUT = j_cstr_to_buffer("[\"abc\"]");
+
+	EXPECT_FALSE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
+	EXPECT_TRUE(jis_null(parsed));
+}
+
+TEST_F(TestNumberSanity, Invalid2)
+{
+	const raw_buffer INPUT = j_cstr_to_buffer("[{}]");
+
+	EXPECT_FALSE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
+	EXPECT_TRUE(jis_null(parsed));
+}
+
+TEST_F(TestNumberSanity, Invalid3)
+{
+	const raw_buffer INPUT = j_cstr_to_buffer("[]");
+	EXPECT_FALSE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
+	EXPECT_TRUE(jis_null(parsed));
+}
+
+TEST_F(TestNumberSanity, Invalid4)
+{
+	const raw_buffer INPUT = j_cstr_to_buffer("[true]");
+	EXPECT_FALSE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
+	EXPECT_TRUE(jis_null(parsed));
+}
+
+TEST_F(TestNumberSanity, Invalid5)
+{
+	const raw_buffer INPUT = j_cstr_to_buffer("[null]");
+	EXPECT_FALSE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
+	EXPECT_TRUE(jis_null(parsed));
+}
+
+TEST_F(TestNumberSanity, Invalid6)
+{
+	const raw_buffer INPUT = j_cstr_to_buffer("{}");
+	EXPECT_FALSE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
+	EXPECT_TRUE(jis_null(parsed));
+}
+
+TEST_F(TestNumberSanity, Valid1)
+{
+	const raw_buffer INPUT = j_cstr_to_buffer("[1]");
+	EXPECT_TRUE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
+	EXPECT_TRUE(jis_array(parsed));
+	EXPECT_TRUE(jvalue_check_schema(parsed, &schema_info));
+}
+
+TEST_F(TestNumberSanity, Valid2)
+{
+	const raw_buffer INPUT = j_cstr_to_buffer("[1.0]");
+	EXPECT_TRUE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
+	EXPECT_TRUE(jis_array(parsed));
+	EXPECT_TRUE(jvalue_check_schema(parsed, &schema_info));
+}
+
+TEST_F(TestNumberSanity, Valid3)
+{
+	const raw_buffer INPUT = j_cstr_to_buffer(
+		"[2394309382309842309234825.62345235323253253220398443213241234"
+		"123431413e90234098320982340924382340982349023423498234908234]"
+		);
+	EXPECT_TRUE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
+	EXPECT_TRUE(jis_array(parsed));
+	EXPECT_TRUE(jvalue_check_schema(parsed, &schema_info));
+}
+
+TEST_F(TestNumberSanity, Valid4)
+{
+	const raw_buffer INPUT = j_cstr_to_buffer("[-50]");
+	EXPECT_TRUE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
+	EXPECT_TRUE(jis_array(parsed));
+	EXPECT_TRUE(jvalue_check_schema(parsed, &schema_info));
+}
+
+// vim: set noet ts=4 sw=4 tw=80:

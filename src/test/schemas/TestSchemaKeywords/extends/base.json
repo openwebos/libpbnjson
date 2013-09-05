@@ -1,8 +1,0 @@
-{
-    "name" : "base",
-    "type" : "object",
-    "properties":
-    {
-        "iField": {"type":"integer"}
-    }
-}

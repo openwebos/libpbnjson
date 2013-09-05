@@ -16,10 +16,6 @@
 #
 # LICENSE@@@
 
-if(NOT QT_FOUND)
-	message(WARNING "Qt not found - skipping building many tests for C api")
-endif()
-
 include_directories(${API_HEADERS})
 webos_add_compiler_flags(ALL -Wall "-std=gnu++0x")
 
@@ -29,13 +25,6 @@ if(NOT CJSON_FOUND)
 	set(CJSON_INCLUDE_DIR "")
 	set(CJSON_LIBRARIES "")
 	set(HAVE_CJSON false)
-endif()
-
-find_package(YAJL)
-if(NOT YAJL_FOUND)
-	set(YAJL_INCLUDE_DIRS "")
-	set(YAJL_LIBRARIES "")
-	set(FOUND_YAJL false)
 endif()
 
 ######################### TEST CONFIGURATION ########################
@@ -60,63 +49,14 @@ endforeach()
 
 
 ######################### THE UNIT TESTS ############################
-qt_hdrs(test_sax
-	TestSAX.h
-)
-
-src(test_sax
-	TestSAX.cpp
-	JSXMLConverter.cpp
-)
-
-qt_hdrs(test_schema
-	TestSchema.h
-)
-
-src(test_schema
-	TestSchema.cpp
-)
-qt_hdrs(test_schema2
-	TestSchemaSanity.h
-)
-
-src(test_schema2
-	TestSchemaSanity.cpp
-)
-
-src(smoketest_mem_badinput
-	SmokeTestMemLeakBadInput.cpp
-)
-
-include_directories(${C_ENGINE_INCDIR})
-
-set(test_parse_test_list
-	testParseDoubleAccuracy
-	testParseFile
-)
-
-set(test_sax_test_list
-	testGenerator
-	testParser
-)
-
-set(test_schema2_test_list
-	testSimpleSchema
-	testSchemaReuse
-)
-
-add_qt_test(test_sax "SAX API")
-add_qt_test(test_schema2 "Schema sanity checks")
-add_regular_test(smoketest_mem_badinput "C memory leak smoke test for parsing invalid input")
-
-add_schema_test(test_schema "Number sanity check" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/sanity/ SimpleNumber)
-add_schema_test(test_schema "Contact" ${CMAKE_CURRENT_SOURCE_DIR}/../schemas/contact/ Contact)
 
 SET(UnitTest
+	SmokeTestMemLeakBadInput
 	TestParse
 	TestDOM
 	TestJobject
-	TestYAJL
+	TestSchemaSanity
+	TestSchemaContact
 	)
 
 FOREACH(TEST ${UnitTest})
@@ -130,3 +70,5 @@ target_link_libraries(TestPerformance ${TEST_LIBRARIES} gtest gtest_main pthread
 
 add_executable(TestJobjectPerformance TestJobjectPerformance.cpp)
 target_link_libraries(TestJobjectPerformance ${TEST_LIBRARIES} gtest gtest_main)
+
+add_definitions(-DSCHEMA_DIR="${CMAKE_CURRENT_BINARY_DIR}/../schemas/")

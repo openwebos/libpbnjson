@@ -128,7 +128,6 @@ TEST(GF_7251, MemoryLeak3)
 		"{ \"type\": \"object\","
 		  "\"properties\": {"
 		    "\"hasVideo\":{"
-		      "\"optional\":true,"
 		      "\"type\": \"object\","
 		      "\"properties\": {"
 		        "\"state\": {\"type\":\"boolean\"},"

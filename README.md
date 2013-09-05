@@ -19,10 +19,14 @@ Below are the tools and libraries (and their minimum versions) required to build
 - gcc 4.6.3
 - g++ 4.6.3
 - glib 2.30.0
+- gmp 5.0.2
+- gperf 3.0.3
+- lemon 3.7.9
 - make (any version)
 - openwebos/cmake-modules-webos 1.0.0 RC3
 - pkg-config 0.26
-- yajl 1.0.12 (2.0.x not supported)
+- uriparser 0.7.5
+- yajl 1.0.12 or 2.0.4
 
 How to Build on Linux
 =====================

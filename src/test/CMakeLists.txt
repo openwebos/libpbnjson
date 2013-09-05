@@ -25,18 +25,12 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/execinfo.h.cmake ${CMAKE_CURRENT_BINA
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-include(HelperTestFunctions.cmake)
-
 if(APPLE)
 	# Problems w/ 32-bit vs 64-bit on snow leopard w/ Qt
 	# Force 32-bit
 	set(CMAKE_OSX_ARCHITECTURES)
 	add_definitions(-m32)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -m32")
-endif()
-
-if(NOT WITH_SCHEMA)
-	add_definitions(-DBYPASS_SCHEMA=1)
 endif()
 
 # Google Test setup
@@ -53,3 +47,6 @@ if(WITH_QTCREATOR)
 		configure_file(${schema} ${schema} COPYONLY)
 	endforeach()
 endif()
+
+file(COPY "schemas" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+add_definitions(-DSCHEMA_DIR="${CMAKE_CURRENT_BINARY_DIR}/schemas/")

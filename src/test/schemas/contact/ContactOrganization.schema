@@ -1,7 +1,7 @@
 {
    "id"   : "ContactOrganization",
    "type" : "object",
-   "extends" : "ContactPluralField"
+   "extends" : {"$ref": "ContactPluralField"},
    "properties" : {
       "name"        : {"type"        : "string",
                        "description" : "The name of the organization."},

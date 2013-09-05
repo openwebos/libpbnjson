@@ -24,7 +24,8 @@
 
 namespace pj = pbnjson;
 
-TEST(JGenerator, serialize_with_schema_validation) {
+TEST(JGenerator, serialize_with_schema_validation)
+{
 	{
 		pj::JValue json = pj::Object() << pj::JValue(int32_t(1));
 		EXPECT_EQ("", pj::JGenerator::serialize(json, pbnjson::JSchemaFragment("{}")));
@@ -43,7 +44,21 @@ TEST(JGenerator, serialize_with_schema_validation) {
 	{
 		pj::JValue json = pj::Object() << pj::JValue::KeyValue("bool", false);
 
-		std::string serialized = pj::JGenerator::serialize(json, pbnjson::JSchemaFragment("{\"type\":\"object\",\"$schema\": \"http://json-schema.org/draft-03/schema\",\"id\": \"http://jsonschema.net\",\"required\":false,\"properties\":{ \"bool\": { \"type\":\"boolean\", \"id\": \"http://jsonschema.net/int32_t\", \"required\":false } }}"));
+		auto schema = pj::JSchemaFragment{
+			"{"
+				"\"type\":\"object\","
+				"\"$schema\": \"http://json-schema.org/draft-03/schema\","
+				"\"id\": \"http://jsonschema.net\","
+				"\"properties\": {"
+					"\"bool\": {"
+						"\"type\":\"boolean\","
+						"\"id\": \"http://jsonschema.net/int32_t\""
+					"}"
+				"}"
+			"}"
+			};
+
+		std::string serialized = pj::JGenerator::serialize(json, schema);
 		EXPECT_EQ("{\"bool\":false}", serialized);
 
 		serialized = pj::JGenerator::serialize((*json.begin()).second, pbnjson::JSchemaFragment("{}"));
@@ -67,10 +82,10 @@ TEST(JGenerator, serialize_with_schema_validation) {
 		pj::JValue json = pj::Array() << pj::JValue(int32_t(1)) << pj::JValue(int32_t(2));
 		EXPECT_EQ("[1,2]", pj::JGenerator::serialize(json, pbnjson::JSchemaFragment("{}")));
 	}
-
 }
 
-TEST(JGenerator, serialize_without_schema_validation) {
+TEST(JGenerator, serialize_without_schema_validation)
+{
 	{
 		pj::JValue json = pj::Array();
 		EXPECT_EQ("[]", pj::JGenerator::serialize(json, true));
@@ -114,9 +129,3 @@ TEST(JGenerator, serialize_without_schema_validation) {
 		EXPECT_EQ("null", pj::JGenerator::serialize(json << pj::JValue(int32_t(1)), true));
 	}
 }
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
-

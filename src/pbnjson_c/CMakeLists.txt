@@ -26,7 +26,6 @@ check_include_files("syslog.h" HAVE_SYSLOG_H)
 check_include_files("regex.h" HAVE_POSIX_REGEXP)
 check_symbol_exists("vsyslog" "stdarg.h;syslog.h" HAVE_VSYSLOG)
 check_symbol_exists("vfprintf" "stdarg.h;stdio.h" HAVE_VFPRINTF)
-check_symbol_exists("__assert_fail" "assert.h" HAVE_ASSERT_FAIL)
 check_function_exists(strnlen HAVE_STRNLEN)
 check_function_exists(isatty HAVE_ISATTY)
 
@@ -44,48 +43,44 @@ check_cxx_source_compiles(
 	HAVE_GCC_ATOMICS)
 
 
-if(NOT WITH_SCHEMA)
-	message(STATUS "Compiling without schema support: WITH_SCHEMA=${WITH_SCHEMA}")
-	add_definitions(-DBYPASS_SCHEMA=1)
-else()
-	message(STATUS "Compiling with schema support: WITH_SCHEMA=${WITH_SCHEMA}")
-	add_definitions(-DBYPASS_SCHEMA=0)
-endif()
-
-if(WITH_PCRE)
-	pkg_check_modules(PCRE REQUIRED libpcre)
-	set(HAVE_PCRE 1)
-endif()
-
-string(TOUPPER ${C_ENGINE} C_ENGINE_PKG)
-set(${C_ENGINE_PKG}_STATIC ${STATIC_C_ENGINE})
-find_package(${C_ENGINE_PKG} REQUIRED)
-set(C_ENGINE_INCDIR ${${C_ENGINE_PKG}_INCLUDE_DIRS})
-set(C_ENGINE_LIBNAME ${${C_ENGINE_PKG}_LIBRARIES})
-set(C_ENGINE_DEFINITIONS ${${C_ENGINE_PKG}_DEFINITIONS})
-message(STATUS "pbnjson_c: ${C_ENGINE} include directory ${C_ENGINE_INCDIR}, library ${C_ENGINE_LIBNAME}, definitions ${C_ENGINE_DEFINITIONS}")
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/sys_malloc.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/sys_malloc.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pjson_syslog.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/pjson_syslog.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/regexp.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/regexp.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/strnlen.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/strnlen.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/isatty.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/isatty.h)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/assert_compat.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/assert_compat.h)
 
-webos_add_compiler_flags(ALL -std=c99 ${C_ENGINE_DEFINITIONS})
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -fPIC")
 
-file(GLOB SHARED_SOURCE "./*.c" "./jvalue/*.c")
+add_subdirectory(validation)
 
-set(STATIC_SOURCE ${SHARED_SOURCE})
+add_library(
+	jvalue
+	STATIC
+	debugging.c
+	jobject.c
+	jvalue/num_conversion.c
+	)
+set_target_properties(jvalue PROPERTIES DEFINE_SYMBOL PJSON_SHARED)
 
-add_library(pbnjson_c SHARED ${SHARED_SOURCE})
-target_link_libraries(pbnjson_c ${C_ENGINE_LIBNAME} ${PCRE_LDFLAGS} ${GLIB2_LDFLAGS})
+add_library(
+	pbnjson_c
+	SHARED
+	jgen_stream.c
+	jvalue_tostring.c
+	jparse_stream.c
+	jschema.c
+	jvalidation.c
+	)
+target_link_libraries(pbnjson_c jvalue schema_validation ${GLIB2_LDFLAGS} ${YAJL_LDFLAGS})
 set_target_properties(pbnjson_c PROPERTIES DEFINE_SYMBOL PJSON_SHARED)
 
-include_directories(${API_HEADERS} ${API_HEADERS}/pbnjson ${API_HEADERS}/pbnjson/c ${C_ENGINE_INCDIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${PCRE_INCLUDE_DIRS})
-if(C_ENGINE_LIBDIR)
-	link_directories(${C_ENGINE_LIBDIR})
-endif()
+include_directories(
+	${API_HEADERS}
+	${API_HEADERS}/pbnjson
+	${API_HEADERS}/pbnjson/c
+	${CMAKE_CURRENT_BINARY_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}
+	)
 
 if(WITH_VERBOSE_DEBUG)
 	add_definitions(-DPJSON_LOG_DBG=1)
@@ -99,3 +94,7 @@ add_definitions(-DPJSON_EXPORT)
 
 webos_build_library(NAME pbnjson_c)
 webos_build_pkgconfig(files/pkgconfig/pbnjson_c)
+
+if(WITH_TESTS)
+	enable_testing()
+endif()

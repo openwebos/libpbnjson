@@ -27,14 +27,6 @@
 
 PJSON_LOCAL jvalue_ref jdom_parse_ex(raw_buffer input, JDOMOptimizationFlags optimizationMode, JSchemaInfoRef schemaInfo, bool allowComments);
 
-/**
- * This should be safe (in terms of not breaking JSON syntax) since only the schema is using it
- * and it can only have well-formed objects.
- */
-PJSON_LOCAL bool jsax_parse_inject(JSAXContextRef ctxt, jvalue_ref key, jvalue_ref value);
-
-PJSON_LOCAL ErrorStateRef jsax_error_init();
-PJSON_LOCAL void jsax_error_release(ErrorStateRef *statePtr);
 
 int dom_null(JSAXContextRef ctxt);
 int dom_boolean(JSAXContextRef ctxt, bool value);
@@ -57,17 +49,17 @@ int my_bounce_number(void *ctxt, const char *numberVal, yajl_size_t numberLen);
 int my_bounce_boolean(void *ctxt, int boolVal);
 int my_bounce_null(void *ctxt);
 
-typedef int(* 	pj_yajl_null )(void *ctx);
-typedef int(* 	pj_yajl_boolean )(void *ctx, int boolVal);
-typedef int(* 	pj_yajl_integer )(void *ctx, long integerVal);
-typedef int(* 	pj_yajl_double )(void *ctx, double doubleVal);
-typedef int(* 	pj_yajl_number )(void *ctx, const char *numberVal, yajl_size_t numberLen);
-typedef int(* 	pj_yajl_string )(void *ctx, const unsigned char *stringVal, yajl_size_t stringLen);
-typedef int(* 	pj_yajl_start_map )(void *ctx);
-typedef int(* 	pj_yajl_map_key )(void *ctx, const unsigned char *key, yajl_size_t stringLen);
-typedef int(* 	pj_yajl_end_map )(void *ctx);
-typedef int(* 	pj_yajl_start_array )(void *ctx);
-typedef int(* 	pj_yajl_end_array )(void *ctx);
+typedef int(* pj_yajl_null )(void *ctx);
+typedef int(* pj_yajl_boolean )(void *ctx, int boolVal);
+typedef int(* pj_yajl_integer )(void *ctx, long integerVal);
+typedef int(* pj_yajl_double )(void *ctx, double doubleVal);
+typedef int(* pj_yajl_number )(void *ctx, const char *numberVal, yajl_size_t numberLen);
+typedef int(* pj_yajl_string )(void *ctx, const unsigned char *stringVal, yajl_size_t stringLen);
+typedef int(* pj_yajl_start_map )(void *ctx);
+typedef int(* pj_yajl_map_key )(void *ctx, const unsigned char *key, yajl_size_t stringLen);
+typedef int(* pj_yajl_end_map )(void *ctx);
+typedef int(* pj_yajl_start_array )(void *ctx);
+typedef int(* pj_yajl_end_array )(void *ctx);
 
 typedef struct DomInfo {
 	JDOMOptimization m_optInformation;

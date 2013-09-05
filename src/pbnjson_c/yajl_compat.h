@@ -19,12 +19,7 @@
 #ifndef YAJL_COMPAT_H_
 #define YAJL_COMPAT_H_
 
-#ifdef HAVE_YAJL_VERSION_H
 #include <yajl/yajl_version.h>
-#else
-/* dummy version lower than 20000 */
-#define YAJL_VERSION 10000
-#endif
 
 #if YAJL_VERSION < 20000
 typedef unsigned int yajl_size_t;

@@ -16,13 +16,6 @@
 #
 # LICENSE@@@
 
-string(TOUPPER ${CXX_ENGINE} CXX_ENGINE_PKG)
-set(${CXX_ENGINE_PKG}_STATIC ${STATIC_CXX_ENGINE})
-find_package(${CXX_ENGINE_PKG} REQUIRED)
-set(CXX_ENGINE_INCDIR ${${CXX_ENGINE_PKG}_INCLUDE_DIR})
-set(CXX_ENGINE_LIBNAME ${${CXX_ENGINE_PKG}_LIBRARY})
-message(STATUS "pbnjson_cxx: ${CXX_ENGINE} include directory ${CXX_ENGINE_INCDIR}, library ${CXX_ENGINE_LIBNAME}")
-
 file(GLOB SHARED_SOURCE "./*.cpp" "../pbnjson_c/debugging.c")
 
 if(WITH_VERBOSE_DEBUG)
@@ -38,20 +31,16 @@ add_definitions(-DPJSONCXX_EXPORT)
 add_definitions(-DLIBRARY_NAME=pbnjson_cpp)
     
 add_library(pbnjson_cpp SHARED ${SHARED_SOURCE})
-target_link_libraries(pbnjson_cpp pbnjson_c ${CXX_ENGINE_LIBNAME})
+target_link_libraries(pbnjson_cpp pbnjson_c)
 
 include_directories(${API_HEADERS}
                     ${API_HEADERS}/pbnjson
                     ${API_HEADERS}/pbnjson/c
                     ${API_HEADERS}/pbnjson/cxx
-                    ${CXX_ENGINE_INCDIR}
                     ${CMAKE_CURRENT_BINARY_DIR}
                     ${CMAKE_CURRENT_BINARY_DIR}/../pbnjson_c
                     ${CMAKE_CURRENT_SOURCE_DIR})
 
-if(CXX_ENGINE_LIBDIR)
-	link_directories(${CXX_ENGINE_LIBDIR})
-endif()
 
 # All of the headers are installed by pbnjson_c
 webos_build_library(NAME pbnjson_cpp NOHEADERS)

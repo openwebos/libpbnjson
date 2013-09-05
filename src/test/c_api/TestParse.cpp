@@ -207,4 +207,3 @@ TEST(TestParse, testParseFile)
 	std::vector<std::string> tasks = {"file_parse_test"};
 	for (const auto &task : tasks) TestParse_testParseFile(task);
 }
-
