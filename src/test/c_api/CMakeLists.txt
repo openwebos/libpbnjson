@@ -65,10 +65,17 @@ FOREACH(TEST ${UnitTest})
 	add_test(C.${TEST} ${TEST})
 ENDFOREACH()
 
-add_executable(TestPerformance TestPerformance.cpp)
-target_link_libraries(TestPerformance ${TEST_LIBRARIES} gtest gtest_main pthread)
+######################### THE PERFORMANCE TESTS ############################
 
-add_executable(TestJobjectPerformance TestJobjectPerformance.cpp)
-target_link_libraries(TestJobjectPerformance ${TEST_LIBRARIES} gtest gtest_main)
+SET(PerformanceTests
+	TestPerformance
+	TestSchemaPerformance
+	TestJobjectPerformance
+	)
+
+FOREACH(TEST ${PerformanceTests})
+	add_executable(${TEST} ${TEST}.cpp)
+	target_link_libraries(${TEST} ${TEST_LIBRARIES} gtest gtest_main pthread)
+ENDFOREACH()
 
 add_definitions(-DSCHEMA_DIR="${CMAKE_CURRENT_BINARY_DIR}/../schemas/")

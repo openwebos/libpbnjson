@@ -20,12 +20,9 @@
 #include <pbnjson.h>
 #include <cjson.h>
 #include <yajl.h>
-#include <memory>
-#include <boost/range.hpp>
-#include <chrono>
+#include "PerformanceUtils.hpp"
 
 using namespace std;
-using namespace std::chrono;
 
 namespace {
 
@@ -83,33 +80,6 @@ void ParseSax(raw_buffer const &input, jschema_ref schema)
 	ASSERT_TRUE(jsax_parse(NULL, input, &schemaInfo));
 }
 
-double _BenchmarkMeasure(function<void(size_t)> code, size_t n)
-{
-	typedef high_resolution_clock ClockT;
-	time_point<ClockT> start = ClockT::now();
-	code(n);
-	time_point<ClockT> finish = ClockT::now();
-	duration<double> time_span = duration_cast<duration<double>>(finish - start);
-	return time_span.count();
-}
-
-double _BenchmarkPerformNs(function<void(size_t)> code)
-{
-	const double low_time_threshold = 3; // seconds, assume a good good resolution warmup
-	const double measure_seconds = 5;
-	size_t n = 50;
-	double t;
-	do
-	{
-		n*=2;
-	} while ((t = _BenchmarkMeasure(code, n)) < low_time_threshold);
-
-	// actual measure
-	size_t repeats = measure_seconds * n / t;
-	double timing = _BenchmarkMeasure(code, repeats);
-	return timing * 1e9 / repeats;
-}
-
 const int OPT_NONE = DOMOPT_NOOPT;
 
 const int OPT_ALL = DOMOPT_INPUT_NOCHANGE
@@ -131,7 +101,7 @@ TEST(Performance, ParseSmallInput)
 
 	cout << "Parsing small JSON (ns):" << endl;
 #if HAVE_YAJL
-	double ns_yajl = _BenchmarkPerformNs([&](size_t n)
+	double ns_yajl = BenchmarkPerformNs([&](size_t n)
 		{
 			for (; n > 0; --n)
 			{
@@ -143,7 +113,7 @@ TEST(Performance, ParseSmallInput)
 #endif
 
 #if HAVE_CJSON
-	double ns_cjson = _BenchmarkPerformNs([&](size_t n)
+	double ns_cjson = BenchmarkPerformNs([&](size_t n)
 		{
 			for (; n > 0; --n)
 			{
@@ -154,7 +124,7 @@ TEST(Performance, ParseSmallInput)
 	cout << "CJSON:\t\t\t" << ns_cjson << endl;
 #endif
 
-	double ns_sax = _BenchmarkPerformNs([&](size_t n)
+	double ns_sax = BenchmarkPerformNs([&](size_t n)
 		{
 			for (; n > 0; --n)
 			{
@@ -164,7 +134,7 @@ TEST(Performance, ParseSmallInput)
 		});
 	cout << "pbnjson-sax:\t\t" << ns_sax << endl;
 
-	double ns_pbnjson = _BenchmarkPerformNs([&](size_t n)
+	double ns_pbnjson = BenchmarkPerformNs([&](size_t n)
 		{
 			for (; n > 0; --n)
 			{
@@ -174,7 +144,7 @@ TEST(Performance, ParseSmallInput)
 		});
 	cout << "pbnjson (-opts):\t" << ns_pbnjson << endl;
 
-	double ns_pbnjson2 = _BenchmarkPerformNs([&](size_t n)
+	double ns_pbnjson2 = BenchmarkPerformNs([&](size_t n)
 		{
 			for (; n > 0; --n)
 			{
@@ -216,7 +186,7 @@ TEST(Performance, ParseBigInput)
 
 	cout << "Parsing big JSON (ns):" << endl;
 #if HAVE_YAJL
-	double ns_yajl = _BenchmarkPerformNs([&](size_t n)
+	double ns_yajl = BenchmarkPerformNs([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParseYajl(input);
@@ -225,7 +195,7 @@ TEST(Performance, ParseBigInput)
 #endif
 
 #if HAVE_CJSON
-	double ns_cjson = _BenchmarkPerformNs([&](size_t n)
+	double ns_cjson = BenchmarkPerformNs([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParseCjson(input);
@@ -233,21 +203,21 @@ TEST(Performance, ParseBigInput)
 	cout << "CJSON:\t\t\t" << ns_cjson << endl;
 #endif
 
-	double ns_sax = _BenchmarkPerformNs([&](size_t n)
+	double ns_sax = BenchmarkPerformNs([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParseSax(input, jschema_all());
 		});
 	cout << "pbnjson-sax:\t\t" << ns_sax << endl;
 
-	double ns_pbnjson = _BenchmarkPerformNs([&](size_t n)
+	double ns_pbnjson = BenchmarkPerformNs([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParsePbnjson(input, OPT_NONE, jschema_all());
 		});
 	cout << "pbnjson (-opts):\t" << ns_pbnjson << endl;
 
-	double ns_pbnjson2 = _BenchmarkPerformNs([&](size_t n)
+	double ns_pbnjson2 = BenchmarkPerformNs([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParsePbnjson(input, OPT_ALL, jschema_all());
