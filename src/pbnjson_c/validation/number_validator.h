@@ -29,27 +29,34 @@ extern "C" {
 
 typedef struct _StringSpan StringSpan;
 
+
+/** @brief Number validator class for {"type": "number"} */
 typedef struct _NumberValidator
 {
-	Validator base;
-	bool integer;
+	Validator base;          /**< @brief Base class */
+	bool integer;            /**< @brief Should a valid instance be integer? */
 
-	bool expected_set;
-	Number expected_value;
+	bool expected_set;       /**< @brief true if a specific value is expected (for enum) */
+	Number expected_value;   /**< @brief Expected value */
 
-	bool max_set;
-	Number max;
-	bool max_exclusive;
+	bool max_set;            /**< @brief Is maximal value set? */
+	Number max;              /**< @brief The maximal value to expect */
+	bool max_exclusive;      /**< @brief Is the inequality strict (val < max)? */
 
-	bool min_set;
-	Number min;
-	bool min_exclusive;
+	bool min_set;            /**< @brief Is the minimal value set? */
+	Number min;              /**< @brief The minimal value to expect */
+	bool min_exclusive;      /**< @brief Is the inequality strict (val > min)? */
 } NumberValidator;
 
 //_Static_assert(offsetof(NumberValidator, base) == 0, "Addresses of NumberValidator and NumberValidator.base should be equal");
 
+/** @brief Constructor. */
 NumberValidator* number_validator_new();
+
+/** @brief Constructor for integer validator. */
 NumberValidator* integer_validator_new();
+
+/** @brief Destructor. */
 void number_validator_release(NumberValidator *v);
 
 // Methods for unit tests
@@ -58,6 +65,7 @@ bool number_validator_add_min_exclusive_constraint(NumberValidator *n, bool excl
 bool number_validator_add_max_constraint(NumberValidator *n, const char* val);
 bool number_validator_add_max_exclusive_constraint(NumberValidator *n, bool exclusive);
 
+/** @brief Set an exact expected value (for enum validation) */
 bool number_validator_add_expected_value(NumberValidator *n, StringSpan *span);
 
 #ifdef __cplusplus

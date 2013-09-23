@@ -26,14 +26,28 @@ typedef struct _StringSpan StringSpan;
 typedef struct _Validator Validator;
 typedef enum _ValidatorType ValidatorType;
 
+/** @brief Type parser errors */
 enum TypeParserError
 {
-	TPE_OK = 0,
-	TPE_UNKNOWN_TYPE,
-	TPE_NO_MEMORY
+	TPE_OK = 0,           /**< No error */
+	TPE_UNKNOWN_TYPE,     /**< Unknown type keyword */
+	TPE_NO_MEMORY         /**< No memory for allocation */
 };
 
+/** @brief Create validator that corresponds to a specific type in {"type": ...}.
+ *
+ * @param[in] s Type keyword in the source text
+ * @param[out] error Type parser error
+ * @return Validator that corresponds to the keyword
+ */
 Validator* type_parser_parse_simple(StringSpan const *s, enum TypeParserError *error);
+
+/** @brief Get type numerical constant that corresponds to a specific type in {"type": ...}.
+ *
+ * @param[in] s Type keyword in the source text
+ * @param[out] error Type parser error
+ * @return Validator type enum to be used in CombinedTypesValidator
+ */
 ValidatorType type_parser_parse_to_type(StringSpan const *s, enum TypeParserError *error);
 
 #ifdef __cplusplus

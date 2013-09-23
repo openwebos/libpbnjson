@@ -20,6 +20,7 @@
 
 static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *ctxt)
 {
+	// Depressive validator, never succeeds.
 	return false;
 }
 
@@ -35,4 +36,3 @@ Validator NOTHING_VALIDATOR_IMPL =
 };
 
 Validator *NOTHING_VALIDATOR = &NOTHING_VALIDATOR_IMPL;
-

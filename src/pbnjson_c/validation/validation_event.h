@@ -25,41 +25,92 @@
 extern "C" {
 #endif
 
+/** @brief Event types */
 typedef enum
 {
-	EV_NULL = 0,
-	EV_BOOL,
-	EV_NUM,
-	EV_STR,
-	EV_OBJ_START,
-	EV_OBJ_END,
-	EV_OBJ_KEY,
-	EV_ARR_START,
-	EV_ARR_END
+	EV_NULL = 0,    /**< JSON null */
+	EV_BOOL,        /**< JSON boolean */
+	EV_NUM,         /**< JSON number of any kind */
+	EV_STR,         /**< JSON string */
+	EV_OBJ_START,   /**< JSON start of object */
+	EV_OBJ_END,     /**< JSON end of object */
+	EV_OBJ_KEY,     /**< JSON object key */
+	EV_ARR_START,   /**< JSON start of array */
+	EV_ARR_END      /**< JSON end of array */
 } ValidationEventTypes;
 
+/** @brief Validation event data */
 typedef struct _ValidationEvent
 {
-	ValidationEventTypes type;
+	ValidationEventTypes type;    /**< @brief Type of event */
 	union
 	{
-		bool boolean;
+		bool boolean;             /**< @brief Boolean parameter for JSON boolean */
 		struct
 		{
-			char const *ptr;
-			size_t len;
-		} string;
-	} value;
+			char const *ptr;      /**< @brief Pointer to the start of a text */
+			size_t len;           /**< @brief Length of the text */
+		} string;                 /**< @brief String parameter for every JSON type except boolean */
+	} value;                      /**< @brief Associated value */
 } ValidationEvent;
 
+
+/** @brief Create validation event for JSON null. */
 ValidationEvent validation_event_null(void);
+
+/** @brief Create validation event for JSON boolean.
+ *
+ * @param[in] val Boolean value
+ * @return Event for validation_check()
+ */
 ValidationEvent validation_event_boolean(bool val);
+
+/** @brief Create validation event for JSON number.
+ *
+ * @param[in] str Pointer to the number source
+ * @param[in] len Length of the number
+ * @return Event for validation_check()
+ */
 ValidationEvent validation_event_number(const char *str, size_t len);
+
+/** @brief Create validation event for JSON string.
+ *
+ * @param[in] str Pointer to the string source
+ * @param[in] len Length of the string
+ * @return Event for validation_check()
+ */
 ValidationEvent validation_event_string(char const *str, size_t len);
+
+/** @brief Create validation event for start of a JSON object.
+ *
+ * @return Event for validation_check()
+ */
 ValidationEvent validation_event_obj_start(void);
+
+/** @brief Create validation event for a JSON object's key.
+ *
+ * @param[in] key Pointer to the key source
+ * @param[in] keylen Length of the key
+ * @return Event for validation_check()
+ */
 ValidationEvent validation_event_obj_key(char const *key, size_t keylen);
+
+/** @brief Create validation event for end of a JSON object.
+ *
+ * @return Event for validation_check()
+ */
 ValidationEvent validation_event_obj_end(void);
+
+/** @brief Create validation event for start of a JSON array.
+ *
+ * @return Event for validation_check()
+ */
 ValidationEvent validation_event_arr_start(void);
+
+/** @brief Create validation event for end of a JSON array.
+ *
+ * @return Event for validation_check()
+ */
 ValidationEvent validation_event_arr_end(void);
 
 #ifdef __cplusplus

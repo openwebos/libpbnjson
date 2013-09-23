@@ -20,6 +20,7 @@
 
 static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *ctxt)
 {
+	// This is a greedy validator which never fails.
 	return true;
 }
 

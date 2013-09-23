@@ -59,17 +59,24 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 	default:
 		return true;
 	}
+
+	// If the last array or object has been closed, we're done.
 	if (!depth)
 	{
 		validation_state_pop_validator(s);
 		return true;
 	}
+	// Ignore happily anything else.
 	return true;
 }
 
 static bool _init_state(Validator *v, ValidationState *s)
 {
-	validation_state_push_context(s, (void *)0);
+	// We'll store sum of object and array depths of incomming events.
+	// We assume, YAJL does basic check of event order, and when
+	// this sum drops to 0, all the opened objects and arrays have been
+	// properly closed.
+	validation_state_push_context(s, GINT_TO_POINTER(0));
 	return true;
 }
 
@@ -113,6 +120,8 @@ void generic_validator_unref(Validator *v)
 	return validator_unref(v);
 }
 
+// Static instance may be suitable to cover "additionalProperties" and
+// other service cases when default value isn't attached to the validator.
 static Validator GENERIC_VALIDATOR_IMPL =
 {
 	.ref_count = 1,

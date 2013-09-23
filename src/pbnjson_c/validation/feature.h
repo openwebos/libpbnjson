@@ -27,21 +27,48 @@ extern "C" {
 typedef struct _Validator Validator;
 typedef struct _Feature Feature;
 
+/**
+ * Table of virtual functions of Feature
+ */
 typedef struct _FeatureVtable
 {
+	/** @brief Apply this feature to a validator.
+	 *
+	 * @param[in] f This feature.
+	 * @param[in] v Validator to apply the feature to.
+	 * @return true if succeeded or not applicable, false if failed to apply.
+	 */
 	bool (*apply)(Feature *f, Validator *v);
+
+	/** @brief Destructor: destroy the contained data. */
 	void (*release)(Feature *f);
 } FeatureVtable;
 
+/**
+ * Schema feature like "properties", "items", "minLength" etc.
+ */
 typedef struct _Feature
 {
+	/** @brief Reference count. */
 	int ref_count;
+	/** @brief Pointer to the table of virtual functions. */
 	FeatureVtable *vtable;
 } Feature;
 
+
+/** @brief Initialize the structure.
+ *
+ * Sets reference count to 1, remembers the table of virtual functions.
+ */
 void feature_init(Feature *f, FeatureVtable *vtable);
+
+/** @brief Increate reference count. */
 Feature* feature_ref(Feature *f);
+
+/** @brief Decrease reference count. Once it drops to zero, the destructor is engaged. */
 void feature_unref(Feature *f);
+
+/** @brief Apply this feature to the validator */
 bool feature_apply(Feature *f, Validator *v);
 
 #ifdef __cplusplus

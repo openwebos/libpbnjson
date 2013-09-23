@@ -484,6 +484,7 @@ ConversionResultFlags JValue::asNumber<double>(double& number) const
 	return jnumber_get_f64(m_jval, &number);
 }
 
+//! @cond Doxygen_Suppress
 template <>
 ConversionResultFlags JValue::asNumber<std::string>(std::string& number) const
 {
@@ -495,6 +496,7 @@ ConversionResultFlags JValue::asNumber<std::string>(std::string& number) const
 
 	return result;
 }
+//! @endcond
 
 template <>
 ConversionResultFlags JValue::asNumber<NumericString>(NumericString& number) const

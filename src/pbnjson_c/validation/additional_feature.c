@@ -16,52 +16,55 @@
 //
 // LICENSE@@@
 
-#include "array_additional_items.h"
+#include "additional_feature.h"
 #include "validator.h"
 #include <glib.h>
+#include <assert.h>
 
 static void _release(Feature *f)
 {
-	ArrayAdditionalItems *a = (ArrayAdditionalItems *) f;
+	AdditionalFeature *a = (AdditionalFeature *) f;
 	validator_unref(a->validator);
 	g_free(a);
 }
 
 static bool _apply(Feature *f, Validator *v)
 {
-	ArrayAdditionalItems *a = (ArrayAdditionalItems *) f;
+	AdditionalFeature *a = (AdditionalFeature *) f;
 	if (!a || !v)
 		return false;
-	validator_set_array_additional_items(v, a->validator);
+	assert(a->apply_func);
+	a->apply_func(v, a->validator);
 	return true;
 }
 
-static FeatureVtable array_additional_items_vtable =
+static FeatureVtable additional_feature_vtable =
 {
 	.release = _release,
 	.apply = _apply,
 };
 
-ArrayAdditionalItems* array_additional_items_new(void)
+AdditionalFeature* additional_feature_new(AdditionalFeatureFunc apply_func)
 {
-	ArrayAdditionalItems *a = g_new0(ArrayAdditionalItems, 1);
+	AdditionalFeature *a = g_new0(AdditionalFeature, 1);
 	if (!a)
 		return a;
-	feature_init(&a->base, &array_additional_items_vtable);
+	feature_init(&a->base, &additional_feature_vtable);
+	a->apply_func = apply_func;
 	return a;
 }
 
-ArrayAdditionalItems* array_additional_items_ref(ArrayAdditionalItems *a)
+AdditionalFeature* additional_feature_ref(AdditionalFeature *a)
 {
-	return (ArrayAdditionalItems *) feature_ref(&a->base);
+	return (AdditionalFeature *) feature_ref(&a->base);
 }
 
-void array_additional_items_unref(ArrayAdditionalItems *a)
+void additional_feature_unref(AdditionalFeature *a)
 {
 	feature_unref(&a->base);
 }
 
-void array_additional_items_set_validator(ArrayAdditionalItems *a, Validator *v)
+void additional_feature_set_validator(AdditionalFeature *a, Validator *v)
 {
 	validator_unref(a->validator);
 	a->validator = v;

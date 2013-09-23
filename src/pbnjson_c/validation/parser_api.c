@@ -28,6 +28,22 @@
 #include <string.h>
 
 
+// YAJL and gperf are used to produce lexical tokens.
+// The parser is generated from a EBNF source with LEMON LALR(1) parser (see
+// json_schema_grammar.y). The abstract syntax tree is formed using the class
+// SchemaParsing for every parsed schema.
+//
+// Post-parse processing consists of the following steps:
+//  * Apply features: gathered features are moved to the type validator
+//    for every SchemaParsing.
+//  * Combine validators: combine together validators in combinators and
+//    the type validator for every SchemaParsing.
+//  * Collect URI: resolve URI scopes, and put validators worth remembering
+//    into UriResolver.
+//  * Finalize parse: Substitute all the SchemaParsing in the tree by their
+//    type validators.
+
+// Prototypes of the interface to the generated parser.
 void *JsonSchemaParserAlloc(void *(*mallocProc)(size_t));
 void JsonSchemaParserFree(
 	void *p,                    /* The parser to be deleted */
@@ -39,7 +55,9 @@ void JsonSchemaParser(
 	TokenParam yyminor,          /* The value for the token */
 	ParserContext *
 );
+#ifndef NDEBUG
 void JsonSchemaParserTrace(FILE *f, char *p);
+#endif // NDEBUG
 
 
 typedef struct _YajlContext
@@ -48,6 +66,7 @@ typedef struct _YajlContext
 	ParserContext parser_ctxt;
 } YajlContext;
 
+// Every YAJL callback means a token for the parser.
 static int on_null(void *ctx)
 {
 	YajlContext *yajl_context = (YajlContext *) ctx;
@@ -105,6 +124,8 @@ static int on_map_key(void *ctx, const unsigned char *str, yajl_size_t len)
 			.str_len = len,
 		},
 	};
+	// Object key may mean different tokens for the parser, each schema keyword
+	// is a distinct token for the parser.
 	const struct JsonSchemaKeyword *k = json_schema_keyword_lookup(str, len);
 	JsonSchemaParser(yajl_context->parser,
 	                 k ? k->token : TOKEN_KEY_NOT_KEYWORD, token_param,
@@ -239,6 +260,7 @@ Validator* parse_schema_n(char const *str, size_t len,
 		return NULL;
 	}
 
+	// Let the parser finish its job.
 	TokenParam token_param;
 	JsonSchemaParser(parser, 0, token_param, &yajl_context.parser_ctxt);
 
@@ -253,7 +275,10 @@ Validator* parse_schema_n(char const *str, size_t len,
 	validator_combine(v);
 	if (uri_resolver)
 		validator_collect_uri(v, root_scope, uri_resolver);
+	// Substitute every SchemaParsing by its type validator for every node
+	// in the AST.
 	Validator *result = validator_finalize_parse(v);
+	// Forget about SchemaParsing then.
 	validator_unref(v);
 	return result;
 }

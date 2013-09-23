@@ -205,6 +205,8 @@ static void _collect_uri_enter(char const *key, Validator *v, void *ctxt)
 		fragment = uri_scope_get_fragment(uri_scope);
 	}
 
+	// Only root fragment # and definitions of the root fragments should be remembered
+	// in the UriResolver.
 	if (!strcmp(ROOT_FRAGMENT, fragment) ||
 	    (key && g_str_has_prefix(fragment, ROOT_DEFINITIONS)))
 		uri_resolver_add_validator(uri_scope->uri_resolver, document, fragment, s->type_validator);

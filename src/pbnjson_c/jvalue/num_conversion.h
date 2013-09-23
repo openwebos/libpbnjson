@@ -36,10 +36,9 @@ extern "C" {
  *
  * NOTE: Behaviour is unspecified if exponent isn't NULL but decimalPortion & decimalLeadingZeros are.
  *
- * @param string
- * @param strlen
+ * @param str
  * @param integerPortion - Cannot be null.  Will contain the integer equivalent of the number (clamped to the boundaries)
- * @param exponent - If not null, then the exponent is not applied.  If it is, an attempt to apply the exponent is made
+ * @param exponentPortion - If not null, then the exponent is not applied.  If it is, an attempt to apply the exponent is made
  *                   (if there is overflow, the result flags are
  * @param decimalPortion - If null & there is a decimal point, then a CONV_PRECISION_LOSS will be present in the result flag.  Otherwise,
  *                         this will contain the numeric equivalent of the numbers following the decimal point

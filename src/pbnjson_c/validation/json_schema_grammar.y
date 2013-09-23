@@ -26,10 +26,9 @@
 #include "generic_validator.h"
 #include "parser_context.h"
 #include "object_properties.h"
-#include "object_additional_properties.h"
+#include "additional_feature.h"
 #include "object_required.h"
 #include "array_items.h"
-#include "array_additional_items.h"
 #include "count_feature.h"
 #include "number_feature.h"
 #include "boolean_feature.h"
@@ -457,22 +456,22 @@ any_object_key(A) ::= KEY_TYPE(B). { A = B; }
 // Object additionalProperties
 schema_feature(A) ::= KEY_ADDITIONAL_PROPERTIES schema(V).
 {
-	ObjectAdditionalProperties *p = object_additional_properties_new();
-	if (p)
-		object_additional_properties_set_validator(p, V);
+	AdditionalFeature *f = additional_feature_new(validator_set_object_additional_properties);
+	if (f)
+		additional_feature_set_validator(f, V);
 	else PARSE_FAILED;
-	A = &p->base;
+	A = &f->base;
 }
 
 schema_feature(A) ::= KEY_ADDITIONAL_PROPERTIES BOOLEAN(B).
 {
-	ObjectAdditionalProperties *p = object_additional_properties_new();
-	if (p)
-		object_additional_properties_set_validator(p, B.boolean
-		                                              ? validator_ref(GENERIC_VALIDATOR)
-		                                              : NULL);
+	AdditionalFeature *f = additional_feature_new(validator_set_object_additional_properties);
+	if (f)
+		additional_feature_set_validator(f, B.boolean
+		                                 ? validator_ref(GENERIC_VALIDATOR)
+		                                 : NULL);
 	else PARSE_FAILED;
-	A = &p->base;
+	A = &f->base;
 }
 
 
@@ -579,22 +578,22 @@ items(A) ::= items(B) schema(V).
 // Array additionalItems
 schema_feature(A) ::= KEY_ADDITIONAL_ITEMS schema(V).
 {
-	ArrayAdditionalItems *a = array_additional_items_new();
-	if (a)
-		array_additional_items_set_validator(a, V);
+	AdditionalFeature *f = additional_feature_new(validator_set_array_additional_items);
+	if (f)
+		additional_feature_set_validator(f, V);
 	else PARSE_FAILED;
-	A = &a->base;
+	A = &f->base;
 }
 
 schema_feature(A) ::= KEY_ADDITIONAL_ITEMS BOOLEAN(B).
 {
-	ArrayAdditionalItems *a = array_additional_items_new();
-	if (a)
-		array_additional_items_set_validator(a, B.boolean
-		                                        ? validator_ref(GENERIC_VALIDATOR)
-		                                        : NULL);
+	AdditionalFeature *f = additional_feature_new(validator_set_array_additional_items);
+	if (f)
+		additional_feature_set_validator(f, B.boolean
+		                                    ? validator_ref(GENERIC_VALIDATOR)
+		                                    : NULL);
 	else PARSE_FAILED;
-	A = &a->base;
+	A = &f->base;
 }
 
 

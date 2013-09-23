@@ -27,22 +27,31 @@ extern "C" {
 
 typedef struct _StringSpan StringSpan;
 
+/** @brief String validator class for {"type": "string"} */
 typedef struct _StringValidator
 {
-	Validator base;
+	Validator base;        /**< Base class */
 
-	char *expected_value;
-	int min_length;
-	int max_length;
+	char *expected_value;  /**< Expected value if not NULL (for enums) */
+	int min_length;        /**< Minimal string length from {"minLength": ...} */
+	int max_length;        /**< Maximal string length from {"maxLength": ...} */
 } StringValidator;
 
 //_Static_assert(offsetof(StringValidator, base) == 0, "Addresses of StringValidator and StringValidator.base should be equal");
 
+/** @brief Constructor */
 StringValidator* string_validator_new();
+
+/** @brief Destructor */
 void string_validator_release(StringValidator *v);
 
+/** @brief Remember minimal length */
 void string_validator_add_min_length_constraint(StringValidator *v, size_t min_length);
+
+/** @brief Remember maximal length */
 void string_validator_add_max_length_constraint(StringValidator *v, size_t max_length);
+
+/** @brief Remember expected value (for enums) */
 bool string_validator_add_expected_value(StringValidator *v, StringSpan *span);
 
 #ifdef __cplusplus

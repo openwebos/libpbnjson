@@ -28,21 +28,39 @@ extern "C" {
 
 typedef struct _ArrayItems ArrayItems;
 
+/**
+ * Array validator for {"type": "array"}
+ */
 typedef struct _ArrayValidator
 {
+	/** @brief Base class is Validator */
 	Validator base;
+
+	/** @brief Items of the array from "items": [...]. */
 	ArrayItems *items;
+
+	/** @brief Additional items of the array from "additionalItems". */
 	Validator *additional_items;
+
+	/** @brief Maximal count of items in the array. */
 	int max_items;
+
+	/** @brief Minimal count of items in the array. */
 	int min_items;
 } ArrayValidator;
 
 //_Static_assert(offsetof(ArrayValidator, base) == 0, "");
 
+/** @brief Constructor: allocate and initialize an array validator. */
 ArrayValidator* array_validator_new();
+
+/** @brief Destroy the array validator. */
 void array_validator_release(ArrayValidator *v);
 
+/** @brief Set maximal item count in the array. */
 bool array_validator_set_max_items(ArrayValidator *v, size_t max);
+
+/** @brief Set minimal item count in the array. */
 bool array_validator_set_min_items(ArrayValidator *v, size_t min);
 
 #ifdef __cplusplus

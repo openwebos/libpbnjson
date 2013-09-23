@@ -218,7 +218,7 @@ public:
 	/**
 	 * Test this object against a C string.
 	 *
-	 * @param[in] null-terminated C string to test this JSON string against.
+	 * @param[in] other null-terminated C string to test this JSON string against.
 	 * @return True if and only if this object represents a JSON string with the same bytes (careful here if you need
 	 *         actual textual comparison and you have utf8).
 	 */

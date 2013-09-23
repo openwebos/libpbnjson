@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="12.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>560</x>
+      <y>490</y>
+      <w>360</w>
+      <h>290</h>
+    </coordinates>
+    <panel_attributes>SchemaParsing
+--
+-type_validator: Validator
+-validator_combinators: CombinedValidator [0..*]
+-features: Feature [0..*]
+-id: char *
+-definitions: Definitions
+--
+_new(): SchemaParsing_
++ref(s)
++unref(s)
++add_feature(f: Feature)
++set_validator(v: Validator)
++add_combinator(v: Validator)
+--
+Responsibilities
+-- Represent AST of schema
+-- Keep parsed parameters
+-- Contain subvalidators to form a tree</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>620</x>
+      <y>200</y>
+      <w>240</w>
+      <h>200</h>
+    </coordinates>
+    <panel_attributes>Validator
+--
+-ref_count: int
+_-vtable: ValidatorVtable_
++def_value: jvalue_ref
+--
++visit(enter: Func, exit: Func)
++apply_features
++combine_validators
++collect_uri
++finalize_parse
+--
+Responsibilities
+-- Be nodes in the tree graph</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>710</x>
+      <y>370</y>
+      <w>50</w>
+      <h>140</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-</panel_attributes>
+    <additional_attributes>30;30;30;120</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>490</x>
+      <y>180</y>
+      <w>150</w>
+      <h>360</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>70;340;30;340;30;30;130;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>980</x>
+      <y>550</y>
+      <w>210</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>Feature
+--
+-ref_count: int
+_-vtable: FeatureVtable_
+--
++apply(v: Validator): bool
+--
+Responsibilities
+-- Hold parsed parameters</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>920</x>
+      <y>280</y>
+      <w>300</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>ObjectProperties
+--
+-keys: GHashTable {char * -&gt; Validator}
+--
++add_key(key: string, v: Validator)
++lookup(key: string): Validator
+--
+Responsibilities
+-- Hold subvalidators for object</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>1050</x>
+      <y>370</y>
+      <w>50</w>
+      <h>200</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-</panel_attributes>
+    <additional_attributes>30;180;30;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>890</x>
+      <y>530</y>
+      <w>110</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>30;30;90;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>830</x>
+      <y>180</y>
+      <w>270</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>250;100;250;30;30;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>260</x>
+      <y>570</y>
+      <w>210</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>CombinedValidator
+--
+-validators: Validator [1..*]
+--
++add_value(v: Validator)
+--
+Responsibilities
+-- Hold subvalidators</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>330</x>
+      <y>370</y>
+      <w>310</w>
+      <h>220</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-</panel_attributes>
+    <additional_attributes>290;30;30;200</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>440</x>
+      <y>180</y>
+      <w>100</w>
+      <h>440</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>30;420;60;420;60;30;80;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>410</x>
+      <y>510</y>
+      <w>170</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>150;30;30;30;30;60</additional_attributes>
+  </element>
+</diagram>

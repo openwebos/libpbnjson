@@ -22,6 +22,7 @@
 extern "C" {
 #endif
 
+/** @brief Validation error codes */
 typedef enum _ValidationErrorCode
 {
 	VEC_OK = 0,
@@ -49,6 +50,7 @@ typedef enum _ValidationErrorCode
 	VEC_UNEXPECTED_VALUE,
 } ValidationErrorCode;
 
+/** @brief Get human readable message for specific error code. */
 char const *ValidationGetErrorMessage(ValidationErrorCode code);
 
 #ifdef __cplusplus

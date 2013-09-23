@@ -165,13 +165,15 @@ PJSON_API const char *jvalue_tostring_simple(jvalue_ref val) NON_NULL(1);
 
 /**
  * Just like jvalue_tostring(), but is able to solve external references in the given schema.
+ *
+ * @param val JSON value to serialize.
  * @param schemainfo This is used to carry useful information to the parser.
- * 			m_schema is expected to contain the schema
- *			m_resolver should contain a proper schema resolver
+ *          m_schema is expected to contain the schema
+ *          m_resolver should contain a proper schema resolver
  * @see JSchemaInfo
  * @see jvalue_tostring()
  */
-PJSON_API const char *jvalue_tostring_schemainfo (jvalue_ref val, const JSchemaInfoRef schemainfo) NON_NULL(1, 2);
+PJSON_API const char *jvalue_tostring_schemainfo(jvalue_ref val, const JSchemaInfoRef schemainfo) NON_NULL(1, 2);
 
 /*** JSON Object operations ***/
 /**

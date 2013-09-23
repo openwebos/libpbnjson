@@ -25,31 +25,41 @@
 extern "C" {
 #endif
 
+
+/** @brief Expected validator type */
 typedef enum _ValidatorType
 {
-	V_NULL = 0,
-	V_NUM,
-	V_BOOL,
-	V_STR,
-	V_ARR,
-	V_OBJ,
-	V_ANY,   // TODO: Remove support for "any"
+	V_NULL = 0,   /**< @brief JSON null */
+	V_NUM,        /**< @brief JSON number */
+	V_BOOL,       /**< @brief JSON boolean */
+	V_STR,        /**< @brief JSON string */
+	V_ARR,        /**< @brief JSON array */
+	V_OBJ,        /**< @brief JSON object */
+	V_ANY,        /**< @brief Any JSON type. TODO: It's obsolete, remove it. */
 
-	V_TYPES_NUM,
+	V_TYPES_NUM,  /**< @brief Count of JSON types. */
 } ValidatorType;
 
+/** @brief Validator for type combination */
 typedef struct _CombinedTypesValidator
 {
-	Validator base;
-	Validator* types[V_TYPES_NUM];
+	Validator base;                  /**< @brief Base class */
+	Validator* types[V_TYPES_NUM];   /**< @brief Validators for specified types {"type":[...]}. */
 } CombinedTypesValidator;
 
 //_Static_assert(offsetof(ArrayValidator, base) == 0, "");
 
+
+/** @brief Constructor */
 CombinedTypesValidator* combined_types_validator_new();
+
+/** @brief Destructor */
 void combined_types_validator_release(CombinedTypesValidator *v);
 
+/** @brief Add validator for a specific type. */
 void combined_types_validator_set_type(CombinedTypesValidator *c, const char *type_str, size_t len);
+
+/** @brief Add default validators for the rest in the array. */
 void combined_types_validator_fill_all_types(CombinedTypesValidator *c);
 
 #ifdef __cplusplus

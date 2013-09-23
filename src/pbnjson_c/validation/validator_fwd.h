@@ -24,7 +24,21 @@ extern "C" {
 
 typedef struct _Validator Validator;
 
+/** @brief Validator visitor enter function.
+ *
+ * @param[in] key Key in the parent validator (property name, definition name etc)
+ * @param[in] v Current validator
+ * @param[in] ctxt Pointer supplied by the user
+ */
 typedef void (*VisitorEnterFunc)(char const *key, Validator *v, void *ctxt);
+
+/** @brief Validator visitor exit function.
+ *
+ * @param[in] key Key in the parent validator (property name, definition name etc)
+ * @param[in] v Current validator
+ * @param[in] ctxt Pointer supplied by the user
+ * @param[out] new_v If not NULL, substite the current validator in parent container.
+ */
 typedef void (*VisitorExitFunc)(char const *key, Validator *v, void *ctxt, Validator **new_v);
 
 #ifdef __cplusplus

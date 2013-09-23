@@ -19,6 +19,7 @@
 #include "validation_state.h"
 #include "validator.h"
 
+
 ValidationState *validation_state_new(Validator *validator,
                                       UriResolver *uri_resolver,
                                       Notification *notify)
@@ -36,6 +37,7 @@ void validation_state_free(ValidationState *s)
 	g_free(s);
 }
 
+// Initialize preallocated ValidationState (for instance, on stack)
 void validation_state_init(ValidationState *s,
                            Validator *validator,
                            UriResolver *uri_resolver,

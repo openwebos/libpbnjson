@@ -27,19 +27,37 @@ extern "C" {
 
 typedef struct _Validator Validator;
 
+/** @brief Number feature application function.
+ *
+ * @param[in] v Validator to apply the feature to.
+ * @param[in] n Number to apply
+ */
 typedef void (*NumberFeatureFunc)(Validator *v, Number *n);
 
+
+/** @brief Number feature class */
 typedef struct _NumberFeature
 {
-	Feature base;
-	Number value;
-	NumberFeatureFunc apply_func;
+	Feature base;                   /**< Base class */
+	Number value;                   /**< Number value */
+	NumberFeatureFunc apply_func;   /**< Application function */
 } NumberFeature;
 
 
+/** @brief Constructor.
+ *
+ * @param[in] str Pointer to the text to get number from
+ * @param[in] len Count of bytes of the number text
+ * @param[in] apply_func Application function to use
+ * @return An allocated and initialized NumberFeature
+ */
 NumberFeature* number_feature_new(char const *str, size_t len,
                                   NumberFeatureFunc apply_func);
+
+/** @brief Increase reference counter. */
 NumberFeature* number_feature_ref(NumberFeature *n);
+
+/** @brief Decrease reference counter. Once it drops to zero, the object is destructed. */
 void number_feature_unref(NumberFeature *n);
 
 #ifdef __cplusplus

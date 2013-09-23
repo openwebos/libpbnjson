@@ -28,24 +28,46 @@ extern "C" {
 typedef struct _ObjectProperties ObjectProperties;
 typedef struct _ObjectRequired ObjectRequired;
 
+/**
+ * Object validator for {"type": "object"}
+ */
 typedef struct _ObjectValidator
 {
+	/** @brief Base class is Validator */
 	Validator base;
+
+	/** @brief Expected object properties from "properties": {...} */
 	ObjectProperties *properties;
+	/** @brief Additional properties may accept what wasn't described by "properties" */
 	Validator *additional_properties;
+	/** @brief List of required property names from "required": [...] */
 	ObjectRequired *required;
+	/** @brief Maximal count of properties */
 	int max_properties;
+	/** @brief Minimal count of properties */
 	int min_properties;
 
+	/** @brief Count of properties, which have default value.
+	 *
+	 * Default values are contained by the validators in the properties.
+	 * We count them before the main work to decide if properties with
+	 * defaults should be tracked at all.
+	 */
 	int default_properties_count;
 } ObjectValidator;
 
 //_Static_assert(offsetof(GenericValidator, base) == 0, "");
 
+/** @brief Constructor: allocate and initialize new object validator. */
 ObjectValidator* object_validator_new(void);
+
+/** @brief Destroy object validator. */
 void object_validator_release(ObjectValidator *v);
 
+/** @brief Set maximal count of properties. */
 bool object_validator_set_max_properties(ObjectValidator *v, size_t max);
+
+/** @brief Set minimal count of properties. */
 bool object_validator_set_min_properties(ObjectValidator *v, size_t min);
 
 #ifdef __cplusplus

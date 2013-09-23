@@ -72,9 +72,9 @@ PJSON_API jschema_ref jschema_duplicate(jschema_ref schema) NON_NULL(1);
  * whether or not you need it.  After a successful call to this method, the schema is guaranteed to be
  * immutable & thus the same reference will be thread-safe.
  *
- * @NOTE: For now, this API is unexposed - please discuss with the maintainer about exposing.
+ * NOTE: For now, this API is unexposed - please discuss with the maintainer about exposing.
  *
- * @param schema The schema to resolve.
+ * @param schema_info The schema to resolve.
  * @return True if the schema resolved fully, false if some error occured.
  *         If some error occurred, you will typically want to remember to free the reference before-hand.
  */

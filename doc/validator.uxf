@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="12.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>660</x>
+      <y>610</y>
+      <w>300</w>
+      <h>220</h>
+    </coordinates>
+    <panel_attributes>ObjectValidator
+--
+-object_properties: ObjectProperties
+-additional_properties: Validator [0..1]
+-required: ObjectRequired
+-max_properties: integer
+-min_properties: integer
+--
+-check(e: ValidationEvent): boolean
+-init_state(): boolean
+-cleanup_state()
+--
+Responsibilities
+-- Validate a JSON object
+-- Keep key-values for object properties</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>600</x>
+      <y>320</y>
+      <w>270</w>
+      <h>200</h>
+    </coordinates>
+    <panel_attributes>Validator
+--
+-ref_count: int
+_-vtable: ValidatorVtable_
++def_value: jvalue_ref
+--
++check(e: ValidationEvent): boolean
++init_state(): boolean
++cleanup_state()
+--
+Responsibilities
+-- Be nodes in the tree graph</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>770</x>
+      <y>490</y>
+      <w>50</w>
+      <h>140</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-</panel_attributes>
+    <additional_attributes>30;30;30;120</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>1060</x>
+      <y>490</y>
+      <w>300</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>ObjectProperties
+--
+-keys: GHashTable {char * -&gt; Validator}
+--
++add_key(key: string, v: Validator)
++lookup(key: string): Validator
+--
+Responsibilities
+-- Hold subvalidators for object</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>840</x>
+      <y>430</y>
+      <w>240</w>
+      <h>110</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>220;90;140;90;140;30;30;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>360</x>
+      <y>690</y>
+      <w>210</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>CombinedValidator
+--
+-validators: Validator [1..*]
+--
++add_value(v: Validator)
+--
+Responsibilities
+-- Hold subvalidators</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>430</x>
+      <y>490</y>
+      <w>190</w>
+      <h>220</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-</panel_attributes>
+    <additional_attributes>170;30;30;200</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>540</x>
+      <y>490</y>
+      <w>100</w>
+      <h>250</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>30;230;80;230;80;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>930</x>
+      <y>540</y>
+      <w>150</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>30;100;130;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>600</x>
+      <y>490</y>
+      <w>80</w>
+      <h>190</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>60;170;30;170;30;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>1060</x>
+      <y>660</y>
+      <w>210</w>
+      <h>130</h>
+    </coordinates>
+    <panel_attributes>ObjectRequired
+--
+-keys: string [*]
+--
++lookup(key: string): string
+--
+Responsibilities
+-- Hold required keys
+-- Lookup encountered key</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>930</x>
+      <y>640</y>
+      <w>150</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>30;30;130;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>640</x>
+      <y>20</y>
+      <w>270</w>
+      <h>210</h>
+    </coordinates>
+    <panel_attributes>ArrayValidator
+--
+-array_items: ArrayItems
+-additional_items: Validator [0..1]
+-max_items: integer
+-min_items: integer
+--
+-check(e: ValidationEvent): boolean
+-init_state(): boolean
+-cleanup_state()
+--
+Responsibilities
+-- Validate JSON array
+-- Keep validators for array items</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>730</x>
+      <y>200</y>
+      <w>50</w>
+      <h>140</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-</panel_attributes>
+    <additional_attributes>30;120;30;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>580</x>
+      <y>40</y>
+      <w>80</w>
+      <h>300</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>60;30;30;30;30;280</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>1010</x>
+      <y>40</y>
+      <w>270</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>ArrayItems
+--
+-items: Validator [*]
+-generic_validator: Validator [0..1]</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>880</x>
+      <y>20</y>
+      <w>150</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>30;30;130;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>840</x>
+      <y>50</y>
+      <w>190</w>
+      <h>300</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>170;30;130;30;130;280;30;280</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>260</x>
+      <y>170</y>
+      <w>210</w>
+      <h>140</h>
+    </coordinates>
+    <panel_attributes>GenericValidator
+--
+-depth: integer
+--
+-check(e: ValidationEvent): bool
+-init_state(): boolean
+-cleanup_state()
+--
+Responsibilities
+-- Validate any JSON value</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>440</x>
+      <y>150</y>
+      <w>180</w>
+      <h>200</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-</panel_attributes>
+    <additional_attributes>160;180;30;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>210</x>
+      <y>330</y>
+      <w>280</w>
+      <h>140</h>
+    </coordinates>
+    <panel_attributes>StringValidator
+--
+-expected_value: string
+-min_length: integer
+-max_length: integer
+--
+-check(e: ValidationEvent): boolean
+--
+Responsibilities
+-- Validate JSON string</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>460</x>
+      <y>310</y>
+      <w>160</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-</panel_attributes>
+    <additional_attributes>140;30;30;30</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>210</x>
+      <y>490</y>
+      <w>280</w>
+      <h>110</h>
+    </coordinates>
+    <panel_attributes>BooleanValidator
+--
+-value: boolean
+--
+-check(e: ValidationEvent): boolean
+--
+Responsibilities
+-- Validate JSON boolean</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>460</x>
+      <y>440</y>
+      <w>160</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-</panel_attributes>
+    <additional_attributes>140;30;30;60</additional_attributes>
+  </element>
+  <element>
+    <type>com.umlet.element.Class</type>
+    <coordinates>
+      <x>1080</x>
+      <y>330</y>
+      <w>280</w>
+      <h>140</h>
+    </coordinates>
+    <panel_attributes>NumberValidator
+--
+-expected_value: number
+-is_integer: boolean
+-...
+--
+-check(e: ValidationEvent): boolean
+--
+Responsibilities
+-- Validate JSON number</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <type>com.umlet.element.Relation</type>
+    <coordinates>
+      <x>840</x>
+      <y>310</y>
+      <w>260</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-</panel_attributes>
+    <additional_attributes>30;30;240;30</additional_attributes>
+  </element>
+</diagram>

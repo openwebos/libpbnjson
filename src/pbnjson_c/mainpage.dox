@@ -1,0 +1,66 @@
+/**
+
+  @mainpage PBNJSON C API internals
+
+  @section PBNJSON_FEATURES Notable features
+
+    - GHashTable is used to store object properties. It ensures compact storage,
+    fast lookup, fast sequential (though, not ordered) iteration.
+
+    - Embedded structures are used to store jvalue structure. Jvalue is the base
+    structure, which contains type information, determining the type of the
+    structure it's embedded into.
+
+    - Validation is efficiently done with recurrent structure Validator
+
+    - Schema parsing is implemented with YAJL + LALR(1) parser generator LEMON
+
+    - GNU gperf is used for keyword transformation into parser tokens
+
+    - GNU gperf is used for recognition of schema type name
+
+    - The library uriparser is used to track URI scope
+
+    - Much code is with automatic tests based on Google gtest
+
+
+  @section PBNJSON_SCHEMA Validation against JSON schema
+
+  Two stacks are used to validate YAJL event (object start, object end, object
+  key, array start, array end, string, bool etc) against schema: validator stack
+  and context stack. The head of the validator stack contains currently active
+  validator, which check incoming events. A validator may push another one to
+  the stack of validators, thus, deferring its own execution (consider
+  validation of an object's property). If validator is finished either because
+  of failure or because of success, it shall remove itself from the validation
+  stack.
+
+  The stack of contexts may used by validators to keep their data
+  between different events. For instance, object validator should count
+  encountered keys to decide if all required properties have been seen. So a
+  structure with the counter is placed into the context state when validator
+  starts its work (object begin), updated when a new key is considered (object
+  key), checked and removed from the stack when the validator finishes its
+  mission (object end).
+
+  @subsection PBNJSON_SCHEMA_PARSING JSON schema parsing
+
+  YAJL and gperf are used to produce lexical tokens. The parser is generated
+  from a EBNF source with LEMON LALR(1) parser. The abstract syntax tree is
+  formed using the class SchemaParsing for every parsed schema.
+
+  Post-parse processing consists of the following steps:
+
+    - Apply features: gathered features are moved to the type validator for
+    every SchemaParsing.
+
+    - Combine validators: combine together validators in combinators and the
+    type validator for every SchemaParsing.
+
+    - Collect URI: resolve URI scopes, and put validators worth remembering into
+    UriResolver.
+
+    - Finalize parse: Substitute all the SchemaParsing in the tree by their type
+    validators.
+ */
+// vim: set et ts=4 sw=4 ft=c:

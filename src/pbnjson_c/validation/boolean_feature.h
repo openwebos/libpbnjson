@@ -25,9 +25,12 @@
 extern "C" {
 #endif
 
-typedef struct _Validator Validator;
-
-typedef void (*BooleanFeatureFunc)(Validator *v, bool boolean);
+/** @brief Application function for the feature.
+ *
+ * @param[in] v Validator to apply the feature to.
+ * @param[in] value Value to apply.
+ */
+typedef void (*BooleanFeatureFunc)(Validator *v, bool value);
 
 typedef struct _BooleanFeature
 {
@@ -37,11 +40,17 @@ typedef struct _BooleanFeature
 } BooleanFeature;
 
 
+/** @brief Constructor */
 BooleanFeature* boolean_feature_new(BooleanFeatureFunc apply_func);
+
+/** @brief Increment reference counter. */
 BooleanFeature* boolean_feature_ref(BooleanFeature *n);
+
+/** @brief Decrement reference counter. Once it drops to zero, the object is destructed. */
 void boolean_feature_unref(BooleanFeature *n);
 
-bool boolean_feature_set_value(BooleanFeature *n, bool exclusive);
+/** @brief Remember the boolean value */
+bool boolean_feature_set_value(BooleanFeature *n, bool value);
 
 #ifdef __cplusplus
 }

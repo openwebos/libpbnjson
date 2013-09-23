@@ -26,20 +26,38 @@
 extern "C" {
 #endif
 
+/** @brief Application function
+ *
+ * @param[in] v Validator to apply the feature to
+ * @param[in] count Value to apply
+ */
 typedef void (*CountFeatureFunc)(Validator *v, size_t count);
 
+/** @brief Count feature */
 typedef struct _CountFeature
 {
-	Feature base;
-	long count;
-	CountFeatureFunc apply_func;
+	Feature base;                /**< Base class */
+	long count;                  /**< Value of the feature */
+	CountFeatureFunc apply_func; /**< Applicator function */
 } CountFeature;
 
 
+/** @brief Constructor */
 CountFeature* count_feature_new(CountFeatureFunc apply_func);
+
+/** @brief Increase reference counter. */
 CountFeature* count_feature_ref(CountFeature *n);
+
+/** @brief Decrease reference counter. Once it drops to zero, destroy the object. */
 void count_feature_unref(CountFeature *n);
 
+/** @brief Remember the value of the feature.
+ *
+ * @param[in] n This feature
+ * @param[in] val Pointer to the chunk of text with the value to remember.
+ * @param[in] val_len Length of the number to remember
+ * @return true if succeeded
+ */
 bool count_feature_set_value(CountFeature *n, const char *val, size_t val_len);
 
 #ifdef __cplusplus

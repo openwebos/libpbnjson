@@ -25,17 +25,26 @@
 extern "C" {
 #endif
 
+
+/** @brief JSON boolean validator */
 typedef struct _BooleanValidator
 {
-	Validator base;
+	Validator base;        /**< Base class */
 
-	bool value_expected;;
-	bool value;
+	bool value_expected;   /**< Is specific value expected? */
+	bool value;            /**< The value that the instance is expected to have. */
 } BooleanValidator;
 
+/** @brief Constructor */
 BooleanValidator *boolean_validator_new(void);
+
+/** @brief Constructor with specific expected value (for enum). */
 BooleanValidator *boolean_validator_new_with_value(bool value);
+
+/** @brief Increment reference counter. */
 BooleanValidator *boolean_validator_ref(BooleanValidator *b);
+
+/** @brief Decrement reference counter. Once it drops to zero, destruct the object. */
 void boolean_validator_unref(BooleanValidator *b);
 
 #ifdef __cplusplus

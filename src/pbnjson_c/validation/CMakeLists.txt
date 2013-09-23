@@ -70,8 +70,8 @@ add_library(
 	${CMAKE_CURRENT_BINARY_DIR}/schema_keywords.h
 	${CMAKE_CURRENT_BINARY_DIR}/instance_types.h
 	${grammar_c}
+	additional_feature.c
 	array_items.c
-	array_additional_items.c
 	array_validator.c
 	boolean_feature.c
 	boolean_validator.c
@@ -88,7 +88,6 @@ add_library(
 	number_feature.c
 	number_validator.c
 	string_validator.c
-	object_additional_properties.c
 	object_properties.c
 	object_required.c
 	object_validator.c

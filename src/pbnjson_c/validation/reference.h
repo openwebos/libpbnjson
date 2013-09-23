@@ -26,21 +26,28 @@ extern "C" {
 
 typedef struct _StringSpan StringSpan;
 
+/** @brief Reference validator class */
 typedef struct _Reference
 {
-	Validator base;
+	Validator base;        /**< Base class */
 
-	char *target; // original parsed value
+	char *target;          /**< Original parsed value like "other.json#/definitions/a" */
 
-	char const *document; // owned by UriResolver
-	char *fragment;
-	Validator *validator; // owned by UriResolver
+	char const *document;  /**< Document part of the reference "other.json", owned by UriResolver */
+	char *fragment;        /**< Fragment part of the reference "#/definitions/a" */
+	Validator *validator;  /**< Resolved validator, owned by UriResolver */
 } Reference;
 
+/** @brief Constructor */
 Reference *reference_new(void);
+
+/** @brief Increment reference counter. */
 Reference *reference_ref(Reference *r);
+
+/** @brief Decrement reference counter. Once it drops to zero, the object is destructed. */
 void reference_unref(Reference *r);
 
+/** @brief Remember target from the parser. */
 bool reference_set_target(Reference *r, StringSpan *target);
 
 #ifdef __cplusplus

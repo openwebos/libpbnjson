@@ -27,25 +27,29 @@ extern "C" {
 
 typedef struct _Validator Validator;
 
+/** @brief The data available in the semantic actions. */
 typedef struct _ParserContext
 {
-	Validator *validator;
-	bool success;
-	char const *error_message;
+	Validator *validator;       /**< @brief Root validator to be set. */
+	bool success;               /**< @brief Has parsing succeeded so far? */
+	char const *error_message;  /**< @brief Error message if parse failed. */
 } ParserContext;
 
+/** @brief Piece of the original text. */
 typedef struct _StringSpan
 {
-	char const *str;
-	size_t str_len;
+	char const *str;  /**< @brief Pointer to the begin */
+	size_t str_len;   /**< @brief Length of the span */
 } StringSpan;
 
+/** @brief Parameter for a lexical token */
 typedef union _TokenParam
 {
-	StringSpan string;
-	bool boolean;
+	StringSpan string;    /**< @brief Token text in the source for keys, strings, and numbers. */
+	bool boolean;         /**< @brief Boolean value */
 } TokenParam;
 
+/** @brief Remember parse error */
 void parser_context_set_error(ParserContext *c, char const *error_message);
 
 #ifdef __cplusplus
