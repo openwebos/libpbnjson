@@ -164,8 +164,6 @@ jvalue_ref jvalue_duplicate (jvalue_ref val)
 		{
 			jvalue_ref valueCopy = jvalue_duplicate (pair.value);
 			if (!jobject_put (result, jvalue_copy (pair.key), valueCopy)) {
-				j_release (&valueCopy);
-				j_release (&pair.key);
 				j_release (&result);
 				result = NULL;
 				break;
@@ -547,12 +545,7 @@ bool jobject_set (jvalue_ref obj, raw_buffer key, jvalue_ref val)
 		return false;
 	}
 
-	if (UNLIKELY(!jobject_put(obj, newKey, newVal))) {
-		j_release (&newKey);
-		j_release (&newVal);
-		return false;
-	}
-	return true;
+	return jobject_put(obj, newKey, newVal);
 }
 
 bool jobject_set2(jvalue_ref obj, jvalue_ref key, jvalue_ref val)
@@ -572,13 +565,7 @@ bool jobject_set2(jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 		return false;
 	}
 
-	if (UNLIKELY(!jobject_put(obj, new_key, new_val)))
-	{
-		j_release(&new_key);
-		j_release(&new_val);
-		return false;
-	}
-	return true;
+	return jobject_put(obj, new_key, new_val);
 }
 
 bool jobject_put (jvalue_ref obj, jvalue_ref key, jvalue_ref val)
@@ -589,26 +576,49 @@ bool jobject_put (jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 
 	assert(val != NULL);
 
-	if (!jobject_deref(obj)->m_members)
-		return false;
+	do {
+		if (!jobject_deref(obj)->m_members) {
+			break;
+		}
 
-	CHECK_CONDITION_RETURN_VALUE(!jis_object(obj), false, "%p is %d not an object (%d)", obj, obj->m_type, JV_OBJECT);
-	CHECK_POINTER_RETURN_NULL(key);
-	CHECK_CONDITION_RETURN_VALUE(!jis_string(key), false, "%p is %d not a string (%d)", key, key->m_type, JV_STR);
-	CHECK_CONDITION_RETURN_VALUE(jstring_size(key) == 0, false, "Object instance name is the empty string");
+		if (UNLIKELY(!jis_object(obj))) {
+			PJ_LOG_ERR("%p is %d not an object (%d)", obj, obj->m_type, JV_OBJECT);
+			break;
+		}
 
-	if (val == NULL) {
-		PJ_LOG_WARN("Please don't pass in NULL - use jnull() instead");
-		val = jnull ();
-	}
+		if (UNLIKELY(key == NULL)) {
+			PJ_LOG_ERR("Invalid API use: null pointer");
+			break;
+		}
 
-	if (!check_insert_sanity(obj, val)) {
-		PJ_LOG_ERR("Error in object hierarchy. Inserting jvalue would create an illegal cyclic dependency");
-		return false;
-	}
+		if (UNLIKELY(!jis_string(key))) {
+			PJ_LOG_ERR("%p is %d not a string (%d)", key, key->m_type, JV_STR);
+			break;
+		}
 
-	g_hash_table_replace(jobject_deref(obj)->m_members, key, val);
-	return true;
+		if (UNLIKELY(jstring_size(key) == 0)) {
+			PJ_LOG_ERR("Object instance name is the empty string");
+			break;
+		}
+
+		if (val == NULL) {
+			PJ_LOG_WARN("Please don't pass in NULL - use jnull() instead");
+			val = jnull ();
+		}
+
+		if (!check_insert_sanity(obj, val)) {
+			PJ_LOG_ERR("Error in object hierarchy. Inserting jvalue would create an illegal cyclic dependency");
+			break;
+		}
+
+		g_hash_table_replace(jobject_deref(obj)->m_members, key, val);
+		return true;
+	} while (false);
+
+	j_release(&key);
+	j_release(&val);
+
+	return false;
 }
 
 // JSON Object iterators
@@ -927,15 +937,32 @@ bool jarray_set (jvalue_ref arr, ssize_t index, jvalue_ref val)
 
 bool jarray_put (jvalue_ref arr, ssize_t index, jvalue_ref val)
 {
-	CHECK_CONDITION_RETURN_VALUE(!jis_array(arr), false, "Attempt to insert into non-array %p", arr);
-	CHECK_CONDITION_RETURN_VALUE(index < 0, false, "Attempt to insert array element for %p with negative index value %zd", arr, index);
+	do {
+		if (!jis_array(arr)) {
+			PJ_LOG_ERR("Attempt to insert into non-array %p", arr);
+			break;
+		}
 
-	if (UNLIKELY(val == NULL)) {
-		PJ_LOG_WARN("incorrect API use - please pass an actual reference to a JSON null if that's what you want - assuming that's the case");
-		val = jnull ();
-	}
+		if (index < 0) {
+			PJ_LOG_ERR("Attempt to insert array element for %p with negative index value %zd", arr, index);
+			break;
+		}
 
-	return jarray_put_unsafe (arr, index, val);
+		if (UNLIKELY(val == NULL)) {
+			PJ_LOG_WARN("incorrect API use - please pass an actual reference to a JSON null if that's what you want - assuming that's the case");
+			val = jnull ();
+		}
+
+		if (!jarray_put_unsafe (arr, index, val)) {
+			break;
+		}
+
+		return true;
+	} while (false);
+
+	j_release(&val);
+
+	return false;
 }
 
 bool jarray_append (jvalue_ref arr, jvalue_ref val)
