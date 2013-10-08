@@ -511,7 +511,7 @@ ConversionResultFlags JValue::asNumber<NumericString>(NumericString& number) con
 template <>
 int32_t JValue::asNumber<int32_t>() const
 {
-	int32_t result;
+	int32_t result = 0;
 	asNumber(result);
 	return result;
 }
@@ -519,7 +519,7 @@ int32_t JValue::asNumber<int32_t>() const
 template <>
 int64_t JValue::asNumber<int64_t>() const
 {
-	int64_t result;
+	int64_t result = 0;
 	asNumber(result);
 	return result;
 }
@@ -527,7 +527,7 @@ int64_t JValue::asNumber<int64_t>() const
 template <>
 double JValue::asNumber<double>() const
 {
-	double result;
+	double result = 0;
 	asNumber(result);
 	return result;
 }
