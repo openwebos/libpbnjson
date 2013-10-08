@@ -126,4 +126,9 @@ TEST_F(TestNumberSanity, Valid4)
 	EXPECT_TRUE(JValidator::isValid(parsed, *schema.get()));
 }
 
+TEST(GF40819, Test)
+{
+	 pbnjson::JSchemaFile schema("this_file_should_never_exist");
+	 EXPECT_FALSE(schema.isInitialized());
+}
 // vim: set noet ts=4 sw=4 tw=80:

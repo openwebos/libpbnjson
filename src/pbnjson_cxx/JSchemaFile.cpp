@@ -29,6 +29,9 @@ namespace pbnjson {
 JSchema::Resource* JSchemaFile::createSchemaMap(const std::string &path)
 {
 	jschema_ref schema = jschema_parse_file(path.c_str(), NULL);
+	if (schema == NULL)
+		return NULL;
+
 	return new Resource(schema, Resource::TakeSchema);
 }
 
