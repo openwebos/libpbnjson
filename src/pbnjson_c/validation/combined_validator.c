@@ -26,11 +26,6 @@ typedef struct _MyContext
 	GList *states;
 } MyContext;
 
-static void _state_release(gpointer data)
-{
-	validation_state_free((ValidationState *) data);
-}
-
 static bool _all_of_check(ValidationEvent const *e,
                           ValidationState *real_state,
                           void *ctxt,
@@ -170,23 +165,11 @@ static bool _one_of_check(ValidationEvent const *e,
 static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
 {
 	CombinedValidator *vcomb = (CombinedValidator *) v;
-	MyContext *my_ctxt = (MyContext *) validation_state_get_context(s);
-	if (!my_ctxt->states)
-	{
-		GSList *it = vcomb->validators;
-		while (it)
-		{
-			// TODO: aggregate error notifiacations
-			my_ctxt->states = g_list_append(my_ctxt->states, validation_state_new(it->data, s->uri_resolver, NULL /*s->notify*/));
-			it = g_slist_next(it);
-		}
-	}
 
 	bool all_finished;
 	bool res = vcomb->check_all(e, s, c, &all_finished);
 	if (!res || all_finished)
 	{
-		g_list_free_full(my_ctxt->states, _state_release);
 		validation_state_pop_validator(s);
 	}
 
@@ -195,9 +178,18 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 
 static bool _init_state(Validator *v, ValidationState *s)
 {
-	MyContext *my_ctxt = g_new0(MyContext, 1);
-	if (!my_ctxt)
-		return false;
+	CombinedValidator *vcomb = (CombinedValidator *) v;
+	MyContext *my_ctxt = g_slice_new0(MyContext);
+
+	GSList *it = vcomb->validators;
+	while (it)
+	{
+		// TODO: aggregate error notifiacations
+		ValidationState *substate = validation_state_new(it->data, s->uri_resolver, NULL /*s->notify*/);
+		my_ctxt->states = g_list_append(my_ctxt->states, substate);
+		it = g_slist_next(it);
+	}
+
 	validation_state_push_context(s, my_ctxt);
 	return true;
 }
@@ -205,7 +197,8 @@ static bool _init_state(Validator *v, ValidationState *s)
 static void _cleanup_state(Validator *v, ValidationState *s)
 {
 	MyContext *c = validation_state_pop_context(s);
-	g_free(c);
+	g_list_free_full(c->states, (GDestroyNotify) validation_state_free);
+	g_slice_free(MyContext, c);
 }
 
 static void _release(Validator *validator)

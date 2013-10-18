@@ -21,6 +21,7 @@
 #include "../generic_validator.h"
 #include "../null_validator.h"
 #include "../boolean_validator.h"
+#include "Util.hpp"
 #include <gtest/gtest.h>
 
 using namespace std;
@@ -29,22 +30,18 @@ class TestAllOfValidator : public ::testing::Test
 {
 protected:
 	CombinedValidator *v;
-	ValidationState *s;
 	ValidationEvent e;
 	ValidationErrorCode error;
+	static Notification notify;
 
 	virtual void SetUp()
 	{
-		static Notification notify { &OnError };
-
 		v = all_of_validator_new();
-		s = validation_state_new(&v->base, NULL, &notify);
 		error = VEC_OK;
 	}
 
 	virtual void TearDown()
 	{
-		validation_state_free(s);
 		combined_validator_release(v);
 	}
 
@@ -57,11 +54,15 @@ protected:
 	}
 };
 
+Notification TestAllOfValidator::notify = { &OnError };
+
 TEST_F(TestAllOfValidator, OnlyGeneric)
 {
 	combined_validator_add_value(v, validator_ref(GENERIC_VALIDATOR));
+	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
+
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
-	EXPECT_TRUE(validation_check(&(e = validation_event_null()), s, this));
+	EXPECT_TRUE(validation_check(&(e = validation_event_null()), s.get(), this));
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
 }
 
@@ -69,8 +70,10 @@ TEST_F(TestAllOfValidator, GenericAndNullPositive)
 {
 	combined_validator_add_value(v, validator_ref(GENERIC_VALIDATOR));
 	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
+
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
-	EXPECT_TRUE(validation_check(&(e = validation_event_null()), s, this));
+	EXPECT_TRUE(validation_check(&(e = validation_event_null()), s.get(), this));
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
 }
 
@@ -78,8 +81,10 @@ TEST_F(TestAllOfValidator, GenericAndNullNegative)
 {
 	combined_validator_add_value(v, validator_ref(GENERIC_VALIDATOR));
 	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
+
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
-	EXPECT_FALSE(validation_check(&(e = validation_event_boolean(true)), s, this));
+	EXPECT_FALSE(validation_check(&(e = validation_event_boolean(true)), s.get(), this));
 	//EXPECT_EQ(VEC_NOT_NULL, error);
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
 }
@@ -88,8 +93,10 @@ TEST_F(TestAllOfValidator, AlwaysFails1)
 {
 	combined_validator_add_value(v, (Validator *) boolean_validator_new());
 	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
+
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
-	EXPECT_FALSE(validation_check(&(e = validation_event_boolean(true)), s, this));
+	EXPECT_FALSE(validation_check(&(e = validation_event_boolean(true)), s.get(), this));
 	//EXPECT_EQ(VEC_NOT_NULL, error);
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
 }
@@ -98,8 +105,10 @@ TEST_F(TestAllOfValidator, AlwaysFails2)
 {
 	combined_validator_add_value(v, (Validator *) boolean_validator_new());
 	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
+
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
-	EXPECT_FALSE(validation_check(&(e = validation_event_null()), s, this));
+	EXPECT_FALSE(validation_check(&(e = validation_event_null()), s.get(), this));
 	//EXPECT_EQ(VEC_NOT_BOOLEAN, error);
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
 }

@@ -21,6 +21,7 @@
 #include "../generic_validator.h"
 #include "../null_validator.h"
 #include "../boolean_validator.h"
+#include "Util.hpp"
 #include <gtest/gtest.h>
 
 using namespace std;
@@ -29,22 +30,18 @@ class TestOneOfValidator : public ::testing::Test
 {
 protected:
 	CombinedValidator *v;
-	ValidationState *s;
 	ValidationEvent e;
 	ValidationErrorCode error;
+	static Notification notify;
 
 	virtual void SetUp()
 	{
-		static Notification notify { &OnError };
-
 		v = one_of_validator_new();
-		s = validation_state_new(&v->base, NULL, &notify);
 		error = VEC_OK;
 	}
 
 	virtual void TearDown()
 	{
-		validation_state_free(s);
 		combined_validator_release(v);
 	}
 
@@ -57,11 +54,16 @@ protected:
 	}
 };
 
+Notification TestOneOfValidator::notify { &OnError };
+
+
 TEST_F(TestOneOfValidator, OnlyGeneric)
 {
 	combined_validator_add_value(v, validator_ref(GENERIC_VALIDATOR));
+	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
+
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
-	EXPECT_TRUE(validation_check(&(e = validation_event_null()), s, this));
+	EXPECT_TRUE(validation_check(&(e = validation_event_null()), s.get(), this));
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
 }
 
@@ -69,8 +71,10 @@ TEST_F(TestOneOfValidator, GenericAndNull)
 {
 	combined_validator_add_value(v, validator_ref(GENERIC_VALIDATOR));
 	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
+
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
-	EXPECT_FALSE(validation_check(&(e = validation_event_null()), s, this));
+	EXPECT_FALSE(validation_check(&(e = validation_event_null()), s.get(), this));
 	EXPECT_EQ(VEC_MORE_THAN_ONE_OF, error);
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
 }
@@ -79,8 +83,10 @@ TEST_F(TestOneOfValidator, GenericAndNullAnyValue)
 {
 	combined_validator_add_value(v, validator_ref(GENERIC_VALIDATOR));
 	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
+
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
-	EXPECT_TRUE(validation_check(&(e = validation_event_boolean(true)), s, this));
+	EXPECT_TRUE(validation_check(&(e = validation_event_boolean(true)), s.get(), this));
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
 }
 
@@ -88,8 +94,10 @@ TEST_F(TestOneOfValidator, BooleanAndNullOnNull)
 {
 	combined_validator_add_value(v, (Validator *) boolean_validator_new());
 	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
+
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
-	EXPECT_TRUE(validation_check(&(e = validation_event_boolean(true)), s, this));
+	EXPECT_TRUE(validation_check(&(e = validation_event_boolean(true)), s.get(), this));
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
 }
 
@@ -97,8 +105,10 @@ TEST_F(TestOneOfValidator, BooleanAndNullOnBoolean)
 {
 	combined_validator_add_value(v, (Validator *) boolean_validator_new());
 	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
+
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
-	EXPECT_TRUE(validation_check(&(e = validation_event_null()), s, this));
+	EXPECT_TRUE(validation_check(&(e = validation_event_null()), s.get(), this));
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
 }
 
@@ -106,7 +116,9 @@ TEST_F(TestOneOfValidator, BooleanAndNullOnString)
 {
 	combined_validator_add_value(v, (Validator *) boolean_validator_new());
 	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
+
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
-	EXPECT_FALSE(validation_check(&(e = validation_event_string("a", 1)), s, this));
+	EXPECT_FALSE(validation_check(&(e = validation_event_string("a", 1)), s.get(), this));
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
 }

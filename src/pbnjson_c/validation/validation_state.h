@@ -92,6 +92,7 @@ typedef struct _ValidationState
  *                         the validation may fail.
  * @param[in] notify Notification callbacks for error details or default properties.
  * @return Newly allocated and initialized validation instance.
+ *         It's assumed this constructor never fails, the program is terminated otherwise.
  */
 ValidationState *validation_state_new(Validator *validator,
                                       UriResolver *uri_resolver,

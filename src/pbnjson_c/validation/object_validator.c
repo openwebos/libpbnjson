@@ -165,9 +165,7 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 
 static bool _init_state(Validator *v, ValidationState *s)
 {
-	MyContext *my_ctxt = g_new0(MyContext, 1);
-	if (!my_ctxt)
-		return false;
+	MyContext *my_ctxt = g_slice_new0(MyContext);
 	my_ctxt->has_started = false;
 	validation_state_push_context(s, my_ctxt);
 	return true;
@@ -178,7 +176,7 @@ static void _cleanup_state(Validator *v, ValidationState *s)
 	MyContext *my_ctxt = validation_state_pop_context(s);
 	if (my_ctxt->default_properties)
 		g_hash_table_destroy(my_ctxt->default_properties);
-	g_free(my_ctxt);
+	g_slice_free(MyContext, my_ctxt);
 }
 
 static void _release(Validator *validator)

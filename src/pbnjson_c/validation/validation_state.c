@@ -24,9 +24,7 @@ ValidationState *validation_state_new(Validator *validator,
                                       UriResolver *uri_resolver,
                                       Notification *notify)
 {
-	ValidationState *s = g_new(ValidationState, 1);
-	if (!s)
-		return s;
+	ValidationState *s = g_slice_new(ValidationState);
 	validation_state_init(s, validator, uri_resolver, notify);
 	return s;
 }
@@ -34,7 +32,7 @@ ValidationState *validation_state_new(Validator *validator,
 void validation_state_free(ValidationState *s)
 {
 	validation_state_clear(s);
-	g_free(s);
+	g_slice_free(ValidationState, s);
 }
 
 // Initialize preallocated ValidationState (for instance, on stack)
