@@ -30,8 +30,9 @@ extern "C" {
  *
  * @param[in] v Validator to apply the feature to
  * @param[in] count Value to apply
+ * @return Validator with feature applied
  */
-typedef void (*CountFeatureFunc)(Validator *v, size_t count);
+typedef Validator* (*CountFeatureFunc)(Validator *v, size_t count);
 
 /** @brief Count feature */
 typedef struct _CountFeature

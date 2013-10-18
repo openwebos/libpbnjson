@@ -38,17 +38,23 @@ static void unref(Validator *validator)
 	g_free(v);
 }
 
-static void set_default(Validator *validator, jvalue_ref def_value)
+static Validator* set_default(Validator *validator, jvalue_ref def_value)
 {
 	GenericValidator *v = (GenericValidator *) validator;
 	j_release(&v->def_value);
 	v->def_value = jvalue_copy(def_value);
+	return validator;
 }
 
 static jvalue_ref get_default(Validator *validator, ValidationState *s)
 {
 	GenericValidator *v = (GenericValidator *) validator;
 	return v->def_value;
+}
+
+static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
+{
+	return set_default(&generic_validator_new()->base, def_value);
 }
 
 static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
@@ -110,7 +116,7 @@ static void _cleanup_state(Validator *v, ValidationState *s)
 	validation_state_pop_context(s);
 }
 
-static void _dump_enter(char const *key, Validator *v, void *ctxt)
+static void dump_enter(char const *key, Validator *v, void *ctxt)
 {
 	if (key)
 		fprintf((FILE *) ctxt, "%s:", key);
@@ -126,7 +132,7 @@ static ValidatorVtable generic_vtable =
 	.cleanup_state = _cleanup_state,
 	.set_default = set_default,
 	.get_default = get_default,
-	.dump_enter = _dump_enter,
+	.dump_enter = dump_enter,
 };
 
 static ValidatorVtable generic_static_vtable =
@@ -134,7 +140,8 @@ static ValidatorVtable generic_static_vtable =
 	.check = _check,
 	.init_state = _init_state,
 	.cleanup_state = _cleanup_state,
-	.dump_enter = _dump_enter,
+	.set_default = set_default_generic,
+	.dump_enter = dump_enter,
 };
 
 GenericValidator *generic_validator_new(void)
@@ -145,16 +152,6 @@ GenericValidator *generic_validator_new(void)
 	return v;
 }
 
-Validator *generic_validator_ref(Validator *v)
-{
-	return validator_ref(v);
-}
-
-void generic_validator_unref(Validator *v)
-{
-	return validator_unref(v);
-}
-
 // Static instance may be suitable to cover "additionalProperties" and
 // other service cases when default value isn't attached to the validator.
 static Validator GENERIC_VALIDATOR_IMPL =
@@ -163,3 +160,8 @@ static Validator GENERIC_VALIDATOR_IMPL =
 };
 
 Validator *GENERIC_VALIDATOR = &GENERIC_VALIDATOR_IMPL;
+
+Validator *generic_validator_instance(void)
+{
+	return GENERIC_VALIDATOR;
+}

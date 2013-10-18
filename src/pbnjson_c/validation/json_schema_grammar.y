@@ -653,13 +653,12 @@ enum_list(A) ::= enum_list(B) value_validator(V).
 
 value_validator(A) ::= NULL.
 {
-	A = NULL_VALIDATOR;
+	A = null_validator_instance();
 }
 
 value_validator(A) ::= BOOLEAN(V).
 {
-	BooleanValidator *b = boolean_validator_new_with_value(V.boolean);
-	A = &b->base;
+	A = boolean_validator_new_with_value(V.boolean);
 }
 
 value_validator(A) ::= STRING(V).

@@ -36,6 +36,9 @@ typedef struct _NullValidator
 /** @brief Static instance of a null validator. */
 extern Validator *NULL_VALIDATOR;
 
+/** @brief Getter of static instance */
+Validator *null_validator_instance(void);
+
 /** @brief Constructor: allocate and initialize a new null validator. */
 NullValidator *null_validator_new(void);
 

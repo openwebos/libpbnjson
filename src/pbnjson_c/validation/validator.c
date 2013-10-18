@@ -79,81 +79,92 @@ void validator_reactivate(Validator *v, ValidationState *s)
 	v->vtable->reactivate(v, s);
 }
 
-void validator_set_object_properties(Validator *v, ObjectProperties *p)
+Validator* validator_set_object_properties(Validator *v, ObjectProperties *p)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_object_properties)
-		v->vtable->set_object_properties(v, p);
+		return v->vtable->set_object_properties(v, p);
+	return v;
 }
 
-void validator_set_object_additional_properties(Validator *v, Validator *additional)
+Validator* validator_set_object_additional_properties(Validator *v, Validator *additional)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_object_additional_properties)
-		v->vtable->set_object_additional_properties(v, additional);
+		return v->vtable->set_object_additional_properties(v, additional);
+	return v;
 }
 
-void validator_set_object_required(Validator *v, ObjectRequired *p)
+Validator* validator_set_object_required(Validator *v, ObjectRequired *p)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_object_required)
-		v->vtable->set_object_required(v, p);
+		return v->vtable->set_object_required(v, p);
+	return v;
 }
 
-void validator_set_object_max_properties(Validator *v, size_t max)
+Validator* validator_set_object_max_properties(Validator *v, size_t max)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_object_max_properties)
-		v->vtable->set_object_max_properties(v, max);
+		return v->vtable->set_object_max_properties(v, max);
+	return v;
 }
 
-void validator_set_object_min_properties(Validator *v, size_t min)
+Validator* validator_set_object_min_properties(Validator *v, size_t min)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_object_min_properties)
-		v->vtable->set_object_min_properties(v, min);
+		return v->vtable->set_object_min_properties(v, min);
+	return v;
 }
 
-void validator_set_array_items(Validator *v, ArrayItems *a)
+Validator* validator_set_array_items(Validator *v, ArrayItems *a)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_array_items)
-		v->vtable->set_array_items(v, a);
+		return v->vtable->set_array_items(v, a);
+	return v;
 }
 
-void validator_set_array_max_items(Validator *v, size_t maxItems)
+Validator* validator_set_array_max_items(Validator *v, size_t maxItems)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_array_max_items)
-		v->vtable->set_array_max_items(v, maxItems);
+		return v->vtable->set_array_max_items(v, maxItems);
+	return v;
 }
 
-void validator_set_array_min_items(Validator *v, size_t minItems)
+Validator* validator_set_array_min_items(Validator *v, size_t minItems)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_array_min_items)
-		v->vtable->set_array_min_items(v, minItems);
+		return v->vtable->set_array_min_items(v, minItems);
+	return v;
 }
 
-void validator_set_array_additional_items(Validator *v, Validator *additional)
+Validator* validator_set_array_additional_items(Validator *v, Validator *additional)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_array_additional_items)
-		v->vtable->set_array_additional_items(v, additional);
+		return v->vtable->set_array_additional_items(v, additional);
+	return v;
 }
 
-void validator_set_number_maximum(Validator *v, Number *n)
+Validator* validator_set_number_maximum(Validator *v, Number *n)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_number_maximum)
-		v->vtable->set_number_maximum(v, n);
+		return v->vtable->set_number_maximum(v, n);
+	return v;
 }
 
-void validator_set_number_maximum_exclusive(Validator *v, bool exclusive)
+Validator* validator_set_number_maximum_exclusive(Validator *v, bool exclusive)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_number_maximum_exclusive)
-		v->vtable->set_number_maximum_exclusive(v, exclusive);
+		return v->vtable->set_number_maximum_exclusive(v, exclusive);
+	return v;
 }
 
 void validator_visit(Validator *v,
@@ -289,39 +300,44 @@ void validator_dump(Validator *v, FILE *f)
 	_validator_dump_exit(NULL, v, f, NULL);
 }
 
-void validator_set_number_minimum(Validator *v, Number *n)
+Validator* validator_set_number_minimum(Validator *v, Number *n)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_number_minimum)
-		v->vtable->set_number_minimum(v, n);
+		return v->vtable->set_number_minimum(v, n);
+	return v;
 }
 
-void validator_set_number_minimum_exclusive(Validator *v, bool exclusive)
+Validator* validator_set_number_minimum_exclusive(Validator *v, bool exclusive)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_number_minimum_exclusive)
-		v->vtable->set_number_minimum_exclusive(v, exclusive);
+		return v->vtable->set_number_minimum_exclusive(v, exclusive);
+	return v;
 }
 
-void validator_set_string_max_length(Validator *v, size_t maxLength)
+Validator* validator_set_string_max_length(Validator *v, size_t maxLength)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_string_max_length)
-		v->vtable->set_string_max_length(v, maxLength);
+		return v->vtable->set_string_max_length(v, maxLength);
+	return v;
 }
 
-void validator_set_string_min_length(Validator *v, size_t minLength)
+Validator* validator_set_string_min_length(Validator *v, size_t minLength)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_string_min_length)
-		v->vtable->set_string_min_length(v, minLength);
+		return v->vtable->set_string_min_length(v, minLength);
+	return v;
 }
 
-void validator_set_default(Validator *v, jvalue_ref def_value)
+Validator* validator_set_default(Validator *v, jvalue_ref def_value)
 {
 	assert(v && v->vtable);
 	if (v->vtable->set_default)
-		v->vtable->set_default(v, def_value);
+		return v->vtable->set_default(v, def_value);
+	return v;
 }
 
 jvalue_ref validator_get_default(Validator *v, ValidationState *s)

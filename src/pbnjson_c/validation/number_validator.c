@@ -65,6 +65,50 @@ static bool _check_conditions(NumberValidator *v, Number const *n,
 	return true;
 }
 
+static bool check_generic(Validator *v, ValidationEvent const *e, ValidationState *s, void *ctxt)
+{
+	validation_state_pop_validator(s);
+	if (e->type != EV_NUM)
+	{
+		validation_state_notify_error(s, VEC_NOT_NUMBER, ctxt);
+		return false;
+	}
+	return true;
+}
+
+static bool check_integer_conditions(Number *n, ValidationEvent const *e, ValidationState *s, void *ctxt)
+{
+	if (number_set_n(n, e->value.string.ptr, e->value.string.len))
+	{
+		// TODO: Number format error
+		validation_state_notify_error(s, VEC_NOT_NUMBER, ctxt);
+		return false;
+	}
+
+	if (!number_is_integer(n))
+		return false;
+
+	return true;
+}
+
+static bool check_integer_generic(Validator *v, ValidationEvent const *e, ValidationState *s, void *ctxt)
+{
+	if (e->type != EV_NUM)
+	{
+		validation_state_notify_error(s, VEC_NOT_NUMBER, ctxt);
+		validation_state_pop_validator(s);
+		return false;
+	}
+
+	Number n;
+	number_init(&n);
+
+	bool res = check_integer_conditions(&n, e, s, ctxt);
+	number_clear(&n);
+	validation_state_pop_validator(s);
+	return res;
+}
+
 static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *ctxt)
 {
 	if (e->type != EV_NUM)
@@ -107,39 +151,44 @@ static void unref(Validator *validator)
 	number_validator_release(v);
 }
 
-static void _set_maximum(Validator *v, Number *num)
+static Validator* set_maximum(Validator *v, Number *num)
 {
 	NumberValidator *n = (NumberValidator *) v;
 	n->max_set = true;
 	number_init(&n->max);
 	number_copy(&n->max, num);
+	return v;
 }
 
-static void _set_maximum_exclusive(Validator *v, bool exclusive)
+static Validator* set_maximum_exclusive(Validator *v, bool exclusive)
 {
 	NumberValidator *n = (NumberValidator *) v;
 	number_validator_add_max_exclusive_constraint(n, exclusive);
+	return v;
 }
 
-static void _set_minimum(Validator *v, Number *num)
+static Validator* set_minimum(Validator *v, Number *num)
 {
 	NumberValidator *n = (NumberValidator *) v;
 	n->min_set = true;
 	number_init(&n->min);
 	number_copy(&n->min, num);
+	return v;
 }
 
-static void _set_minimum_exclusive(Validator *v, bool exclusive)
+static Validator* set_minimum_exclusive(Validator *v, bool exclusive)
 {
 	NumberValidator *n = (NumberValidator *) v;
 	number_validator_add_min_exclusive_constraint(n, exclusive);
+	return v;
 }
 
-static void set_default(Validator *validator, jvalue_ref def_value)
+static Validator* set_default(Validator *validator, jvalue_ref def_value)
 {
 	NumberValidator *v = (NumberValidator *) validator;
 	j_release(&v->def_value);
 	v->def_value = jvalue_copy(def_value);
+	return validator;
 }
 
 static jvalue_ref get_default(Validator *validator, ValidationState *s)
@@ -148,15 +197,60 @@ static jvalue_ref get_default(Validator *validator, ValidationState *s)
 	return v->def_value;
 }
 
+static Validator* set_maximum_generic(Validator *v, Number *num)
+{
+	return set_maximum(&number_validator_new()->base, num);
+}
+
+static Validator* set_minimum_generic(Validator *v, Number *num)
+{
+	return set_minimum(&number_validator_new()->base, num);
+}
+
+static Validator* set_maximum_exclusive_generic(Validator *v, bool exclusive)
+{
+	return set_maximum_exclusive(&number_validator_new()->base, exclusive);
+}
+
+static Validator* set_minimum_exclusive_generic(Validator *v, bool exclusive)
+{
+	return set_minimum_exclusive(&number_validator_new()->base, exclusive);
+}
+
+static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
+{
+	return set_default(&number_validator_new()->base, def_value);
+}
+
+static ValidatorVtable generic_number_vtable =
+{
+	.check = check_generic,
+	.set_number_maximum = set_maximum_generic,
+	.set_number_maximum_exclusive = set_maximum_exclusive_generic,
+	.set_number_minimum = set_minimum_generic,
+	.set_number_minimum_exclusive = set_minimum_exclusive_generic,
+	.set_default = set_default_generic,
+};
+
+static ValidatorVtable generic_integer_vtable =
+{
+	.check = check_integer_generic,
+	.set_number_maximum = set_maximum_generic,
+	.set_number_maximum_exclusive = set_maximum_exclusive_generic,
+	.set_number_minimum = set_minimum_generic,
+	.set_number_minimum_exclusive = set_minimum_exclusive_generic,
+	.set_default = set_default_generic,
+};
+
 static ValidatorVtable number_vtable =
 {
 	.ref = ref,
 	.unref = unref,
 	.check = _check,
-	.set_number_maximum = _set_maximum,
-	.set_number_maximum_exclusive = _set_maximum_exclusive,
-	.set_number_minimum = _set_minimum,
-	.set_number_minimum_exclusive = _set_minimum_exclusive,
+	.set_number_maximum = set_maximum,
+	.set_number_maximum_exclusive = set_maximum_exclusive,
+	.set_number_minimum = set_minimum,
+	.set_number_minimum_exclusive = set_minimum_exclusive,
 	.set_default = set_default,
 	.get_default = get_default,
 };
@@ -197,7 +291,7 @@ bool number_validator_add_min_constraint(NumberValidator *n, const char* val)
 		number_clear(&num);
 		return false;
 	}
-	_set_minimum(&n->base, &num);
+	set_minimum(&n->base, &num);
 	number_clear(&num);
 	return true;
 }
@@ -216,7 +310,7 @@ bool number_validator_add_max_constraint(NumberValidator *n, const char* val)
 		number_clear(&num);
 		return false;
 	}
-	_set_maximum(&n->base, &num);
+	set_maximum(&n->base, &num);
 	number_clear(&num);
 	return true;
 }
@@ -239,4 +333,28 @@ bool number_validator_add_expected_value(NumberValidator *n, StringSpan *span)
 	}
 	n->expected_set = true;
 	return true;
+}
+
+static Validator NUMBER_VALIDATOR_IMPL =
+{
+	.vtable = &generic_number_vtable,
+};
+
+Validator *NUMBER_VALIDATOR_GENERIC = &NUMBER_VALIDATOR_IMPL;
+
+Validator* number_validator_instance(void)
+{
+	return NUMBER_VALIDATOR_GENERIC;
+}
+
+static Validator INTEGER_VALIDATOR_IMPL =
+{
+	.vtable = &generic_integer_vtable,
+};
+
+Validator *INTEGER_VALIDATOR_GENERIC = &INTEGER_VALIDATOR_IMPL;
+
+Validator* integer_validator_instance(void)
+{
+	return INTEGER_VALIDATOR_GENERIC;
 }

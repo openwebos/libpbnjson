@@ -217,11 +217,12 @@ static void unref(Validator *validator)
 	combined_validator_release(v);
 }
 
-static void set_default(Validator *validator, jvalue_ref def_value)
+static Validator* set_default(Validator *validator, jvalue_ref def_value)
 {
 	CombinedValidator *v = (CombinedValidator *) validator;
 	j_release(&v->def_value);
 	v->def_value = jvalue_copy(def_value);
+	return validator;
 }
 
 static jvalue_ref get_default(Validator *validator, ValidationState *s)

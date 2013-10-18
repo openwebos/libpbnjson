@@ -37,33 +37,47 @@ static void unref(Validator *validator)
 	g_free(v);
 }
 
-static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
+static bool check_generic(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
 {
-	BooleanValidator *b = (BooleanValidator *) v;
-
+	validation_state_pop_validator(s);
 	if (e->type != EV_BOOL)
 	{
 		validation_state_notify_error(s, VEC_NOT_BOOLEAN, c);
-		validation_state_pop_validator(s);
 		return false;
 	}
-
-	if (b->value_expected && b->value != e->value.boolean)
-	{
-		validation_state_notify_error(s, VEC_UNEXPECTED_VALUE, c);
-		validation_state_pop_validator(s);
-		return false;
-	}
-
-	validation_state_pop_validator(s);
 	return true;
 }
 
-static void set_default(Validator *v, jvalue_ref def_value)
+static bool check_true(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
+{
+	if (!check_generic(v, e, s, c))
+		return false;
+
+	if (e->value.boolean)
+		return true;
+
+	validation_state_notify_error(s, VEC_UNEXPECTED_VALUE, c);
+	return false;
+}
+
+static bool check_false(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
+{
+	if (!check_generic(v, e, s, c))
+		return false;
+
+	if (!e->value.boolean)
+		return true;
+
+	validation_state_notify_error(s, VEC_UNEXPECTED_VALUE, c);
+	return false;
+}
+
+static Validator* set_default(Validator *v, jvalue_ref def_value)
 {
 	BooleanValidator *b = (BooleanValidator *) v;
 	j_release(&b->def_value);
 	b->def_value = jvalue_copy(def_value);
+	return v;
 }
 
 static jvalue_ref get_default(Validator *v, ValidationState *s)
@@ -72,25 +86,57 @@ static jvalue_ref get_default(Validator *v, ValidationState *s)
 	return b->def_value;
 }
 
+static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
+{
+	return set_default(&boolean_validator_new()->base, def_value);
+}
+
 static ValidatorVtable boolean_vtable =
 {
 	.ref = ref,
 	.unref = unref,
-	.check = _check,
+	.check = check_generic,
 	.set_default = set_default,
 	.get_default = get_default,
 };
 
-static BooleanValidator BOOLEAN_VALIDATOR_IMPL =
+static ValidatorVtable generic_boolean_vtable =
 {
-	.base = {
-		.vtable = &boolean_vtable
-	},
-	.value_expected = false,
-	.value = false,
+	.check = check_generic,
+	.set_default = set_default_generic,
 };
 
-Validator *BOOLEAN_VALIDATOR = &BOOLEAN_VALIDATOR_IMPL.base;
+static ValidatorVtable true_boolean_vtable =
+{
+	.check = check_true,
+	.set_default = set_default_generic,
+};
+
+static ValidatorVtable false_boolean_vtable =
+{
+	.check = check_false,
+	.set_default = set_default_generic,
+};
+
+static Validator GENERIC_BOOLEAN_VALIDATOR =
+{
+	.vtable = &generic_boolean_vtable
+};
+
+static Validator TRUE_BOOLEAN_VALIDATOR =
+{
+	.vtable = &true_boolean_vtable
+};
+
+static Validator FALSE_BOOLEAN_VALIDATOR =
+{
+	.vtable = &false_boolean_vtable
+};
+
+Validator *boolean_validator_instance(void)
+{
+	return &GENERIC_BOOLEAN_VALIDATOR;
+}
 
 BooleanValidator *boolean_validator_new(void)
 {
@@ -100,25 +146,7 @@ BooleanValidator *boolean_validator_new(void)
 	return b;
 }
 
-BooleanValidator *boolean_validator_new_with_value(bool value)
+Validator *boolean_validator_new_with_value(bool value)
 {
-	BooleanValidator *b = boolean_validator_new();
-	if (!b)
-		return NULL;
-	b->value_expected = true;
-	b->value = value;
-	return b;
-}
-
-BooleanValidator *boolean_validator_ref(BooleanValidator *b)
-{
-	if (b)
-		validator_ref(&b->base);
-	return b;
-}
-
-void boolean_validator_unref(BooleanValidator *b)
-{
-	if (b)
-		validator_unref(&b->base);
+	return value ? &TRUE_BOOLEAN_VALIDATOR : &FALSE_BOOLEAN_VALIDATOR;
 }

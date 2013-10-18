@@ -32,22 +32,16 @@ typedef struct _BooleanValidator
 	Validator base;        /**< @brief Base class */
 	unsigned ref_count;    /**< @brief Reference count */
 	jvalue_ref def_value;  /**< @brief Default value attached to this validator */
-
-	bool value_expected;   /**< @brief Is specific value expected? */
-	bool value;            /**< @brief The value that the instance is expected to have. */
 } BooleanValidator;
+
+/** @brief Generic boolean validator. Checks only value type. */
+Validator *boolean_validator_instance(void);
 
 /** @brief Constructor */
 BooleanValidator *boolean_validator_new(void);
 
 /** @brief Constructor with specific expected value (for enum). */
-BooleanValidator *boolean_validator_new_with_value(bool value);
-
-/** @brief Increment reference counter. */
-BooleanValidator *boolean_validator_ref(BooleanValidator *b);
-
-/** @brief Decrement reference counter. Once it drops to zero, destruct the object. */
-void boolean_validator_unref(BooleanValidator *b);
+Validator *boolean_validator_new_with_value(bool value);
 
 #ifdef __cplusplus
 }

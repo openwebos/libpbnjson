@@ -36,9 +36,9 @@ typedef struct _FeatureVtable
 	 *
 	 * @param[in] f This feature.
 	 * @param[in] v Validator to apply the feature to.
-	 * @return true if succeeded or not applicable, false if failed to apply.
+	 * @return Validator with feature applied
 	 */
-	bool (*apply)(Feature *f, Validator *v);
+	Validator* (*apply)(Feature *f, Validator *v);
 
 	/** @brief Destructor: destroy the contained data. */
 	void (*release)(Feature *f);
@@ -69,7 +69,7 @@ Feature* feature_ref(Feature *f);
 void feature_unref(Feature *f);
 
 /** @brief Apply this feature to the validator */
-bool feature_apply(Feature *f, Validator *v);
+Validator* feature_apply(Feature *f, Validator *v);
 
 #ifdef __cplusplus
 }

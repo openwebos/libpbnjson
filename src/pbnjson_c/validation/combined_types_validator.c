@@ -26,6 +26,7 @@
 #include "string_validator.h"
 #include "object_validator.h"
 #include "array_validator.h"
+#include "nothing_validator.h"
 #include "validation_state.h"
 #include "validation_event.h"
 #include "parser_context.h"
@@ -50,7 +51,8 @@ static Validator* _get_current_validator(CombinedTypesValidator *c, ValidationEv
 	case EV_OBJ_START:
 		return c->types[V_OBJ];
 	default:
-		return NULL;
+		assert(!"Combined types validator doesn't support this type");
+		return NOTHING_VALIDATOR;
 	}
 }
 
@@ -85,141 +87,92 @@ static void unref(Validator *validator)
 	combined_types_validator_release(v);
 }
 
-static void _set_maximum(Validator *v, Number *n)
+static Validator* set_maximum(Validator *v, Number *n)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (!c->types[V_NUM])
-	{
-		NumberValidator *new = number_validator_new();
-		if (!new)
-			return;
-		c->types[V_NUM] = &new->base;
-	}
-	validator_set_number_maximum(c->types[V_NUM], n);
+	if (c->types[V_NUM])
+		c->types[V_NUM] = validator_set_number_maximum(c->types[V_NUM], n);
+	return v;
 }
 
-static void _set_maximum_exclusive(Validator *v, bool exclusive)
+static Validator* set_maximum_exclusive(Validator *v, bool exclusive)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (!c->types[V_NUM])
-	{
-		NumberValidator *new = number_validator_new();
-		if (!new)
-			return;
-		c->types[V_NUM] = &new->base;
-	}
-	validator_set_number_maximum_exclusive(c->types[V_NUM], exclusive);
+	if (c->types[V_NUM])
+		c->types[V_NUM] = validator_set_number_maximum_exclusive(c->types[V_NUM], exclusive);
+	return v;
 }
 
-static void _set_minimum(Validator *v, Number *n)
+static Validator* set_minimum(Validator *v, Number *n)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (!c->types[V_NUM])
-	{
-		NumberValidator *new = number_validator_new();
-		if (!new)
-			return;
-		c->types[V_NUM] = &new->base;
-	}
-	validator_set_number_minimum(c->types[V_NUM], n);
+	if (c->types[V_NUM])
+		c->types[V_NUM] = validator_set_number_minimum(c->types[V_NUM], n);
+	return v;
 }
 
-static void _set_minimum_exclusive(Validator *v, bool exclusive)
+static Validator* set_minimum_exclusive(Validator *v, bool exclusive)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (!c->types[V_NUM])
-	{
-		NumberValidator *new = number_validator_new();
-		if (!new)
-			return;
-		c->types[V_NUM] = &new->base;
-	}
-	validator_set_number_minimum_exclusive(c->types[V_NUM], exclusive);
+	if (c->types[V_NUM])
+		c->types[V_NUM] = validator_set_number_minimum_exclusive(c->types[V_NUM], exclusive);
+	return v;
 }
 
-static void _set_max_length(Validator *v, size_t maxLength)
+static Validator* set_max_length(Validator *v, size_t maxLength)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (!c->types[V_STR])
-	{
-		StringValidator *new = string_validator_new();
-		if (!new)
-			return;
-		c->types[V_STR] = &new->base;
-	}
-	validator_set_string_max_length(c->types[V_STR], maxLength);
+	if (c->types[V_STR])
+		c->types[V_STR] = validator_set_string_max_length(c->types[V_STR], maxLength);
+	return v;
 }
 
-static void _set_min_length(Validator *v, size_t minLength)
+static Validator* set_min_length(Validator *v, size_t minLength)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (!c->types[V_STR])
-	{
-		StringValidator *new = string_validator_new();
-		if (!new)
-			return;
-		c->types[V_STR] = &new->base;
-	}
-	validator_set_string_min_length(c->types[V_STR], minLength);
+	if (c->types[V_STR])
+		c->types[V_STR] = validator_set_string_min_length(c->types[V_STR], minLength);
+	return v;
 }
 
-static void _set_items(Validator *v, ArrayItems *items)
+static Validator* set_items(Validator *v, ArrayItems *items)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (!c->types[V_ARR])
-	{
-		ArrayValidator *new = array_validator_new();
-		if (!new)
-			return;
-		c->types[V_ARR] = &new->base;
-	}
-	validator_set_array_items(c->types[V_ARR], items);
+	if (c->types[V_ARR])
+		c->types[V_ARR] = validator_set_array_items(c->types[V_ARR], items);
+	return v;
 }
 
-static void _set_additional_items(Validator *v, Validator *additional)
+static Validator* set_additional_items(Validator *v, Validator *additional)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (!c->types[V_ARR])
-	{
-		ArrayValidator *new = array_validator_new();
-		if (!new)
-			return;
-		c->types[V_ARR] = &new->base;
-	}
-	validator_set_array_additional_items(c->types[V_ARR], additional);
+	if (c->types[V_ARR])
+		c->types[V_ARR] = validator_set_array_additional_items(c->types[V_ARR], additional);
+	return v;
 }
 
-static void _set_properties(Validator *v, ObjectProperties *p)
+static Validator* set_properties(Validator *v, ObjectProperties *p)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (!c->types[V_OBJ])
-	{
-		ObjectValidator *new = object_validator_new();
-		if (!new)
-			return;
-		c->types[V_OBJ] = &new->base;
-	}
-	validator_set_object_properties(c->types[V_OBJ], p);
+	if (c->types[V_OBJ])
+		c->types[V_OBJ] = validator_set_object_properties(c->types[V_OBJ], p);
+	return v;
 }
 
-static void _set_additional_properties(Validator *v, Validator *additional)
+static Validator* set_additional_properties(Validator *v, Validator *additional)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (!c->types[V_OBJ])
-	{
-		ObjectValidator *new = object_validator_new();
-		if (!new)
-			return;
-		c->types[V_OBJ] = &new->base;
-	}
-	validator_set_object_additional_properties(c->types[V_OBJ], additional);
+	if (c->types[V_OBJ])
+		c->types[V_OBJ] = validator_set_object_additional_properties(c->types[V_OBJ], additional);
+	return v;
 }
 
-static void set_default(Validator *validator, jvalue_ref def_value)
+static Validator* set_default(Validator *validator, jvalue_ref def_value)
 {
 	CombinedTypesValidator *v = (CombinedTypesValidator *) validator;
 	j_release(&v->def_value);
 	v->def_value = jvalue_copy(def_value);
+	return validator;
 }
 
 static jvalue_ref get_default(Validator *validator, ValidationState *s)
@@ -257,16 +210,16 @@ ValidatorVtable combined_types_vtable =
 	.ref = ref,
 	.unref = unref,
 	.visit = _visit,
-	.set_number_maximum = _set_maximum,
-	.set_number_maximum_exclusive = _set_maximum_exclusive,
-	.set_number_minimum = _set_minimum,
-	.set_number_minimum_exclusive = _set_minimum_exclusive,
-	.set_string_max_length = _set_max_length,
-	.set_string_min_length = _set_min_length,
-	.set_array_items = _set_items,
-	.set_array_additional_items = _set_additional_items,
-	.set_object_properties = _set_properties,
-	.set_object_additional_properties = _set_additional_properties,
+	.set_number_maximum = set_maximum,
+	.set_number_maximum_exclusive = set_maximum_exclusive,
+	.set_number_minimum = set_minimum,
+	.set_number_minimum_exclusive = set_minimum_exclusive,
+	.set_string_max_length = set_max_length,
+	.set_string_min_length = set_min_length,
+	.set_array_items = set_items,
+	.set_array_additional_items = set_additional_items,
+	.set_object_properties = set_properties,
+	.set_object_additional_properties = set_additional_properties,
 	.set_default = set_default,
 	.get_default = get_default,
 };
@@ -293,13 +246,20 @@ void combined_types_validator_set_type(CombinedTypesValidator *c, const char *ty
 {
 	StringSpan str = { .str = type_str, .str_len = len };
 	ValidatorType type = type_parser_parse_to_type(&str, NULL);
+
+	if (type == V_INT)
+	{
+		// Integer is more strict so don't overwrite existing number validator with it
+		if (c->types[V_NUM])
+			return;
+		else
+			type = V_NUM;
+	}
+
 	assert(type < V_TYPES_NUM);
 
 	Validator *old = c->types[type];
 	if (old)
-		// if there is a number validator skip it (needed to resolve integer and number types simultaneously)
-		if (type == V_NUM && !((NumberValidator *) old)->integer)
-			return;
 		validator_unref(old);
 
 	c->types[type] = type_parser_parse_simple(&str, NULL);
@@ -315,19 +275,25 @@ void combined_types_validator_fill_all_types(CombinedTypesValidator *c)
 			switch (i)
 			{
 			case V_NULL:
-				c->types[i] = NULL_VALIDATOR;
+				c->types[i] = null_validator_instance();
 				break;
 			case V_BOOL:
-				c->types[i] = (Validator *) boolean_validator_new();
+				c->types[i] = boolean_validator_instance();
 				break;
 			case V_NUM:
-				c->types[i] = (Validator *) number_validator_new();
+				c->types[i] = number_validator_instance();
 				break;
 			case V_STR:
-				c->types[i] = (Validator *) string_validator_new();
+				c->types[i] = string_validator_instance();
+				break;
+			case V_ARR:
+				c->types[i] = array_validator_instance();
+				break;
+			case V_OBJ:
+				c->types[i] = object_validator_instance();
 				break;
 			default:
-				c->types[i] = GENERIC_VALIDATOR;
+				c->types[i] = generic_validator_instance();
 			}
 		}
 	}

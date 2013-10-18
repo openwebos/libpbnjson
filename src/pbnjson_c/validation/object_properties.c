@@ -35,17 +35,16 @@ static void _release(Feature *f)
 	g_free(o);
 }
 
-static bool _apply(Feature *f, Validator *v)
+static Validator* apply(Feature *f, Validator *v)
 {
-	ObjectProperties *o = (ObjectProperties *) f;
-	validator_set_object_properties(v, o);
-	return true;
+	assert(f);
+	return validator_set_object_properties(v, (ObjectProperties *) f);
 }
 
 static FeatureVtable object_properties_vtable =
 {
 	.release = _release,
-	.apply = _apply,
+	.apply = apply,
 };
 
 ObjectProperties* object_properties_new(void)

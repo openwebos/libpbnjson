@@ -38,6 +38,12 @@ typedef enum _ValidatorType
 	V_ANY,        /**< @brief Any JSON type. TODO: It's obsolete, remove it. */
 
 	V_TYPES_NUM,  /**< @brief Count of JSON types. */
+
+	/** @brief JSON integer.
+	 * Doesn't really map to validator instance.
+	 * Used just to indicate type during schema parsing
+	 * */
+	V_INT,
 } ValidatorType;
 
 /** @brief Validator for type combination */

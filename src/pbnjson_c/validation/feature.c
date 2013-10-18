@@ -17,6 +17,7 @@
 // LICENSE@@@
 
 #include "feature.h"
+#include <assert.h>
 
 void feature_init(Feature *f, FeatureVtable *vtable)
 {
@@ -41,9 +42,8 @@ void feature_unref(Feature *f)
 	f->vtable->release(f);
 }
 
-bool feature_apply(Feature *f, Validator *v)
+Validator* feature_apply(Feature *f, Validator *v)
 {
-	if (!f || !f->vtable || !f->vtable->apply)
-		return false;
+	assert(f && v && f->vtable && f->vtable->apply);
 	return f->vtable->apply(f, v);
 }

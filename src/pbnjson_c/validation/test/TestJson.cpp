@@ -358,6 +358,10 @@ TEST_F(Json, Array)
 	EXPECT_FALSE(validate_json_plain("{\"a\": null}", v));
 	EXPECT_TRUE(validate_json_plain("[]", v));
 	EXPECT_TRUE(validate_json_plain("[null, 1, false, \"hello\", {}, {\"a\":null}, [], [null]]", v));
+
+	// some invalid layouts checks
+	EXPECT_FALSE(validate_json_plain("]", v));
+	EXPECT_FALSE(validate_json_plain("][", v));
 }
 
 TEST_F(Json, ArrayGenericSchema)
@@ -502,6 +506,14 @@ TEST_F(Json, Object)
 	EXPECT_TRUE(validate_json_plain("{\"a\": null}", v));
 	EXPECT_FALSE(validate_json("{\"a\": \"b\"}", v, NULL, &error));
 	EXPECT_EQ(VEC_NOT_NULL, error.error);
+
+	// some invalid layout checks
+	EXPECT_FALSE(validate_json_plain("}", v));
+	EXPECT_FALSE(validate_json_plain("}{", v));
+	EXPECT_FALSE(validate_json_plain("{null}", v));
+	EXPECT_FALSE(validate_json_plain("{{}}", v));
+	EXPECT_FALSE(validate_json_plain("{[}]", v));
+	EXPECT_FALSE(validate_json_plain("{\"s\"}", v));
 }
 
 TEST_F(Json, ObjectWithKeyword)

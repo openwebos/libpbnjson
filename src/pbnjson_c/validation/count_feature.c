@@ -27,18 +27,17 @@ static void _release(Feature *f)
 	g_free(n);
 }
 
-static bool _apply(Feature *f, Validator *v)
+static Validator* apply(Feature *f, Validator *v)
 {
-	CountFeature *n = (CountFeature *) f;
-	assert(n->apply_func);
-	n->apply_func(v, n->count);
-	return true;
+	CountFeature *c = (CountFeature *) f;
+	assert(c && c->apply_func);
+	return c->apply_func(v, c->count);
 }
 
 static FeatureVtable count_feature_vtable =
 {
 	.release = _release,
-	.apply = _apply,
+	.apply = apply,
 };
 
 CountFeature* count_feature_new(CountFeatureFunc apply_func)

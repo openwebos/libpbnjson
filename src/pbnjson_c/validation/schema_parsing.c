@@ -179,21 +179,19 @@ static void _apply_features(char const *key, Validator *v, void *ctxt)
 	if (!head)
 		return;
 
-	Validator *vcur = s->type_validator;
-
 	// if there is no validator for features to apply (aka no types was defined in schema)
 	// create combined types validator that allow all types
-	if (!vcur)
+	if (!s->type_validator)
+	{
 		s->type_validator = (Validator *) combined_types_validator_new();
+		combined_types_validator_fill_all_types((CombinedTypesValidator *) s->type_validator);
+	}
 
 	while (head)
 	{
-		feature_apply((Feature *) head->data, s->type_validator);
+		s->type_validator = feature_apply((Feature *) head->data, s->type_validator);
 		head = g_slist_next(head);
 	}
-
-	if (!vcur)
-		combined_types_validator_fill_all_types((CombinedTypesValidator *) s->type_validator);
 }
 
 static void _collect_uri_enter(char const *key, Validator *v, void *ctxt)

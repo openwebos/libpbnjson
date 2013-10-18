@@ -29,18 +29,17 @@ static void _release(Feature *f)
 	g_free(n);
 }
 
-static bool _apply(Feature *f, Validator *v)
+static Validator* apply(Feature *f, Validator *v)
 {
 	NumberFeature *n = (NumberFeature *) f;
-	assert(n->apply_func);
-	n->apply_func(v, &n->value);
-	return true;
+	assert(n && n->apply_func);
+	return n->apply_func(v, &n->value);
 }
 
 static FeatureVtable number_feature_vtable =
 {
 	.release = _release,
-	.apply = _apply,
+	.apply = apply,
 };
 
 NumberFeature* number_feature_new(char const *str, size_t len,

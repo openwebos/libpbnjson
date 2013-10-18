@@ -60,11 +60,12 @@ static Validator *_resolve_reference(Reference *r, UriResolver *uri_resolver)
 	return r->validator;
 }
 
-static void set_default(Validator *v, jvalue_ref def_value)
+static Validator* set_default(Validator *v, jvalue_ref def_value)
 {
 	Reference *r = (Reference *) v;
 	j_release(&r->def_value);
 	r->def_value = jvalue_copy(def_value);
+	return v;
 }
 
 static jvalue_ref get_default(Validator *v, ValidationState *s)

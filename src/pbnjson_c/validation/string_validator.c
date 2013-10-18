@@ -66,6 +66,17 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 	return res;
 }
 
+static bool check_generic(Validator *v, ValidationEvent const *e, ValidationState *s, void *ctxt)
+{
+	validation_state_pop_validator(s);
+	if (e->type != EV_STR)
+	{
+		validation_state_notify_error(s, VEC_NOT_STRING, ctxt);
+		return false;
+	}
+	return true;
+}
+
 static Validator* ref(Validator *validator)
 {
 	StringValidator *v = (StringValidator *) validator;
@@ -81,23 +92,26 @@ static void unref(Validator *validator)
 	string_validator_release(v);
 }
 
-static void _set_max_length(Validator *v, size_t max_length)
+static Validator* set_max_length(Validator *v, size_t max_length)
 {
 	StringValidator *s = (StringValidator *) v;
 	string_validator_add_max_length_constraint(s, max_length);
+	return v;
 }
 
-static void _set_min_length(Validator *v, size_t min_length)
+static Validator* set_min_length(Validator *v, size_t min_length)
 {
 	StringValidator *s = (StringValidator *) v;
 	string_validator_add_min_length_constraint(s, min_length);
+	return v;
 }
 
-static void set_default(Validator *validator, jvalue_ref def_value)
+static Validator* set_default(Validator *validator, jvalue_ref def_value)
 {
 	StringValidator *v = (StringValidator *) validator;
 	j_release(&v->def_value);
 	v->def_value = jvalue_copy(def_value);
+	return validator;
 }
 
 static jvalue_ref get_default(Validator *validator, ValidationState *s)
@@ -106,23 +120,47 @@ static jvalue_ref get_default(Validator *validator, ValidationState *s)
 	return v->def_value;
 }
 
-static void _dump_enter(char const *key, Validator *v, void *ctxt)
+static Validator* set_max_length_generic(Validator *v, size_t max_length)
+{
+	return set_max_length(&string_validator_new()->base, max_length);
+}
+
+static Validator* set_min_length_generic(Validator *v, size_t min_length)
+{
+	return set_min_length(&string_validator_new()->base, min_length);
+}
+
+static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
+{
+	return set_default(&string_validator_new()->base, def_value);
+}
+
+static void dump_enter(char const *key, Validator *v, void *ctxt)
 {
 	if (key)
 		fprintf((FILE *) ctxt, "%s:", key);
 	fprintf((FILE *) ctxt, "(s)");
 }
 
+static ValidatorVtable generic_string_vtable =
+{
+	.check = check_generic,
+	.set_string_max_length = set_max_length_generic,
+	.set_string_min_length = set_min_length_generic,
+	.set_default = set_default_generic,
+	.dump_enter = dump_enter,
+};
+
 static ValidatorVtable string_vtable =
 {
 	.check = _check,
 	.ref = ref,
 	.unref = unref,
-	.set_string_max_length = _set_max_length,
-	.set_string_min_length = _set_min_length,
+	.set_string_max_length = set_max_length,
+	.set_string_min_length = set_min_length,
 	.set_default = set_default,
 	.get_default = get_default,
-	.dump_enter = _dump_enter,
+	.dump_enter = dump_enter,
 };
 
 StringValidator* string_validator_new(void)
@@ -156,4 +194,16 @@ void string_validator_add_expected_value(StringValidator *v, StringSpan *span)
 {
 	g_free(v->expected_value);
 	v->expected_value = g_strndup(span->str, span->str_len);
+}
+
+static Validator STRING_VALIDATOR_IMPL =
+{
+	.vtable = &generic_string_vtable,
+};
+
+Validator *STRING_VALIDATOR_GENERIC = &STRING_VALIDATOR_IMPL;
+
+Validator* string_validator_instance(void)
+{
+	return STRING_VALIDATOR_GENERIC;
 }

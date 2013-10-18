@@ -45,11 +45,11 @@
 struct InstanceTypeFactory { char const *name; Validator *(*create)(void); ValidatorType type; };
 
 %%
-any,            generic_validator_new,  V_ANY
-array,          array_validator_new,    V_ARR
-boolean,        boolean_validator_new,  V_BOOL
-integer,        integer_validator_new,  V_NUM
-null,           null_validator_new,     V_NULL
-number,         number_validator_new,   V_NUM
-object,         object_validator_new,   V_OBJ
-string,         string_validator_new,   V_STR
+any,            generic_validator_instance, V_ANY
+array,          array_validator_instance,   V_ARR
+boolean,        boolean_validator_instance, V_BOOL
+integer,        integer_validator_instance, V_INT
+null,           null_validator_instance,    V_NULL
+number,         number_validator_instance,  V_NUM
+object,         object_validator_instance,  V_OBJ
+string,         string_validator_instance,  V_STR

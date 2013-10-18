@@ -76,10 +76,7 @@ TEST_F(Parser, Null)
 	char const *const SCHEMA = "{\"type\": \"null\"}";
 	v = parse_schema_bare(SCHEMA);
 	ASSERT_TRUE(v != NULL);
-	// For now, non-static instance on null validator is created during parsing
-	// in order to store default value
-	// TODO: better to use the static instance unless the opposite is really needed
-	//EXPECT_TRUE(NULL_VALIDATOR == v);
+	EXPECT_TRUE(NULL_VALIDATOR == v);
 }
 
 TEST_F(Parser, SyntaxError)

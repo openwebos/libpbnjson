@@ -29,8 +29,9 @@ extern "C" {
  *
  * @param[in] v Validator to apply the feature to.
  * @param[in] value Value to apply.
+ * @return Validator with feature applied
  */
-typedef void (*BooleanFeatureFunc)(Validator *v, bool value);
+typedef Validator* (*BooleanFeatureFunc)(Validator *v, bool value);
 
 typedef struct _BooleanFeature
 {

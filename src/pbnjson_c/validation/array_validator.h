@@ -57,6 +57,9 @@ typedef struct _ArrayValidator
 
 //_Static_assert(offsetof(ArrayValidator, base) == 0, "");
 
+/** @brief Generic array validator. Checks only value type. */
+Validator* array_validator_instance();
+
 /** @brief Constructor: allocate and initialize an array validator. */
 ArrayValidator* array_validator_new();
 

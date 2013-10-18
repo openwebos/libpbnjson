@@ -39,14 +39,11 @@ typedef struct _GenericValidator
 /** @brief Static instance of a generic validator. */
 extern Validator *GENERIC_VALIDATOR;
 
+/** @brief Getter of static instance */
+Validator *generic_validator_instance(void);
+
 /** @brief Constructor: allocate and initialize a new generic validator. */
 GenericValidator *generic_validator_new(void);
-
-/** @brief Increase reference count. */
-Validator *generic_validator_ref(Validator *v);
-
-/** @brief Decrease reference count. */
-void generic_validator_unref(Validator *v);
 
 #ifdef __cplusplus
 }

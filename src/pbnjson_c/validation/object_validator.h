@@ -62,6 +62,9 @@ typedef struct _ObjectValidator
 
 //_Static_assert(offsetof(GenericValidator, base) == 0, "");
 
+/** @brief Generic object validator. Checks only value type */
+Validator* object_validator_instance(void);
+
 /** @brief Constructor: allocate and initialize new object validator. */
 ObjectValidator* object_validator_new(void);
 

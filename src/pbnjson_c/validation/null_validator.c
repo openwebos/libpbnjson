@@ -38,17 +38,23 @@ static void unref(Validator *validator)
 	g_free(v);
 }
 
-static void set_default(Validator *validator, jvalue_ref def_value)
+static Validator* set_default(Validator *validator, jvalue_ref def_value)
 {
 	NullValidator *v = (NullValidator *) validator;
 	j_release(&v->def_value);
 	v->def_value = jvalue_copy(def_value);
+	return validator;
 }
 
 static jvalue_ref get_default(Validator *validator, ValidationState *s)
 {
 	NullValidator *v = (NullValidator *) validator;
 	return v->def_value;
+}
+
+static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
+{
+	return set_default(&null_validator_new()->base, def_value);
 }
 
 static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
@@ -62,6 +68,7 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 static ValidatorVtable generic_null_vtable =
 {
 	.check = _check,
+	.set_default = set_default_generic,
 };
 
 static ValidatorVtable null_vtable =
@@ -86,4 +93,9 @@ NullValidator *null_validator_new(void)
 	v->ref_count = 1;
 	validator_init(&v->base, &null_vtable);
 	return v;
+}
+
+Validator *null_validator_instance(void)
+{
+	return NULL_VALIDATOR;
 }

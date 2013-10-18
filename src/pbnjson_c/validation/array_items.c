@@ -36,17 +36,16 @@ static void _release(Feature *f)
 	g_free(a);
 }
 
-static bool _apply(Feature *f, Validator *v)
+static Validator* apply(Feature *f, Validator *v)
 {
-	ArrayItems *a = (ArrayItems *) f;
-	validator_set_array_items(v, a);
-	return true;
+	assert(f);
+	return validator_set_array_items(v, (ArrayItems *) f);
 }
 
 static FeatureVtable array_items_vtable =
 {
 	.release = _release,
-	.apply = _apply,
+	.apply = apply,
 };
 
 ArrayItems* array_items_new(void)

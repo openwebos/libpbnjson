@@ -41,6 +41,9 @@ typedef struct _StringValidator
 
 //_Static_assert(offsetof(StringValidator, base) == 0, "Addresses of StringValidator and StringValidator.base should be equal");
 
+/** @brief Generic string validator. Checks only value type. */
+Validator* string_validator_instance();
+
 /** @brief Constructor */
 StringValidator* string_validator_new();
 

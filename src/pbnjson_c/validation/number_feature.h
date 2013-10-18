@@ -31,8 +31,9 @@ typedef struct _Validator Validator;
  *
  * @param[in] v Validator to apply the feature to.
  * @param[in] n Number to apply
+ * @return Validator with feature applied
  */
-typedef void (*NumberFeatureFunc)(Validator *v, Number *n);
+typedef Validator* (*NumberFeatureFunc)(Validator *v, Number *n);
 
 
 /** @brief Number feature class */

@@ -30,17 +30,16 @@ static void _release(Feature *f)
 	g_free(o);
 }
 
-static bool _apply(Feature *f, Validator *v)
+static Validator* apply(Feature *f, Validator *v)
 {
-	ObjectRequired *o = (ObjectRequired *) f;
-	validator_set_object_required(v, o);
-	return true;
+	assert(f);
+	return validator_set_object_required(v, (ObjectRequired *) f);
 }
 
 static FeatureVtable object_required_vtable =
 {
 	.release = _release,
-	.apply = _apply,
+	.apply = apply,
 };
 
 ObjectRequired* object_required_new(void)

@@ -28,8 +28,9 @@ extern "C" {
  *
  * @param[in] v Validator to apply to
  * @param[in] additional Validator for "additionalProperties" or "additionalItems"
+ * @return Validator with feature applied
  */
-typedef void (*AdditionalFeatureFunc)(Validator *v, Validator *additional);
+typedef Validator* (*AdditionalFeatureFunc)(Validator *v, Validator *additional);
 
 /**
  * AdditionalFeature contains parsed "additionalProperties" or "additionalItems"

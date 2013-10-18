@@ -145,22 +145,22 @@ typedef struct _ValidatorVtable
 	 *  @{
 	 */
 
-	void (*set_object_properties)(Validator *v, ObjectProperties *p);
-	void (*set_object_additional_properties)(Validator *v, Validator *additional);
-	void (*set_object_required)(Validator *v, ObjectRequired *p);
-	void (*set_object_max_properties)(Validator *v, size_t max);
-	void (*set_object_min_properties)(Validator *v, size_t min);
-	void (*set_array_items)(Validator *v, ArrayItems *a);
-	void (*set_array_additional_items)(Validator *v, Validator *additional);
-	void (*set_array_max_items)(Validator *v, size_t maxItems);
-	void (*set_array_min_items)(Validator *v, size_t minItems);
-	void (*set_number_maximum)(Validator *v, Number *n);
-	void (*set_number_maximum_exclusive)(Validator *v, bool exclusive);
-	void (*set_number_minimum)(Validator *v, Number *n);
-	void (*set_number_minimum_exclusive)(Validator *v, bool exclusive);
-	void (*set_string_max_length)(Validator *v, size_t maxLength);
-	void (*set_string_min_length)(Validator *v, size_t minLength);
-	void (*set_default)(Validator *v, jvalue_ref def_value);
+	Validator* (*set_object_properties)(Validator *v, ObjectProperties *p);
+	Validator* (*set_object_additional_properties)(Validator *v, Validator *additional);
+	Validator* (*set_object_required)(Validator *v, ObjectRequired *p);
+	Validator* (*set_object_max_properties)(Validator *v, size_t max);
+	Validator* (*set_object_min_properties)(Validator *v, size_t min);
+	Validator* (*set_array_items)(Validator *v, ArrayItems *a);
+	Validator* (*set_array_additional_items)(Validator *v, Validator *additional);
+	Validator* (*set_array_max_items)(Validator *v, size_t maxItems);
+	Validator* (*set_array_min_items)(Validator *v, size_t minItems);
+	Validator* (*set_number_maximum)(Validator *v, Number *n);
+	Validator* (*set_number_maximum_exclusive)(Validator *v, bool exclusive);
+	Validator* (*set_number_minimum)(Validator *v, Number *n);
+	Validator* (*set_number_minimum_exclusive)(Validator *v, bool exclusive);
+	Validator* (*set_string_max_length)(Validator *v, size_t maxLength);
+	Validator* (*set_string_min_length)(Validator *v, size_t minLength);
+	Validator* (*set_default)(Validator *v, jvalue_ref def_value);
 	jvalue_ref (*get_default)(Validator *v, ValidationState *s);
 
 	/** @} */
@@ -247,22 +247,22 @@ void _validator_dump_enter(char const *key, Validator *v, void *ctxt);
 void _validator_dump_exit(char const *key, Validator *v, void *ctxt, Validator **new_v);
 void validator_dump(Validator *v, FILE *f);
 
-void validator_set_object_properties(Validator *v, ObjectProperties *p);
-void validator_set_object_additional_properties(Validator *v, Validator *additional);
-void validator_set_object_required(Validator *v, ObjectRequired *p);
-void validator_set_object_max_properties(Validator *v, size_t max);
-void validator_set_object_min_properties(Validator *v, size_t min);
-void validator_set_array_items(Validator *v, ArrayItems *a);
-void validator_set_array_additional_items(Validator *v, Validator *additional);
-void validator_set_array_max_items(Validator *v, size_t maxItems);
-void validator_set_array_min_items(Validator *v, size_t minItems);
-void validator_set_number_maximum(Validator *v, Number *n);
-void validator_set_number_maximum_exclusive(Validator *v, bool exclusive);
-void validator_set_number_minimum(Validator *v, Number *n);
-void validator_set_number_minimum_exclusive(Validator *v, bool exclusive);
-void validator_set_string_max_length(Validator *v, size_t maxLength);
-void validator_set_string_min_length(Validator *v, size_t minLength);
-void validator_set_default(Validator *v, jvalue_ref def_value);
+Validator* validator_set_object_properties(Validator *v, ObjectProperties *p);
+Validator* validator_set_object_additional_properties(Validator *v, Validator *additional);
+Validator* validator_set_object_required(Validator *v, ObjectRequired *p);
+Validator* validator_set_object_max_properties(Validator *v, size_t max);
+Validator* validator_set_object_min_properties(Validator *v, size_t min);
+Validator* validator_set_array_items(Validator *v, ArrayItems *a);
+Validator* validator_set_array_additional_items(Validator *v, Validator *additional);
+Validator* validator_set_array_max_items(Validator *v, size_t maxItems);
+Validator* validator_set_array_min_items(Validator *v, size_t minItems);
+Validator* validator_set_number_maximum(Validator *v, Number *n);
+Validator* validator_set_number_maximum_exclusive(Validator *v, bool exclusive);
+Validator* validator_set_number_minimum(Validator *v, Number *n);
+Validator* validator_set_number_minimum_exclusive(Validator *v, bool exclusive);
+Validator* validator_set_string_max_length(Validator *v, size_t maxLength);
+Validator* validator_set_string_min_length(Validator *v, size_t minLength);
+Validator* validator_set_default(Validator *v, jvalue_ref def_value);
 jvalue_ref validator_get_default(Validator *v, ValidationState *s);
 
 /** @} */

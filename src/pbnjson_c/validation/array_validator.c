@@ -83,13 +83,6 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 		return res;
 	}
 
-	// FIXME: Does YAJL verify basic layout?
-	//if (e->type == EV_OBJ_KEY)
-	//{
-	//	validation_state_pop_validator(s);
-	//	return false;
-	//}
-
 	++my_ctxt->items_count;
 
 	if (varr->max_items != -1 && my_ctxt->items_count > varr->max_items)
@@ -112,6 +105,50 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 	validation_state_notify_error(s, VEC_ARRAY_TOO_LONG, c);
 	validation_state_pop_validator(s);
 	return false;
+}
+
+static bool check_generic(Validator *v, ValidationEvent const *e, ValidationState *s, void *ctxt)
+{
+	// depth is used to track when current and all nested arrays are closed
+	// layout checks done by YAJL
+	int depth = GPOINTER_TO_INT(validation_state_get_context(s));
+	switch (e->type)
+	{
+	case EV_ARR_START:
+		validation_state_set_context(s, GINT_TO_POINTER(++depth));
+		return true;
+	case EV_ARR_END:
+		validation_state_set_context(s, GINT_TO_POINTER(--depth));
+		if (!depth)
+			// all arrays are closed. Last one was array validated by this object
+			// so all validations are passed
+			validation_state_pop_validator(s);
+		return true;
+	default:
+		if (!depth)
+		{
+			// if there is non ARR_START event when depth is zero (a.k.a. basic array is not started yet)
+			// than it's not array at all.
+			// return error
+			validation_state_notify_error(s, VEC_NOT_ARRAY, ctxt);
+			validation_state_pop_validator(s);
+			return false;
+		}
+
+		// if basic array is started (depth is non-zero) we don't care. All is fine
+		return true;
+	}
+}
+
+static bool init_state_generic(Validator *v, ValidationState *s)
+{
+	validation_state_push_context(s, GINT_TO_POINTER(0));
+	return true;
+}
+
+static void cleanup_state_generic(Validator *v, ValidationState *s)
+{
+	validation_state_pop_context(s);
 }
 
 static bool _init_state(Validator *v, ValidationState *s)
@@ -143,45 +180,75 @@ static void unref(Validator *validator)
 	array_validator_release(v);
 }
 
-static void _set_items(Validator *v, ArrayItems *items)
+static Validator* set_items(Validator *v, ArrayItems *items)
 {
 	ArrayValidator *a = (ArrayValidator *) v;
 	if (a->items)
 		array_items_unref(a->items);
 	a->items = array_items_ref(items);
+	return v;
 }
 
-static void _set_additional_items(Validator *v, Validator *additional)
+static Validator* set_additional_items(Validator *v, Validator *additional)
 {
 	ArrayValidator *a = (ArrayValidator *) v;
 	if (a->additional_items)
 		validator_unref(a->additional_items);
 	a->additional_items = validator_ref(additional);
+	return v;
 }
 
-static void _set_max_items(Validator *v, size_t max)
+static Validator* set_max_items(Validator *v, size_t max)
 {
 	ArrayValidator *a = (ArrayValidator *) v;
 	array_validator_set_max_items(a, max);
+	return v;
 }
 
-static void _set_min_items(Validator *v, size_t min)
+static Validator* set_min_items(Validator *v, size_t min)
 {
 	ArrayValidator *a = (ArrayValidator *) v;
 	array_validator_set_min_items(a, min);
+	return v;
 }
 
-static void set_default(Validator *v, jvalue_ref def_value)
+static Validator* set_default(Validator *v, jvalue_ref def_value)
 {
 	ArrayValidator *a = (ArrayValidator *) v;
 	j_release(&a->def_value);
 	a->def_value = jvalue_copy(def_value);
+	return v;
 }
 
 static jvalue_ref get_default(Validator *v, ValidationState *s)
 {
 	ArrayValidator *a = (ArrayValidator *) v;
 	return a->def_value;
+}
+
+static Validator* set_items_generic(Validator *v, ArrayItems *items)
+{
+	return set_items(&array_validator_new()->base, items);
+}
+
+static Validator* set_additional_items_generic(Validator *v, Validator *additional)
+{
+	return set_additional_items(&array_validator_new()->base, additional);
+}
+
+static Validator* set_max_items_generic(Validator *v, size_t max)
+{
+	return set_max_items(&array_validator_new()->base, max);
+}
+
+static Validator* set_min_items_generic(Validator *v, size_t min)
+{
+	return set_min_items(&array_validator_new()->base, min);
+}
+
+static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
+{
+	return set_default(&array_validator_new()->base, def_value);
 }
 
 static void _visit(Validator *v,
@@ -205,17 +272,31 @@ static void _visit(Validator *v,
 		array_items_visit(a->items, enter_func, exit_func, ctxt);
 }
 
-static void _dump_enter(char const *key, Validator *v, void *ctxt)
+static void dump_enter(char const *key, Validator *v, void *ctxt)
 {
 	if (key)
 		fprintf((FILE *) ctxt, "%s:", key);
 	fprintf((FILE *) ctxt, "[");
 }
 
-static void _dump_exit(char const *key, Validator *v, void *ctxt, Validator **new_v)
+static void dump_exit(char const *key, Validator *v, void *ctxt, Validator **new_v)
 {
 	fprintf((FILE *) ctxt, "]");
 }
+
+static ValidatorVtable generic_array_vtable =
+{
+	.check = check_generic,
+	.init_state = init_state_generic,
+	.cleanup_state = cleanup_state_generic,
+	.set_array_items = set_items_generic,
+	.set_array_additional_items = set_additional_items_generic,
+	.set_array_max_items = set_max_items_generic,
+	.set_array_min_items = set_min_items_generic,
+	.set_default = set_default_generic,
+	.dump_enter = dump_enter,
+	.dump_exit = dump_exit,
+};
 
 ValidatorVtable array_vtable =
 {
@@ -225,14 +306,14 @@ ValidatorVtable array_vtable =
 	.ref = ref,
 	.unref = unref,
 	.visit = _visit,
-	.set_array_items = _set_items,
-	.set_array_additional_items = _set_additional_items,
-	.set_array_max_items = _set_max_items,
-	.set_array_min_items = _set_min_items,
+	.set_array_items = set_items,
+	.set_array_additional_items = set_additional_items,
+	.set_array_max_items = set_max_items,
+	.set_array_min_items = set_min_items,
 	.set_default = set_default,
 	.get_default = get_default,
-	.dump_enter = _dump_enter,
-	.dump_exit = _dump_exit,
+	.dump_enter = dump_enter,
+	.dump_exit = dump_exit,
 };
 
 ArrayValidator* array_validator_new(void)
@@ -270,4 +351,16 @@ void array_validator_set_min_items(ArrayValidator *a, size_t min)
 	if (a->max_items == -1)
 		a->max_items = EMPTY_LENGTH;
 	a->min_items = min;
+}
+
+static Validator ARRAY_VALIDATOR_IMPL =
+{
+	.vtable = &generic_array_vtable,
+};
+
+Validator *ARRAY_VALIDATOR_GENERIC = &ARRAY_VALIDATOR_IMPL;
+
+Validator* array_validator_instance(void)
+{
+	return ARRAY_VALIDATOR_GENERIC;
 }

@@ -53,8 +53,14 @@ typedef struct _NumberValidator
 
 //_Static_assert(offsetof(NumberValidator, base) == 0, "Addresses of NumberValidator and NumberValidator.base should be equal");
 
+/** @brief Generic number validator. Checks only value type */
+Validator* number_validator_instance();
+
 /** @brief Constructor. */
 NumberValidator* number_validator_new();
+
+/** @brief Generic integer validator. Checks only value type */
+Validator* integer_validator_instance();
 
 /** @brief Constructor for integer validator. */
 NumberValidator* integer_validator_new();

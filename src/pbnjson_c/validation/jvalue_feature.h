@@ -31,8 +31,9 @@ typedef struct jvalue *jvalue_ref;
  *
  * @param[in] v Validator to apply the feature to
  * @param[in] value JSON representation to apply
+ * @return Validator with feture applied
  */
-typedef void (*JvalueFeatureFunc)(Validator *v, jvalue_ref value);
+typedef Validator* (*JvalueFeatureFunc)(Validator *v, jvalue_ref value);
 
 /** @brief JSON value feature */
 typedef struct _JvalueFeature

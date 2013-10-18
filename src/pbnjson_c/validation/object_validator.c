@@ -109,13 +109,6 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 		return true;
 	}
 
-	//FIXME: Does YAJL do basic layout validation?
-	//if (e->type != EV_OBJ_KEY)
-	//{
-	//	validation_state_pop_validator(s);
-	//	return false;
-	//}
-
 	char key[e->value.string.len + 1];
 	strncpy(key, e->value.string.ptr, e->value.string.len);
 	key[e->value.string.len] = 0;
@@ -164,6 +157,52 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 	return true;
 }
 
+static bool check_generic(Validator *v, ValidationEvent const *e, ValidationState *s, void *ctxt)
+{
+	// depth is used to track when current and all nested objects are closed
+	int depth = GPOINTER_TO_INT(validation_state_get_context(s));
+
+	// basic layout validation is done by YAJL
+	// so assume that object structure is correct
+	switch (e->type)
+	{
+	case EV_OBJ_START:
+		validation_state_set_context(s, GINT_TO_POINTER(++depth));
+		return true;
+	case EV_OBJ_END:
+		validation_state_set_context(s, GINT_TO_POINTER(--depth));
+		if (!depth)
+			// all objects are closed. Last one was object validated by this validator
+			validation_state_pop_validator(s);
+		return true;
+	default:
+		if (!depth)
+		{
+			// if there is non OBJ_START event when depth is zero (a.k.a. basic object is not started yet)
+			// than it is not object at all.
+			// return error
+			validation_state_notify_error(s, VEC_NOT_OBJECT, ctxt);
+			validation_state_pop_validator(s);
+			return false;
+		}
+
+		// if basic array is started (depth is non-zero) we don't care. All is fine
+		// Again, layout checks are done by YAJL
+		return true;
+	}
+}
+
+static bool init_state_generic(Validator *v, ValidationState *s)
+{
+	validation_state_push_context(s, GINT_TO_POINTER(0));
+	return true;
+}
+
+static void cleanup_state_generic(Validator *v, ValidationState *s)
+{
+	validation_state_pop_context(s);
+}
+
 static bool _init_state(Validator *v, ValidationState *s)
 {
 	MyContext *my_ctxt = g_slice_new0(MyContext);
@@ -195,53 +234,89 @@ static void unref(Validator *validator)
 	object_validator_release(v);
 }
 
-static void _set_properties(Validator *v, ObjectProperties *p)
+static Validator* set_properties(Validator *v, ObjectProperties *p)
 {
 	ObjectValidator *o = (ObjectValidator *) v;
 	if (o->properties)
 		object_properties_unref(o->properties);
 	o->properties = object_properties_ref(p);
+	return v;
 }
 
-static void _set_additional_properties(Validator *v, Validator *additional)
+static Validator* set_additional_properties(Validator *v, Validator *additional)
 {
 	ObjectValidator *o = (ObjectValidator *) v;
 	if (o->additional_properties)
 		validator_unref(o->additional_properties);
 	o->additional_properties = validator_ref(additional);
+	return v;
 }
 
-static void _set_required(Validator *v, ObjectRequired *p)
+static Validator* set_required(Validator *v, ObjectRequired *p)
 {
 	ObjectValidator *o = (ObjectValidator *) v;
 	if (o->required)
 		object_required_unref(o->required);
 	o->required = object_required_ref(p);
+	return v;
 }
 
-static void _set_max_properties(Validator *v, size_t max)
+static Validator* set_max_properties(Validator *v, size_t max)
 {
 	ObjectValidator *o = (ObjectValidator *) v;
 	object_validator_set_max_properties(o, max);
+	return v;
 }
 
-static void _set_min_properties(Validator *v, size_t min)
+static Validator* set_min_properties(Validator *v, size_t min)
 {
 	ObjectValidator *o = (ObjectValidator *) v;
 	object_validator_set_min_properties(o, min);
+	return v;
 }
 
-static void set_default(Validator *validator, jvalue_ref def_value)
+static Validator* set_default(Validator *validator, jvalue_ref def_value)
 {
 	ObjectValidator *v = (ObjectValidator *) validator;
 	j_release(&v->def_value);
 	v->def_value = jvalue_copy(def_value);
+	return validator;
 }
 
 static jvalue_ref get_default(Validator *validator, ValidationState *s)
 {
 	ObjectValidator *v = (ObjectValidator *) validator;
 	return v->def_value;
+}
+
+static Validator* set_properties_generic(Validator *v, ObjectProperties *p)
+{
+	return set_properties(&object_validator_new()->base, p);
+}
+
+static Validator* set_additional_properties_generic(Validator *v, Validator *additional)
+{
+	return set_additional_properties(&object_validator_new()->base, additional);
+}
+
+static Validator* set_required_generic(Validator *v, ObjectRequired *p)
+{
+	return set_required(&object_validator_new()->base, p);
+}
+
+static Validator* set_max_properties_generic(Validator *v, size_t max)
+{
+	return set_max_properties(&object_validator_new()->base, max);
+}
+
+static Validator* set_min_properties_generic(Validator *v, size_t min)
+{
+	return set_min_properties(&object_validator_new()->base, min);
+}
+
+static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
+{
+	return set_default(&object_validator_new()->base, def_value);
 }
 
 static void _visit(Validator *v,
@@ -265,17 +340,32 @@ static void _visit(Validator *v,
 		object_properties_visit(o->properties, enter_func, exit_func, ctxt);
 }
 
-static void _dump_enter(char const *key, Validator *v, void *ctxt)
+static void dump_enter(char const *key, Validator *v, void *ctxt)
 {
 	//ObjectValidator *o = (ObjectValidator *) v;
 	fprintf((FILE *) ctxt, "{");
 }
 
-static void _dump_exit(char const *key, Validator *v, void *ctxt, Validator **new_v)
+static void dump_exit(char const *key, Validator *v, void *ctxt, Validator **new_v)
 {
 	//ObjectValidator *o = (ObjectValidator *) v;
 	fprintf((FILE *) ctxt, "}");
 }
+
+static ValidatorVtable generic_object_vtable =
+{
+	.check = check_generic,
+	.init_state = init_state_generic,
+	.cleanup_state = cleanup_state_generic,
+	.set_object_properties = set_properties_generic,
+	.set_object_additional_properties = set_additional_properties_generic,
+	.set_object_required = set_required_generic,
+	.set_object_max_properties = set_max_properties_generic,
+	.set_object_min_properties = set_min_properties_generic,
+	.set_default = set_default_generic,
+	.dump_enter = dump_enter,
+	.dump_exit = dump_exit,
+};
 
 ValidatorVtable object_vtable =
 {
@@ -284,16 +374,16 @@ ValidatorVtable object_vtable =
 	.cleanup_state = _cleanup_state,
 	.ref = ref,
 	.unref = unref,
-	.set_object_properties = _set_properties,
-	.set_object_additional_properties = _set_additional_properties,
-	.set_object_required = _set_required,
-	.set_object_max_properties = _set_max_properties,
-	.set_object_min_properties = _set_min_properties,
+	.set_object_properties = set_properties,
+	.set_object_additional_properties = set_additional_properties,
+	.set_object_required = set_required,
+	.set_object_max_properties = set_max_properties,
+	.set_object_min_properties = set_min_properties,
 	.set_default = set_default,
 	.get_default = get_default,
 	.visit = _visit,
-	.dump_enter = _dump_enter,
-	.dump_exit = _dump_exit,
+	.dump_enter = dump_enter,
+	.dump_exit = dump_exit,
 };
 
 ObjectValidator* object_validator_new(void)
@@ -325,4 +415,16 @@ void object_validator_set_max_properties(ObjectValidator *o, size_t max)
 void object_validator_set_min_properties(ObjectValidator *o, size_t min)
 {
 	o->min_properties = min;
+}
+
+static Validator OBJECT_VALIDATOR_IMPL =
+{
+	.vtable = &generic_object_vtable,
+};
+
+Validator *OBJECT_VALIDATOR_GENERIC = &OBJECT_VALIDATOR_IMPL;
+
+Validator* object_validator_instance(void)
+{
+	return OBJECT_VALIDATOR_GENERIC;
 }

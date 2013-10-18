@@ -27,18 +27,17 @@ static void _release(Feature *f)
 	g_free(j);
 }
 
-static bool _apply(Feature *f, Validator *v)
+static Validator* apply(Feature *f, Validator *v)
 {
 	JvalueFeature *j = (JvalueFeature *) f;
-	assert(j->apply_func);
-	j->apply_func(v, j->value);
-	return true;
+	assert(j && j->apply_func);
+	return j->apply_func(v, j->value);
 }
 
 static FeatureVtable jvalue_feature_vtable =
 {
 	.release = _release,
-	.apply = _apply,
+	.apply = apply,
 };
 
 JvalueFeature *jvalue_feature_new(jvalue_ref value, JvalueFeatureFunc apply_func)

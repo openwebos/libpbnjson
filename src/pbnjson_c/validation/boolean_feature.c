@@ -27,18 +27,17 @@ static void _release(Feature *f)
 	g_free(n);
 }
 
-static bool _apply(Feature *f, Validator *v)
+static Validator* apply(Feature *f, Validator *v)
 {
-	BooleanFeature *n = (BooleanFeature *) f;
-	assert(n->apply_func);
-	n->apply_func(v, n->value);
-	return true;
+	BooleanFeature *b = (BooleanFeature *) f;
+	assert(b && b->apply_func);
+	return b->apply_func(v, b->value);
 }
 
 static FeatureVtable boolean_feature_vtable =
 {
 	.release = _release,
-	.apply = _apply,
+	.apply = apply,
 };
 
 BooleanFeature* boolean_feature_new(BooleanFeatureFunc apply_func)
