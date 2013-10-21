@@ -22,6 +22,7 @@
 #include "generic_validator.h"
 #include "array_items.h"
 #include "validation_api.h"
+#include <jobject.h>
 #include <glib.h>
 #include <string.h>
 
@@ -127,9 +128,18 @@ static void _cleanup_state(Validator *v, ValidationState *s)
 	g_slice_free(MyContext, c);
 }
 
-static void _release(Validator *validator)
+static Validator* ref(Validator *validator)
 {
 	ArrayValidator *v = (ArrayValidator *) validator;
+	++v->ref_count;
+	return validator;
+}
+
+static void unref(Validator *validator)
+{
+	ArrayValidator *v = (ArrayValidator *) validator;
+	if (--v->ref_count)
+		return;
 	array_validator_release(v);
 }
 
@@ -159,6 +169,19 @@ static void _set_min_items(Validator *v, size_t min)
 {
 	ArrayValidator *a = (ArrayValidator *) v;
 	array_validator_set_min_items(a, min);
+}
+
+static void set_default(Validator *v, jvalue_ref def_value)
+{
+	ArrayValidator *a = (ArrayValidator *) v;
+	j_release(&a->def_value);
+	a->def_value = jvalue_copy(def_value);
+}
+
+static jvalue_ref get_default(Validator *v, ValidationState *s)
+{
+	ArrayValidator *a = (ArrayValidator *) v;
+	return a->def_value;
 }
 
 static void _visit(Validator *v,
@@ -199,12 +222,15 @@ ValidatorVtable array_vtable =
 	.check = _check,
 	.init_state = _init_state,
 	.cleanup_state = _cleanup_state,
-	.release = _release,
+	.ref = ref,
+	.unref = unref,
 	.visit = _visit,
 	.set_array_items = _set_items,
 	.set_array_additional_items = _set_additional_items,
 	.set_array_max_items = _set_max_items,
 	.set_array_min_items = _set_min_items,
+	.set_default = set_default,
+	.get_default = get_default,
 	.dump_enter = _dump_enter,
 	.dump_exit = _dump_exit,
 };
@@ -214,10 +240,11 @@ ArrayValidator* array_validator_new(void)
 	ArrayValidator *self = g_new0(ArrayValidator, 1);
 	if (!self)
 		return NULL;
+	self->ref_count = 1;
 	self->max_items = -1;
 	self->min_items = -1;
 	validator_init(&self->base, &array_vtable);
-	self->additional_items = validator_ref(GENERIC_VALIDATOR);
+	self->additional_items = GENERIC_VALIDATOR;
 	return self;
 }
 
@@ -229,6 +256,7 @@ void array_validator_release(ArrayValidator *v)
 	if (v->additional_items)
 		validator_unref(v->additional_items);
 
+	j_release(&v->def_value);
 	g_free(v);
 }
 

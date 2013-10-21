@@ -29,13 +29,15 @@ typedef struct _StringSpan StringSpan;
 /** @brief Reference validator class */
 typedef struct _Reference
 {
-	Validator base;        /**< Base class */
+	Validator base;        /**< @brief Base class */
+	unsigned ref_count;    /**< @brief Reference count */
+	jvalue_ref def_value;  /**< @brief Default value attached to this validator */
 
-	char *target;          /**< Original parsed value like "other.json#/definitions/a" */
+	char *target;          /**< @brief Original parsed value like "other.json#/definitions/a" */
 
-	char const *document;  /**< Document part of the reference "other.json", owned by UriResolver */
-	char *fragment;        /**< Fragment part of the reference "#/definitions/a" */
-	Validator *validator;  /**< Resolved validator, owned by UriResolver */
+	char const *document;  /**< @brief Document part of the reference "other.json", owned by UriResolver */
+	char *fragment;        /**< @brief Fragment part of the reference "#/definitions/a" */
+	Validator *validator;  /**< @brief Resolved validator, owned by UriResolver */
 } Reference;
 
 /** @brief Constructor */

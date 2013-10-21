@@ -36,6 +36,5 @@ TEST(Validator, Empty)
 {
 	Foo foo;
 	validator_init(&foo, &foo_vtable);
-	ASSERT_EQ(1, foo.ref_count);
 	ASSERT_EQ(&foo_vtable, foo.vtable);
 }

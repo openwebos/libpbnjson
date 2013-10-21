@@ -21,14 +21,25 @@
 #include "validation_state.h"
 #include "uri_resolver.h"
 #include "uri_scope.h"
+#include <jobject.h>
 #include <glib.h>
 #include <assert.h>
 #include <stdio.h>
 
 
-static void _release(Validator *v)
+static Validator* ref(Validator *v)
 {
 	Reference *r = (Reference *) v;
+	++r->ref_count;
+	return v;
+}
+
+static void unref(Validator *v)
+{
+	Reference *r = (Reference *) v;
+	if (--r->ref_count)
+		return;
+	j_release(&r->def_value);
 	g_free(r->target);
 	g_free(r->fragment);
 	g_free(r);
@@ -49,13 +60,20 @@ static Validator *_resolve_reference(Reference *r, UriResolver *uri_resolver)
 	return r->validator;
 }
 
-static jvalue_ref _get_default(Validator *v, ValidationState *s)
+static void set_default(Validator *v, jvalue_ref def_value)
 {
-	if (!s->uri_resolver)
-		return v->def_value;
 	Reference *r = (Reference *) v;
+	j_release(&r->def_value);
+	r->def_value = jvalue_copy(def_value);
+}
+
+static jvalue_ref get_default(Validator *v, ValidationState *s)
+{
+	Reference *r = (Reference *) v;
+	if (!s->uri_resolver)
+		return r->def_value;
 	if (!_resolve_reference(r, s->uri_resolver))
-		return v->def_value;
+		return r->def_value;
 	return validator_get_default(r->validator, s);
 }
 
@@ -128,8 +146,10 @@ static void _dump_enter(char const *key, Validator *v, void *ctxt)
 
 static ValidatorVtable reference_vtable =
 {
-	.release = _release,
-	.get_default = _get_default,
+	.ref = ref,
+	.unref = unref,
+	.set_default = set_default,
+	.get_default = get_default,
 	.init_state = _init_state,
 	.reactivate = _reactivate,
 	.check = _check,
@@ -143,6 +163,7 @@ Reference *reference_new(void)
 	Reference *r = g_new0(Reference, 1);
 	if (!r)
 		return NULL;
+	r->ref_count = 1;
 	validator_init(&r->base, &reference_vtable);
 	return r;
 }

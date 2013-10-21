@@ -36,6 +36,9 @@ typedef struct _ArrayValidator
 	/** @brief Base class is Validator */
 	Validator base;
 
+	/**< @brief Reference count */
+	unsigned ref_count;
+
 	/** @brief Items of the array from "items": [...]. */
 	ArrayItems *items;
 
@@ -47,6 +50,9 @@ typedef struct _ArrayValidator
 
 	/** @brief Minimal count of items in the array. */
 	int min_items;
+
+	/**< @brief Default value attached to this validator */
+	jvalue_ref def_value;
 } ArrayValidator;
 
 //_Static_assert(offsetof(ArrayValidator, base) == 0, "");

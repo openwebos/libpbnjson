@@ -71,7 +71,7 @@ PARSE_FAILED;
 
 top_schema ::= schema(A).
 {
-	context->validator = A ? A : validator_ref(GENERIC_VALIDATOR);
+	context->validator = A ? A : GENERIC_VALIDATOR;
 }
 
 
@@ -92,7 +92,7 @@ schema(A) ::= OBJ_START
 		SchemaParsing *s = schema_parsing_new();
 		if (s)
 			// No default value is assumed, so use static generic.
-			schema_parsing_set_validator(s, validator_ref(GENERIC_VALIDATOR));
+			schema_parsing_set_validator(s, GENERIC_VALIDATOR);
 		else PARSE_FAILED;
 		A = &s->base;
 	}
@@ -468,7 +468,7 @@ schema_feature(A) ::= KEY_ADDITIONAL_PROPERTIES BOOLEAN(B).
 	AdditionalFeature *f = additional_feature_new(validator_set_object_additional_properties);
 	if (f)
 		additional_feature_set_validator(f, B.boolean
-		                                 ? validator_ref(GENERIC_VALIDATOR)
+		                                 ? GENERIC_VALIDATOR
 		                                 : NULL);
 	else PARSE_FAILED;
 	A = &f->base;
@@ -590,7 +590,7 @@ schema_feature(A) ::= KEY_ADDITIONAL_ITEMS BOOLEAN(B).
 	AdditionalFeature *f = additional_feature_new(validator_set_array_additional_items);
 	if (f)
 		additional_feature_set_validator(f, B.boolean
-		                                    ? validator_ref(GENERIC_VALIDATOR)
+		                                    ? GENERIC_VALIDATOR
 		                                    : NULL);
 	else PARSE_FAILED;
 	A = &f->base;
@@ -738,7 +738,7 @@ enum_list(A) ::= enum_list(B) value_validator(V).
 
 value_validator(A) ::= NULL.
 {
-	A = null_validator_new();
+	A = NULL_VALIDATOR;
 	if (!A) PARSE_FAILED;
 }
 

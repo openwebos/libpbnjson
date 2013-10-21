@@ -40,9 +40,19 @@ static void _release_validator(gpointer data)
 	validator_unref((Validator *) data);
 }
 
-static void _release(Validator *v)
+static Validator* ref(Validator *v)
 {
 	SchemaParsing *s = (SchemaParsing *) v;
+	++s->ref_count;
+	return v;
+}
+
+static void unref(Validator *v)
+{
+	SchemaParsing *s = (SchemaParsing *) v;
+	if (--s->ref_count)
+		return;
+
 	g_slist_free_full(s->features, _release_feature);
 	validator_unref(s->type_validator);
 	definitions_unref(s->definitions);
@@ -114,7 +124,7 @@ static void _combine(char const *key, Validator *v, void *ctxt, Validator **new_
 	    !s->validator_combinators &&
 	    !s->extends)
 	{
-		s->type_validator = validator_ref(GENERIC_VALIDATOR);
+		s->type_validator = GENERIC_VALIDATOR;
 		return;
 	}
 
@@ -238,7 +248,8 @@ static void _dump_exit(char const *key, Validator *v, void *ctxt, Validator **ne
 
 static ValidatorVtable schema_parsing_vtable =
 {
-	.release = _release,
+	.ref = ref,
+	.unref = unref,
 	.visit = _visit,
 	.apply_features = _apply_features,
 	.combine_validators = _combine,
@@ -254,6 +265,7 @@ SchemaParsing* schema_parsing_new(void)
 	SchemaParsing *s = g_new0(SchemaParsing, 1);
 	if (!s)
 		return s;
+	s->ref_count = 1;
 	validator_init(&s->base, &schema_parsing_vtable);
 	return s;
 }

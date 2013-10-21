@@ -20,6 +20,7 @@
 #include "validation_state.h"
 #include "validation_event.h"
 #include "validation_api.h"
+#include <jobject.h>
 
 typedef struct _MyContext
 {
@@ -201,10 +202,32 @@ static void _cleanup_state(Validator *v, ValidationState *s)
 	g_slice_free(MyContext, c);
 }
 
-static void _release(Validator *validator)
+static Validator* ref(Validator *validator)
 {
-	CombinedValidator *a = (CombinedValidator *) validator;
-	combined_validator_release(a);
+	CombinedValidator *v = (CombinedValidator *) validator;
+	++v->ref_count;
+	return validator;
+}
+
+static void unref(Validator *validator)
+{
+	CombinedValidator *v = (CombinedValidator *) validator;
+	if (--v->ref_count)
+		return;
+	combined_validator_release(v);
+}
+
+static void set_default(Validator *validator, jvalue_ref def_value)
+{
+	CombinedValidator *v = (CombinedValidator *) validator;
+	j_release(&v->def_value);
+	v->def_value = jvalue_copy(def_value);
+}
+
+static jvalue_ref get_default(Validator *validator, ValidationState *s)
+{
+	CombinedValidator *v = (CombinedValidator *) validator;
+	return v->def_value;
 }
 
 static void _visit(Validator *v,
@@ -249,8 +272,11 @@ ValidatorVtable combined_vtable =
 	.check = _check,
 	.init_state = _init_state,
 	.cleanup_state = _cleanup_state,
-	.release = _release,
+	.ref = ref,
+	.unref = unref,
 	.visit = _visit,
+	.set_default = set_default,
+	.get_default = get_default,
 	.dump_enter = _dump_enter,
 	.dump_exit = _dump_exit,
 };
@@ -260,6 +286,7 @@ CombinedValidator* combined_validator_new(void)
 	CombinedValidator *self = g_new0(CombinedValidator, 1);
 	if (!self)
 		return NULL;
+	self->ref_count = 1;
 	validator_init(&self->base, &combined_vtable);
 	return self;
 }
@@ -309,6 +336,7 @@ static void _validator_release(gpointer data)
 void combined_validator_release(CombinedValidator *v)
 {
 	g_slist_free_full(v->validators, _validator_release);
+	j_release(&v->def_value);
 	g_free(v);
 }
 

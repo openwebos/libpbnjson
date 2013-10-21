@@ -19,7 +19,6 @@
 #include "validator.h"
 #include "uri_scope.h"
 #include "uri_resolver.h"
-#include <jobject.h>
 #include <assert.h>
 #include <stdio.h>
 
@@ -27,25 +26,25 @@
 void validator_init(Validator *v, ValidatorVtable *vtable)
 {
 	v->vtable = vtable;
-	v->ref_count = 1;
-	v->def_value = NULL;
 }
 
 Validator* validator_ref(Validator *v)
 {
-	if (v)
-		++v->ref_count;
+	if (!v)
+		return NULL;
+	assert(v->vtable);
+	if (v->vtable->ref)
+		return v->vtable->ref(v);
 	return v;
 }
 
 void validator_unref(Validator *v)
 {
-	if (!v || --v->ref_count)
+	if (!v)
 		return;
-	j_release(&v->def_value);
-	if (!v->vtable || !v->vtable->release)
-		return;
-	v->vtable->release(v);
+	assert(v->vtable);
+	if (v->vtable->unref)
+		v->vtable->unref(v);
 }
 
 bool validator_check(Validator *v, ValidationEvent const *e, ValidationState *s, void *ctxt)
@@ -334,8 +333,9 @@ void validator_set_string_min_length(Validator *v, size_t minLength)
 
 void validator_set_default(Validator *v, jvalue_ref def_value)
 {
-	j_release(&v->def_value);
-	v->def_value = jvalue_copy(def_value);
+	assert(v->vtable);
+	if (v->vtable->set_default)
+		v->vtable->set_default(v, def_value);
 }
 
 jvalue_ref validator_get_default(Validator *v, ValidationState *s)
@@ -343,5 +343,5 @@ jvalue_ref validator_get_default(Validator *v, ValidationState *s)
 	assert(v->vtable);
 	if (v->vtable->get_default)
 		return v->vtable->get_default(v, s);
-	return v->def_value;
+	return NULL;
 }

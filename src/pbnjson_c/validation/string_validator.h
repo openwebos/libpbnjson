@@ -30,11 +30,13 @@ typedef struct _StringSpan StringSpan;
 /** @brief String validator class for {"type": "string"} */
 typedef struct _StringValidator
 {
-	Validator base;        /**< Base class */
+	Validator base;        /**< @brief Base class */
+	unsigned ref_count;    /**< @brief Reference count */
+	jvalue_ref def_value;  /**< @brief Default value attached to this validator */
 
-	char *expected_value;  /**< Expected value if not NULL (for enums) */
-	int min_length;        /**< Minimal string length from {"minLength": ...} */
-	int max_length;        /**< Maximal string length from {"maxLength": ...} */
+	char *expected_value;  /**< @brief Expected value if not NULL (for enums) */
+	int min_length;        /**< @brief Minimal string length from {"minLength": ...} */
+	int max_length;        /**< @brief Maximal string length from {"maxLength": ...} */
 } StringValidator;
 
 //_Static_assert(offsetof(StringValidator, base) == 0, "Addresses of StringValidator and StringValidator.base should be equal");

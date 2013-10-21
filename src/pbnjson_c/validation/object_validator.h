@@ -35,6 +35,10 @@ typedef struct _ObjectValidator
 {
 	/** @brief Base class is Validator */
 	Validator base;
+	/** @brief Reference count */
+	unsigned ref_count;
+	/** @brief Default value attached to this validator */
+	jvalue_ref def_value;
 
 	/** @brief Expected object properties from "properties": {...} */
 	ObjectProperties *properties;

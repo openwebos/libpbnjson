@@ -44,6 +44,9 @@ typedef enum _ValidatorType
 typedef struct _CombinedTypesValidator
 {
 	Validator base;                  /**< @brief Base class */
+	unsigned ref_count;              /**< @brief Reference count */
+	jvalue_ref def_value;            /**< @brief Default value attached to this validator */
+
 	Validator* types[V_TYPES_NUM];   /**< @brief Validators for specified types {"type":[...]}. */
 } CombinedTypesValidator;
 

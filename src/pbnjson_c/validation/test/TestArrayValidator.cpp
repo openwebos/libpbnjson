@@ -204,7 +204,7 @@ TEST_F(TestArrayValidator, GeneralValidatorPositive)
 {
 	auto vnum = mk_ptr((Validator *)number_validator_new(), validator_unref);
 	ASSERT_TRUE(array_items_set_generic_item(items, validator_ref(vnum.get())));
-	EXPECT_EQ(2, vnum->ref_count);
+	EXPECT_EQ(2, ((NumberValidator *)vnum.get())->ref_count);
 	ASSERT_EQ(vnum.get(), items->generic_validator);
 	ASSERT_EQ(NULL, items->validators);
 
@@ -321,8 +321,8 @@ TEST_F(TestArrayValidator, SpecificValidatorsLessThanNeeded)
 
 	ASSERT_TRUE(v->items);
 	ASSERT_EQ(2, array_items_items_length(v->items));
-	EXPECT_EQ(2, vnum->ref_count);
-	EXPECT_EQ(2, vstr->ref_count);
+	EXPECT_EQ(2, ((NumberValidator *)vnum.get())->ref_count);
+	EXPECT_EQ(2, ((StringValidator *)vstr.get())->ref_count);
 	EXPECT_EQ(vnum.get(), v->items->validators->data);
 	EXPECT_EQ(vstr.get(), g_list_last(v->items->validators)->data);
 
@@ -374,7 +374,7 @@ TEST_F(TestArrayValidator, SpecificValidatorsMoreThanNeeded)
 
 TEST_F(TestArrayValidator, AdditionalItemsDisallowedPositive)
 {
-	ASSERT_TRUE(array_items_add_item(items, validator_ref(GENERIC_VALIDATOR)));
+	ASSERT_TRUE(array_items_add_item(items, GENERIC_VALIDATOR));
 	validator_set_array_additional_items(&v->base, NULL);
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
@@ -387,7 +387,7 @@ TEST_F(TestArrayValidator, AdditionalItemsDisallowedPositive)
 
 TEST_F(TestArrayValidator, AdditionalItemsDisallowedNegative)
 {
-	ASSERT_TRUE(array_items_add_item(items, validator_ref(GENERIC_VALIDATOR)));
+	ASSERT_TRUE(array_items_add_item(items, GENERIC_VALIDATOR));
 	validator_set_array_additional_items(&v->base, NULL);
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));

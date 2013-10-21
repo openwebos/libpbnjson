@@ -20,6 +20,7 @@
 #include "validation_state.h"
 #include "validation_event.h"
 #include "parser_context.h"
+#include <jobject.h>
 #include <glib.h>
 #include <string.h>
 
@@ -65,9 +66,18 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 	return res;
 }
 
-static void _release(Validator *validator)
+static Validator* ref(Validator *validator)
 {
 	StringValidator *v = (StringValidator *) validator;
+	++v->ref_count;
+	return validator;
+}
+
+static void unref(Validator *validator)
+{
+	StringValidator *v = (StringValidator *) validator;
+	if (--v->ref_count)
+		return;
 	string_validator_release(v);
 }
 
@@ -83,6 +93,19 @@ static void _set_min_length(Validator *v, size_t min_length)
 	string_validator_add_min_length_constraint(s, min_length);
 }
 
+static void set_default(Validator *validator, jvalue_ref def_value)
+{
+	StringValidator *v = (StringValidator *) validator;
+	j_release(&v->def_value);
+	v->def_value = jvalue_copy(def_value);
+}
+
+static jvalue_ref get_default(Validator *validator, ValidationState *s)
+{
+	StringValidator *v = (StringValidator *) validator;
+	return v->def_value;
+}
+
 static void _dump_enter(char const *key, Validator *v, void *ctxt)
 {
 	if (key)
@@ -93,9 +116,12 @@ static void _dump_enter(char const *key, Validator *v, void *ctxt)
 static ValidatorVtable string_vtable =
 {
 	.check = _check,
-	.release = _release,
+	.ref = ref,
+	.unref = unref,
 	.set_string_max_length = _set_max_length,
 	.set_string_min_length = _set_min_length,
+	.set_default = set_default,
+	.get_default = get_default,
 	.dump_enter = _dump_enter,
 };
 
@@ -104,6 +130,7 @@ StringValidator* string_validator_new(void)
 	StringValidator *self = g_new0(StringValidator, 1);
 	if (!self)
 		return NULL;
+	self->ref_count = 1;
 	validator_init(&self->base, &string_vtable);
 	self->min_length = -1;
 	self->max_length = -1;
@@ -113,6 +140,7 @@ StringValidator* string_validator_new(void)
 void string_validator_release(StringValidator *v)
 {
 	g_free(v->expected_value);
+	j_release(&v->def_value);
 	g_free(v);
 }
 

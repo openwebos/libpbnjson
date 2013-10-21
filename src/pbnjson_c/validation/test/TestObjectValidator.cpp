@@ -100,7 +100,7 @@ TEST_F(TestObjectValidator, GenericProperties)
 
 TEST_F(TestObjectValidator, SpecificNullPropertiesPositive)
 {
-	ASSERT_TRUE(object_properties_add_key(p, "null", validator_ref(NULL_VALIDATOR)));
+	ASSERT_TRUE(object_properties_add_key(p, "null", NULL_VALIDATOR));
 	EXPECT_TRUE(validation_check(&(e = validation_event_obj_start()), s, NULL));
 	EXPECT_EQ(1, g_slist_length(s->validator_stack));
 	EXPECT_TRUE(validation_check(&(e = validation_event_obj_key("null", 4)), s, NULL));
@@ -114,7 +114,7 @@ TEST_F(TestObjectValidator, SpecificNullPropertiesPositive)
 
 TEST_F(TestObjectValidator, SpecificNullPropertiesNegative)
 {
-	ASSERT_TRUE(object_properties_add_key(p, "null", validator_ref(NULL_VALIDATOR)));
+	ASSERT_TRUE(object_properties_add_key(p, "null", NULL_VALIDATOR));
 	EXPECT_TRUE(validation_check(&(e = validation_event_obj_start()), s, NULL));
 	EXPECT_EQ(1, g_slist_length(s->validator_stack));
 	EXPECT_TRUE(validation_check(&(e = validation_event_obj_key("null", 4)), s, NULL));
@@ -129,7 +129,7 @@ TEST_F(TestObjectValidator, SpecificMultiplePropertiesPositive)
 	auto vnum = mk_ptr((Validator *)number_validator_new(), validator_unref);
 	ASSERT_TRUE(number_validator_add_max_constraint((NumberValidator *)vnum.get(), "10"));
 
-	ASSERT_TRUE(object_properties_add_key(p, "null", validator_ref(NULL_VALIDATOR)));
+	ASSERT_TRUE(object_properties_add_key(p, "null", NULL_VALIDATOR));
 	ASSERT_TRUE(object_properties_add_key(p, "num", validator_ref(vnum.get())));
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_obj_start()), s, NULL));
@@ -148,7 +148,7 @@ TEST_F(TestObjectValidator, SpecificMultiplePropertiesNevative)
 	auto vnum = mk_ptr((Validator *)number_validator_new(), validator_unref);
 	ASSERT_TRUE(number_validator_add_max_constraint((NumberValidator *)vnum.get(), "10"));
 
-	ASSERT_TRUE(object_properties_add_key(p, "null", validator_ref(NULL_VALIDATOR)));
+	ASSERT_TRUE(object_properties_add_key(p, "null", NULL_VALIDATOR));
 	ASSERT_TRUE(object_properties_add_key(p, "num", validator_ref(vnum.get())));
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_obj_start()), s, NULL));
@@ -166,7 +166,7 @@ TEST_F(TestObjectValidator, SpecificMultiplePropertiesNevativeOnInnerCondition)
 	auto vnum = mk_ptr((Validator *)number_validator_new(), validator_unref);
 	ASSERT_TRUE(number_validator_add_max_constraint((NumberValidator *)vnum.get(), "10"));
 
-	ASSERT_TRUE(object_properties_add_key(p, "null", validator_ref(NULL_VALIDATOR)));
+	ASSERT_TRUE(object_properties_add_key(p, "null", NULL_VALIDATOR));
 	ASSERT_TRUE(object_properties_add_key(p, "num", validator_ref(vnum.get())));
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_obj_start()), s, NULL));
@@ -189,7 +189,7 @@ TEST_F(TestObjectValidator, OnlyEmptyObjectAllowed)
 
 TEST_F(TestObjectValidator, DisallowedAdditionalProperties)
 {
-	ASSERT_TRUE(object_properties_add_key(p, "null", validator_ref(NULL_VALIDATOR)));
+	ASSERT_TRUE(object_properties_add_key(p, "null", NULL_VALIDATOR));
 	validator_set_object_additional_properties(&v->base, NULL);
 
 	EXPECT_TRUE(validate_json_plain("{}", &v->base));
@@ -199,14 +199,14 @@ TEST_F(TestObjectValidator, DisallowedAdditionalProperties)
 
 TEST_F(TestObjectValidator, AdditionalPropertiesDefault)
 {
-	ASSERT_TRUE(object_properties_add_key(p, "null", validator_ref(NULL_VALIDATOR)));
+	ASSERT_TRUE(object_properties_add_key(p, "null", NULL_VALIDATOR));
 
 	EXPECT_TRUE(validate_json_plain("{\"null\": null, \"other\": \"data\"}", &v->base));
 }
 
 TEST_F(TestObjectValidator, AdditionalPropertiesSchema)
 {
-	ASSERT_TRUE(object_properties_add_key(p, "any", validator_ref(GENERIC_VALIDATOR)));
+	ASSERT_TRUE(object_properties_add_key(p, "any", GENERIC_VALIDATOR));
 	validator_set_object_additional_properties(&v->base, NULL_VALIDATOR);
 
 	EXPECT_TRUE(validate_json_plain("{\"any\": false}", &v->base));

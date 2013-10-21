@@ -29,10 +29,12 @@ extern "C" {
 /** @brief JSON boolean validator */
 typedef struct _BooleanValidator
 {
-	Validator base;        /**< Base class */
+	Validator base;        /**< @brief Base class */
+	unsigned ref_count;    /**< @brief Reference count */
+	jvalue_ref def_value;  /**< @brief Default value attached to this validator */
 
-	bool value_expected;   /**< Is specific value expected? */
-	bool value;            /**< The value that the instance is expected to have. */
+	bool value_expected;   /**< @brief Is specific value expected? */
+	bool value;            /**< @brief The value that the instance is expected to have. */
 } BooleanValidator;
 
 /** @brief Constructor */

@@ -34,6 +34,9 @@ typedef struct _StringSpan StringSpan;
 typedef struct _NumberValidator
 {
 	Validator base;          /**< @brief Base class */
+	unsigned ref_count;      /**< @brief Reference count */
+	jvalue_ref def_value;    /**< @brief Default value attached to this validator */
+
 	bool integer;            /**< @brief Should a valid instance be integer? */
 
 	bool expected_set;       /**< @brief true if a specific value is expected (for enum) */

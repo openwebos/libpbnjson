@@ -35,6 +35,7 @@ typedef struct _Definitions
 {
 	Validator base;      /**< @brief Base class. We want definitions to be visitable. */
 
+	unsigned ref_count;  /**< @brief Reference count */
 	char *name;          /**< @brief Name of the definition, key in the parent schema. */
 	GSList *validators;  /**< @brief List of subschemas with their names. */
 } Definitions;

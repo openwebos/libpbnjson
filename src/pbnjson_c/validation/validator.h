@@ -43,11 +43,14 @@ typedef struct jvalue* jvalue_ref;
  */
 typedef struct _ValidatorVtable
 {
-	/** @brief Destructor called when the reference count drops to zero.
+	/** @brief Increment reference count of the validator */
+	Validator* (*ref)(Validator *v);
+
+	/** @brief Decrement reference count of validator. Release validator if reference count drops to zero.
 	 *
-	 * The validator then should free all the resources allocated during construction.
+	 * On release the validator then should free all the resources allocated during construction.
 	 */
-	void (*release)(Validator *v);
+	void (*unref)(Validator *v);
 
 	/** @name Functions used during validation
 	 *  @{
@@ -166,9 +169,7 @@ typedef struct _ValidatorVtable
 /** Base structure of validator */
 typedef struct _Validator
 {
-	unsigned ref_count;         /**< @brief Reference count */
 	ValidatorVtable *vtable;    /**< @brief Table of virtual functions */
-	jvalue_ref def_value;       /**< @brief Default value attached to this validator */
 } Validator;
 
 /** @name Base functions

@@ -35,10 +35,17 @@ static void _release_definition(gpointer d)
 	g_free(nv);
 }
 
-static void _release(Validator *v)
+static Validator* ref(Validator *validator)
 {
-	Definitions *d = (Definitions *) v;
-	if (!d)
+	Definitions *d = (Definitions *) validator;
+	++d->ref_count;
+	return validator;
+}
+
+static void unref(Validator *validator)
+{
+	Definitions *d = (Definitions *) validator;
+	if (!d || --d->ref_count)
 		return;
 	g_slist_free_full(d->validators, _release_definition);
 	g_free(d->name);
@@ -95,7 +102,8 @@ static void _collect_uri_exit(char const *key, Validator *v, void *ctxt, Validat
 
 static ValidatorVtable definitions_vtable =
 {
-	.release = _release,
+	.ref = ref,
+	.unref = unref,
 	.visit = _visit,
 	.collect_uri_enter = _collect_uri_enter,
 	.collect_uri_exit = _collect_uri_exit,
@@ -106,6 +114,7 @@ Definitions* definitions_new(void)
 	Definitions *d = g_new0(Definitions, 1);
 	if (!d)
 		return NULL;
+	d->ref_count = 1;
 	validator_init(&d->base, &definitions_vtable);
 	return d;
 }

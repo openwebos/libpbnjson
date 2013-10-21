@@ -31,7 +31,6 @@ static ValidatorVtable nothing_vtable =
 
 Validator NOTHING_VALIDATOR_IMPL =
 {
-	.ref_count = 1,
 	.vtable = &nothing_vtable,
 };
 

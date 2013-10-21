@@ -30,6 +30,7 @@
 #include "validation_event.h"
 #include "parser_context.h"
 #include "type_parser.h"
+#include <jobject.h>
 #include <assert.h>
 
 static Validator* _get_current_validator(CombinedTypesValidator *c, ValidationEvent const *e)
@@ -69,10 +70,19 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 	return validator_check(vcur, e, s, c);
 }
 
-static void _release(Validator *validator)
+static Validator* ref(Validator *validator)
 {
-	CombinedTypesValidator *c = (CombinedTypesValidator *) validator;
-	combined_types_validator_release(c);
+	CombinedTypesValidator *v = (CombinedTypesValidator *) validator;
+	++v->ref_count;
+	return validator;
+}
+
+static void unref(Validator *validator)
+{
+	CombinedTypesValidator *v = (CombinedTypesValidator *) validator;
+	if (--v->ref_count)
+		return;
+	combined_types_validator_release(v);
 }
 
 static void _set_maximum(Validator *v, Number *n)
@@ -205,6 +215,19 @@ static void _set_additional_properties(Validator *v, Validator *additional)
 	validator_set_object_additional_properties(c->types[V_OBJ], additional);
 }
 
+static void set_default(Validator *validator, jvalue_ref def_value)
+{
+	CombinedTypesValidator *v = (CombinedTypesValidator *) validator;
+	j_release(&v->def_value);
+	v->def_value = jvalue_copy(def_value);
+}
+
+static jvalue_ref get_default(Validator *validator, ValidationState *s)
+{
+	CombinedTypesValidator *v = (CombinedTypesValidator *) validator;
+	return v->def_value;
+}
+
 static void _visit(Validator *v,
                    VisitorEnterFunc enter_func, VisitorExitFunc exit_func,
                    void *ctxt)
@@ -231,7 +254,8 @@ static void _visit(Validator *v,
 ValidatorVtable combined_types_vtable =
 {
 	.check = _check,
-	.release = _release,
+	.ref = ref,
+	.unref = unref,
 	.visit = _visit,
 	.set_number_maximum = _set_maximum,
 	.set_number_maximum_exclusive = _set_maximum_exclusive,
@@ -243,6 +267,8 @@ ValidatorVtable combined_types_vtable =
 	.set_array_additional_items = _set_additional_items,
 	.set_object_properties = _set_properties,
 	.set_object_additional_properties = _set_additional_properties,
+	.set_default = set_default,
+	.get_default = get_default,
 };
 
 CombinedTypesValidator* combined_types_validator_new(void)
@@ -250,6 +276,7 @@ CombinedTypesValidator* combined_types_validator_new(void)
 	CombinedTypesValidator *self = g_new0(CombinedTypesValidator, 1);
 	if (!self)
 		return NULL;
+	self->ref_count = 1;
 	validator_init(&self->base, &combined_types_vtable);
 	return self;
 }
@@ -260,6 +287,7 @@ void combined_types_validator_release(CombinedTypesValidator *v)
 	for (; i < V_TYPES_NUM; ++i)
 		validator_unref(v->types[i]);
 
+	j_release(&v->def_value);
 	g_free(v);
 }
 
@@ -289,7 +317,7 @@ void combined_types_validator_fill_all_types(CombinedTypesValidator *c)
 			switch (i)
 			{
 			case V_NULL:
-				c->types[i] = validator_ref(NULL_VALIDATOR);
+				c->types[i] = NULL_VALIDATOR;
 				break;
 			case V_BOOL:
 				c->types[i] = (Validator *) boolean_validator_new();
@@ -301,7 +329,7 @@ void combined_types_validator_fill_all_types(CombinedTypesValidator *c)
 				c->types[i] = (Validator *) string_validator_new();
 				break;
 			default:
-				c->types[i] = generic_validator_new();
+				c->types[i] = GENERIC_VALIDATOR;
 			}
 		}
 	}

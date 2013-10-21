@@ -25,14 +25,22 @@
 extern "C" {
 #endif
 
-/** @brief Static instance of a generic validator.
+/** @brief Generic validator.
  *
  * Used for service purposes like "additionalProperties".
  */
+typedef struct _GenericValidator
+{
+	Validator base;        /**< @brief Base class */
+	unsigned ref_count;    /**< @brief Reference count */
+	jvalue_ref def_value;  /**< @brief Default value attached to this validator */
+} GenericValidator;
+
+/** @brief Static instance of a generic validator. */
 extern Validator *GENERIC_VALIDATOR;
 
 /** @brief Constructor: allocate and initialize a new generic validator. */
-Validator *generic_validator_new(void);
+GenericValidator *generic_validator_new(void);
 
 /** @brief Increase reference count. */
 Validator *generic_validator_ref(Validator *v);

@@ -19,11 +19,22 @@
 #include "boolean_validator.h"
 #include "validation_event.h"
 #include "validation_state.h"
+#include <jobject.h>
 
-static void _release(Validator *v)
+static Validator* ref(Validator *validator)
 {
-	BooleanValidator *b = (BooleanValidator *) v;
-	g_free(b);
+	BooleanValidator *v = (BooleanValidator *) validator;
+	++v->ref_count;
+	return validator;
+}
+
+static void unref(Validator *validator)
+{
+	BooleanValidator *v = (BooleanValidator *) validator;
+	if (--v->ref_count)
+		return;
+	j_release(&v->def_value);
+	g_free(v);
 }
 
 static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
@@ -48,16 +59,31 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 	return true;
 }
 
+static void set_default(Validator *v, jvalue_ref def_value)
+{
+	BooleanValidator *b = (BooleanValidator *) v;
+	j_release(&b->def_value);
+	b->def_value = jvalue_copy(def_value);
+}
+
+static jvalue_ref get_default(Validator *v, ValidationState *s)
+{
+	BooleanValidator *b = (BooleanValidator *) v;
+	return b->def_value;
+}
+
 static ValidatorVtable boolean_vtable =
 {
-	.release = _release,
+	.ref = ref,
+	.unref = unref,
 	.check = _check,
+	.set_default = set_default,
+	.get_default = get_default,
 };
 
 static BooleanValidator BOOLEAN_VALIDATOR_IMPL =
 {
 	.base = {
-		.ref_count = 42,   // Let it live forever
 		.vtable = &boolean_vtable
 	},
 	.value_expected = false,
@@ -71,6 +97,7 @@ BooleanValidator *boolean_validator_new(void)
 	BooleanValidator *b = g_new0(BooleanValidator, 1);
 	if (!b)
 		return NULL;
+	b->ref_count = 1;
 	validator_init(&b->base, &boolean_vtable);
 	return b;
 }

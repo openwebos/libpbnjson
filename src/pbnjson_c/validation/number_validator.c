@@ -21,6 +21,7 @@
 #include "validation_state.h"
 #include "validation_event.h"
 #include "parser_context.h"
+#include <jobject.h>
 #include <glib.h>
 #include <string.h>
 #include <stdlib.h>
@@ -91,9 +92,18 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 	return res;
 }
 
-static void _release(Validator *validator)
+static Validator* ref(Validator *validator)
 {
 	NumberValidator *v = (NumberValidator *) validator;
+	++v->ref_count;
+	return validator;
+}
+
+static void unref(Validator *validator)
+{
+	NumberValidator *v = (NumberValidator *) validator;
+	if (--v->ref_count)
+		return;
 	number_validator_release(v);
 }
 
@@ -125,14 +135,30 @@ static void _set_minimum_exclusive(Validator *v, bool exclusive)
 	number_validator_add_min_exclusive_constraint(n, exclusive);
 }
 
+static void set_default(Validator *validator, jvalue_ref def_value)
+{
+	NumberValidator *v = (NumberValidator *) validator;
+	j_release(&v->def_value);
+	v->def_value = jvalue_copy(def_value);
+}
+
+static jvalue_ref get_default(Validator *validator, ValidationState *s)
+{
+	NumberValidator *v = (NumberValidator *) validator;
+	return v->def_value;
+}
+
 static ValidatorVtable number_vtable =
 {
+	.ref = ref,
+	.unref = unref,
 	.check = _check,
-	.release = _release,
 	.set_number_maximum = _set_maximum,
 	.set_number_maximum_exclusive = _set_maximum_exclusive,
 	.set_number_minimum = _set_minimum,
 	.set_number_minimum_exclusive = _set_minimum_exclusive,
+	.set_default = set_default,
+	.get_default = get_default,
 };
 
 NumberValidator* number_validator_new(void)
@@ -140,6 +166,7 @@ NumberValidator* number_validator_new(void)
 	NumberValidator *self = g_new0(NumberValidator, 1);
 	if (!self)
 		return NULL;
+	self->ref_count = 1;
 	validator_init(&self->base, &number_vtable);
 	return self;
 }
@@ -159,6 +186,7 @@ void number_validator_release(NumberValidator *v)
 		number_clear(&v->min);
 	if (v->max_set)
 		number_clear(&v->max);
+	j_release(&v->def_value);
 	g_free(v);
 }
 

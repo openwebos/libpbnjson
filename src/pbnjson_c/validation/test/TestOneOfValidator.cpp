@@ -59,7 +59,7 @@ Notification TestOneOfValidator::notify { &OnError };
 
 TEST_F(TestOneOfValidator, OnlyGeneric)
 {
-	combined_validator_add_value(v, validator_ref(GENERIC_VALIDATOR));
+	combined_validator_add_value(v, GENERIC_VALIDATOR);
 	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
 
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
@@ -69,8 +69,8 @@ TEST_F(TestOneOfValidator, OnlyGeneric)
 
 TEST_F(TestOneOfValidator, GenericAndNull)
 {
-	combined_validator_add_value(v, validator_ref(GENERIC_VALIDATOR));
-	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	combined_validator_add_value(v, GENERIC_VALIDATOR);
+	combined_validator_add_value(v, NULL_VALIDATOR);
 	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
 
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
@@ -81,8 +81,8 @@ TEST_F(TestOneOfValidator, GenericAndNull)
 
 TEST_F(TestOneOfValidator, GenericAndNullAnyValue)
 {
-	combined_validator_add_value(v, validator_ref(GENERIC_VALIDATOR));
-	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	combined_validator_add_value(v, GENERIC_VALIDATOR);
+	combined_validator_add_value(v, NULL_VALIDATOR);
 	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
 
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
@@ -93,7 +93,7 @@ TEST_F(TestOneOfValidator, GenericAndNullAnyValue)
 TEST_F(TestOneOfValidator, BooleanAndNullOnNull)
 {
 	combined_validator_add_value(v, (Validator *) boolean_validator_new());
-	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	combined_validator_add_value(v, NULL_VALIDATOR);
 	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
 
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
@@ -104,7 +104,7 @@ TEST_F(TestOneOfValidator, BooleanAndNullOnNull)
 TEST_F(TestOneOfValidator, BooleanAndNullOnBoolean)
 {
 	combined_validator_add_value(v, (Validator *) boolean_validator_new());
-	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	combined_validator_add_value(v, NULL_VALIDATOR);
 	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
 
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));
@@ -115,7 +115,7 @@ TEST_F(TestOneOfValidator, BooleanAndNullOnBoolean)
 TEST_F(TestOneOfValidator, BooleanAndNullOnString)
 {
 	combined_validator_add_value(v, (Validator *) boolean_validator_new());
-	combined_validator_add_value(v, validator_ref(NULL_VALIDATOR));
+	combined_validator_add_value(v, NULL_VALIDATOR);
 	auto s = mk_ptr(validation_state_new(&v->base, NULL, &notify), validation_state_free);
 
 	ASSERT_EQ(1, g_slist_length(s->validator_stack));

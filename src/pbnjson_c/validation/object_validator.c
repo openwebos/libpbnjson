@@ -23,6 +23,7 @@
 #include "object_properties.h"
 #include "object_required.h"
 #include "uri_resolver.h"
+#include <jobject.h>
 #include <string.h>
 #include <stdio.h>
 #include <glib.h>
@@ -179,9 +180,18 @@ static void _cleanup_state(Validator *v, ValidationState *s)
 	g_slice_free(MyContext, my_ctxt);
 }
 
-static void _release(Validator *validator)
+static Validator* ref(Validator *validator)
 {
 	ObjectValidator *v = (ObjectValidator *) validator;
+	++v->ref_count;
+	return validator;
+}
+
+static void unref(Validator *validator)
+{
+	ObjectValidator *v = (ObjectValidator *) validator;
+	if (--v->ref_count)
+		return;
 	object_validator_release(v);
 }
 
@@ -219,6 +229,19 @@ static void _set_min_properties(Validator *v, size_t min)
 {
 	ObjectValidator *o = (ObjectValidator *) v;
 	object_validator_set_min_properties(o, min);
+}
+
+static void set_default(Validator *validator, jvalue_ref def_value)
+{
+	ObjectValidator *v = (ObjectValidator *) validator;
+	j_release(&v->def_value);
+	v->def_value = jvalue_copy(def_value);
+}
+
+static jvalue_ref get_default(Validator *validator, ValidationState *s)
+{
+	ObjectValidator *v = (ObjectValidator *) validator;
+	return v->def_value;
 }
 
 static void _visit(Validator *v,
@@ -259,12 +282,15 @@ ValidatorVtable object_vtable =
 	.check = _check,
 	.init_state = _init_state,
 	.cleanup_state = _cleanup_state,
-	.release = _release,
+	.ref = ref,
+	.unref = unref,
 	.set_object_properties = _set_properties,
 	.set_object_additional_properties = _set_additional_properties,
 	.set_object_required = _set_required,
 	.set_object_max_properties = _set_max_properties,
 	.set_object_min_properties = _set_min_properties,
+	.set_default = set_default,
+	.get_default = get_default,
 	.visit = _visit,
 	.dump_enter = _dump_enter,
 	.dump_exit = _dump_exit,
@@ -275,11 +301,12 @@ ObjectValidator* object_validator_new(void)
 	ObjectValidator *self = g_new0(ObjectValidator, 1);
 	if (!self)
 		return NULL;
+	self->ref_count = 1;
 	self->max_properties = -1;
 	self->min_properties = -1;
 	self->default_properties_count = -1;
 	validator_init(&self->base, &object_vtable);
-	self->additional_properties = validator_ref(GENERIC_VALIDATOR);
+	self->additional_properties = GENERIC_VALIDATOR;
 	return self;
 }
 
@@ -288,6 +315,7 @@ void object_validator_release(ObjectValidator *v)
 	object_properties_unref(v->properties);
 	validator_unref(v->additional_properties);
 	object_required_unref(v->required);
+	j_release(&v->def_value);
 	g_free(v);
 }
 

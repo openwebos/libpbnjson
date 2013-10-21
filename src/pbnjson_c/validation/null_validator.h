@@ -25,10 +25,19 @@
 extern "C" {
 #endif
 
+/** @brief Null type validator. */
+typedef struct _NullValidator
+{
+	Validator base;        /**< @brief Base class */
+	unsigned ref_count;    /**< @brief Reference count */
+	jvalue_ref def_value;  /**< @brief Default value attached to this validator */
+} NullValidator;
+
+/** @brief Static instance of a null validator. */
 extern Validator *NULL_VALIDATOR;
 
-Validator *null_validator_new(void);
-void null_validator_release(Validator *v);
+/** @brief Constructor: allocate and initialize a new null validator. */
+NullValidator *null_validator_new(void);
 
 #ifdef __cplusplus
 }

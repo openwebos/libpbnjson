@@ -20,6 +20,36 @@
 #include "validation_event.h"
 #include "validation_state.h"
 #include "error_code.h"
+#include <jobject.h>
+
+static Validator* ref(Validator *validator)
+{
+	NullValidator *v = (NullValidator *) validator;
+	++v->ref_count;
+	return validator;
+}
+
+static void unref(Validator *validator)
+{
+	NullValidator *v = (NullValidator *) validator;
+	if (--v->ref_count)
+		return;
+	j_release(&v->def_value);
+	g_free(v);
+}
+
+static void set_default(Validator *validator, jvalue_ref def_value)
+{
+	NullValidator *v = (NullValidator *) validator;
+	j_release(&v->def_value);
+	v->def_value = jvalue_copy(def_value);
+}
+
+static jvalue_ref get_default(Validator *validator, ValidationState *s)
+{
+	NullValidator *v = (NullValidator *) validator;
+	return v->def_value;
+}
 
 static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
 {
@@ -29,25 +59,33 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 	return e->type == EV_NULL;
 }
 
-static ValidatorVtable null_vtable =
+static ValidatorVtable generic_null_vtable =
 {
 	.check = _check,
 };
 
+static ValidatorVtable null_vtable =
+{
+	.ref = ref,
+	.unref = unref,
+	.check = _check,
+	.set_default = set_default,
+	.get_default = get_default,
+};
+
 static Validator NULL_VALIDATOR_IMPL =
 {
-	.ref_count = 1,
-	.vtable = &null_vtable
+	.vtable = &generic_null_vtable
 };
 
 Validator *NULL_VALIDATOR = &NULL_VALIDATOR_IMPL;
 
-Validator *null_validator_new(void)
+NullValidator *null_validator_new(void)
 {
-	return validator_ref(NULL_VALIDATOR);
-}
-
-void null_validator_release(Validator *v)
-{
-	validator_unref(NULL_VALIDATOR);
+	NullValidator *v = g_new0(NullValidator, 1);
+	if (!v)
+		return NULL;
+	v->ref_count = 1;
+	validator_init(&v->base, &null_vtable);
+	return v;
 }

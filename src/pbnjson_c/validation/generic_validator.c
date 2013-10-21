@@ -19,11 +19,36 @@
 #include "generic_validator.h"
 #include "validation_state.h"
 #include "validation_event.h"
+#include <jobject.h>
 #include <glib.h>
 
-static void _release(Validator *v)
+static Validator* ref(Validator *validator)
 {
+	GenericValidator *v = (GenericValidator *) validator;
+	++v->ref_count;
+	return validator;
+}
+
+static void unref(Validator *validator)
+{
+	GenericValidator *v = (GenericValidator *) validator;
+	if (--v->ref_count)
+		return;
+	j_release(&v->def_value);
 	g_free(v);
+}
+
+static void set_default(Validator *validator, jvalue_ref def_value)
+{
+	GenericValidator *v = (GenericValidator *) validator;
+	j_release(&v->def_value);
+	v->def_value = jvalue_copy(def_value);
+}
+
+static jvalue_ref get_default(Validator *validator, ValidationState *s)
+{
+	GenericValidator *v = (GenericValidator *) validator;
+	return v->def_value;
 }
 
 static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
@@ -94,19 +119,31 @@ static void _dump_enter(char const *key, Validator *v, void *ctxt)
 
 static ValidatorVtable generic_vtable =
 {
-	.release = _release,
+	.ref = ref,
+	.unref = unref,
+	.check = _check,
+	.init_state = _init_state,
+	.cleanup_state = _cleanup_state,
+	.set_default = set_default,
+	.get_default = get_default,
+	.dump_enter = _dump_enter,
+};
+
+static ValidatorVtable generic_static_vtable =
+{
 	.check = _check,
 	.init_state = _init_state,
 	.cleanup_state = _cleanup_state,
 	.dump_enter = _dump_enter,
 };
 
-Validator *generic_validator_new(void)
+GenericValidator *generic_validator_new(void)
 {
-	Validator *v = g_new0(Validator, 1);
+	GenericValidator *v = g_new0(GenericValidator, 1);
 	if (!v)
 		return NULL;
-	validator_init(v, &generic_vtable);
+	v->ref_count = 1;
+	validator_init(&v->base, &generic_vtable);
 	return v;
 }
 
@@ -124,8 +161,7 @@ void generic_validator_unref(Validator *v)
 // other service cases when default value isn't attached to the validator.
 static Validator GENERIC_VALIDATOR_IMPL =
 {
-	.ref_count = 1,
-	.vtable = &generic_vtable,
+	.vtable = &generic_static_vtable,
 };
 
 Validator *GENERIC_VALIDATOR = &GENERIC_VALIDATOR_IMPL;

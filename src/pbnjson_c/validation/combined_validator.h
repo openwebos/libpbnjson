@@ -31,6 +31,9 @@ extern "C" {
 typedef struct _CombinedValidator
 {
 	Validator base;          /**< @brief Base class */
+	unsigned ref_count;      /**< @brief Reference count */
+	jvalue_ref def_value;    /**< @brief Default value attached to this validator */
+
 	GSList *validators;      /**< @brief Validators for subschemas to combine */
 
 	/** @brief Checking functions

@@ -44,6 +44,9 @@ typedef struct _SchemaParsing
 	 */
 	Validator base;
 
+	/** @brief Reference count */
+	unsigned ref_count;
+
 	/** @brief List of parsed features like "properties", "items", "additionalProperties" etc */
 	GSList *features;
 
