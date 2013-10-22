@@ -47,8 +47,6 @@ static FeatureVtable additional_feature_vtable =
 AdditionalFeature* additional_feature_new(AdditionalFeatureFunc apply_func)
 {
 	AdditionalFeature *a = g_new0(AdditionalFeature, 1);
-	if (!a)
-		return a;
 	feature_init(&a->base, &additional_feature_vtable);
 	a->apply_func = apply_func;
 	return a;

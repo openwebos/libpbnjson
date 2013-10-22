@@ -50,7 +50,7 @@ Reference *reference_ref(Reference *r);
 void reference_unref(Reference *r);
 
 /** @brief Remember target from the parser. */
-bool reference_set_target(Reference *r, StringSpan *target);
+void reference_set_target(Reference *r, StringSpan *target);
 
 #ifdef __cplusplus
 }

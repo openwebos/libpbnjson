@@ -83,8 +83,6 @@ Validator *NULL_VALIDATOR = &NULL_VALIDATOR_IMPL;
 NullValidator *null_validator_new(void)
 {
 	NullValidator *v = g_new0(NullValidator, 1);
-	if (!v)
-		return NULL;
 	v->ref_count = 1;
 	validator_init(&v->base, &null_vtable);
 	return v;

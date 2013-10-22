@@ -238,8 +238,6 @@ ValidatorVtable array_vtable =
 ArrayValidator* array_validator_new(void)
 {
 	ArrayValidator *self = g_new0(ArrayValidator, 1);
-	if (!self)
-		return NULL;
 	self->ref_count = 1;
 	self->max_items = -1;
 	self->min_items = -1;
@@ -260,18 +258,16 @@ void array_validator_release(ArrayValidator *v)
 	g_free(v);
 }
 
-bool array_validator_set_max_items(ArrayValidator *a, size_t max)
+void array_validator_set_max_items(ArrayValidator *a, size_t max)
 {
 	if (a->min_items == -1)
 		a->min_items = 0;
 	a->max_items = max;
-	return true;
 }
 
-bool array_validator_set_min_items(ArrayValidator *a, size_t min)
+void array_validator_set_min_items(ArrayValidator *a, size_t min)
 {
 	if (a->max_items == -1)
 		a->max_items = EMPTY_LENGTH;
 	a->min_items = min;
-	return true;
 }

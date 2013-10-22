@@ -128,8 +128,6 @@ static ValidatorVtable string_vtable =
 StringValidator* string_validator_new(void)
 {
 	StringValidator *self = g_new0(StringValidator, 1);
-	if (!self)
-		return NULL;
 	self->ref_count = 1;
 	validator_init(&self->base, &string_vtable);
 	self->min_length = -1;
@@ -154,9 +152,8 @@ void string_validator_add_max_length_constraint(StringValidator *v, size_t max_l
 	v->max_length = max_length;
 }
 
-bool string_validator_add_expected_value(StringValidator *v, StringSpan *span)
+void string_validator_add_expected_value(StringValidator *v, StringSpan *span)
 {
 	g_free(v->expected_value);
 	v->expected_value = g_strndup(span->str, span->str_len);
-	return v->expected_value != NULL;
 }

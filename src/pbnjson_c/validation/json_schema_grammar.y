@@ -90,10 +90,8 @@ schema(A) ::= OBJ_START
 	else
 	{
 		SchemaParsing *s = schema_parsing_new();
-		if (s)
-			// No default value is assumed, so use static generic.
-			schema_parsing_set_validator(s, GENERIC_VALIDATOR);
-		else PARSE_FAILED;
+		// No default value is assumed, so use static generic.
+		schema_parsing_set_validator(s, GENERIC_VALIDATOR);
 		A = &s->base;
 	}
 }
@@ -104,13 +102,8 @@ schema(A) ::= OBJ_START
               OBJ_END.
 {
 	Reference *r = reference_new();
-	if (r && reference_set_target(r, &B.string))
-		A = &r->base;
-	else
-	{
-		reference_unref(r);
-		PARSE_FAILED;
-	}
+	reference_set_target(r, &B.string);
+	A = &r->base;
 }
 
 // TODO: Check if this should be removed
@@ -127,25 +120,19 @@ schema_attribute_list(A) ::= . { A = NULL; }
 schema_attribute_list(A) ::= schema_attribute_list(B) schema_type(C).
 {
 	A = B ? B : schema_parsing_new();
-	if (A)
-		schema_parsing_set_validator(A, C);
-	else PARSE_FAILED;
+	schema_parsing_set_validator(A, C);
 }
 
 schema_attribute_list(A) ::= schema_attribute_list(B) schema_feature(C).
 {
 	A = B ? B : schema_parsing_new();
-	if (A)
-		schema_parsing_add_feature(A, C);
-	else PARSE_FAILED;
+	schema_parsing_add_feature(A, C);
 }
 
 schema_attribute_list(A) ::= schema_attribute_list(B) schema_id(C).
 {
 	A = B ? B : schema_parsing_new();
-	if (A)
-		schema_parsing_set_id(A, C);
-	else PARSE_FAILED;
+	schema_parsing_set_id(A, C);
 }
 
 schema_attribute_list(A) ::= schema_attribute_list(B) schema_enum(C).
@@ -153,17 +140,13 @@ schema_attribute_list(A) ::= schema_attribute_list(B) schema_enum(C).
 	A = B ? B : schema_parsing_new();
 	// TODO: Add separate way in for the enumeration.
 	// It should be possible to specify both "type" and "enum".
-	if (A)
-		schema_parsing_set_validator(A, C);
-	else PARSE_FAILED;
+	schema_parsing_set_validator(A, C);
 }
 
 schema_attribute_list(A) ::= schema_attribute_list(B) schema_default(C).
 {
 	A = B ? B : schema_parsing_new();
-	if (A)
-		schema_parsing_add_feature(A, C);
-	else PARSE_FAILED;
+	schema_parsing_add_feature(A, C);
 }
 
 // Unknown keywords should be skipped without error
@@ -213,13 +196,7 @@ schema_id(A) ::= KEY_ID STRING(B).
 schema_attribute_list(A) ::= schema_attribute_list(B) schema_definitions(C).
 {
 	A = B ? B : schema_parsing_new();
-	if (A)
-		schema_parsing_set_definitions(A, C);
-	else
-	{
-		PARSE_FAILED;
-		definitions_unref(C);
-	}
+	schema_parsing_set_definitions(A, C);
 }
 
 %type schema_definitions { Definitions * }
@@ -240,9 +217,7 @@ definitions_list(A) ::= .  { A = NULL; }
 definitions_list(A) ::= definitions_list(B) any_object_key(K) schema(V).
 {
 	A = B ? B : definitions_new();
-	if (A)
-		definitions_add(A, &K.string, V);
-	else PARSE_FAILED;
+	definitions_add(A, &K.string, V);
 }
 
 
@@ -251,9 +226,7 @@ definitions_list(A) ::= definitions_list(B) any_object_key(K) schema(V).
 schema_attribute_list(A) ::= schema_attribute_list(B) schema_combinator(C).
 {
 	A = B ? B : schema_parsing_new();
-	if (A)
-		schema_parsing_add_combinator(A, C);
-	else PARSE_FAILED;
+	schema_parsing_add_combinator(A, C);
 }
 
 %type schema_combinator { Validator * }
@@ -308,9 +281,7 @@ combined_validator(A) ::= . { A = NULL; }
 combined_validator(A) ::= combined_validator(B) schema(V).
 {
 	A = B ? B : combined_validator_new();
-	if (A)
-		combined_validator_add_value(A, V);
-	else PARSE_FAILED;
+	combined_validator_add_value(A, V);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -320,17 +291,13 @@ combined_validator(A) ::= combined_validator(B) schema(V).
 schema_attribute_list(A) ::= schema_attribute_list(B) KEY_EXTENDS schema(C).
 {
 	A = B ? B : schema_parsing_new();
-	if (A)
-		schema_parsing_set_extends(A, C);
-	else PARSE_FAILED;
+	schema_parsing_set_extends(A, C);
 }
 
 schema_attribute_list(A) ::= schema_attribute_list(B) KEY_EXTENDS any_of_body(C).
 {
 	A = B ? B : schema_parsing_new();
-	if (A)
-		schema_parsing_set_extends(A, C);
-	else PARSE_FAILED;
+	schema_parsing_set_extends(A, C);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -369,9 +336,7 @@ type_list(A) ::= STRING(B).
 	default: PARSE_FAILED;
 	}
 	A = (Validator *) combined_types_validator_new();
-	if (A)
-		combined_types_validator_set_type((CombinedTypesValidator *) A, B.string.str, B.string.str_len);
-	else PARSE_FAILED;
+	combined_types_validator_set_type((CombinedTypesValidator *) A, B.string.str, B.string.str_len);
 }
 
 type_list(A) ::= type_list(B) STRING(C).
@@ -408,9 +373,7 @@ properties(A) ::= properties(B)
                   any_object_key(K) schema(V).
 {
 	A = B ? B : object_properties_new();
-	if (A)
-		object_properties_add_key_n(A, K.string.str, K.string.str_len, V);
-	else PARSE_FAILED;
+	object_properties_add_key_n(A, K.string.str, K.string.str_len, V);
 }
 
 
@@ -457,20 +420,16 @@ any_object_key(A) ::= KEY_TYPE(B). { A = B; }
 schema_feature(A) ::= KEY_ADDITIONAL_PROPERTIES schema(V).
 {
 	AdditionalFeature *f = additional_feature_new(validator_set_object_additional_properties);
-	if (f)
-		additional_feature_set_validator(f, V);
-	else PARSE_FAILED;
+	additional_feature_set_validator(f, V);
 	A = &f->base;
 }
 
 schema_feature(A) ::= KEY_ADDITIONAL_PROPERTIES BOOLEAN(B).
 {
 	AdditionalFeature *f = additional_feature_new(validator_set_object_additional_properties);
-	if (f)
-		additional_feature_set_validator(f, B.boolean
-		                                 ? GENERIC_VALIDATOR
-		                                 : NULL);
-	else PARSE_FAILED;
+	additional_feature_set_validator(f, B.boolean
+	                                    ? GENERIC_VALIDATOR
+	                                    : NULL);
 	A = &f->base;
 }
 
@@ -497,9 +456,7 @@ required(A) ::= .
 required(A) ::= required(B) STRING(K).
 {
 	A = B ? B : object_required_new();
-	if (A)
-		object_required_add_key_n(A, K.string.str, K.string.str_len);
-	else PARSE_FAILED;
+	object_required_add_key_n(A, K.string.str, K.string.str_len);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -507,12 +464,8 @@ required(A) ::= required(B) STRING(K).
 schema_feature(A) ::= KEY_MAX_PROPERTIES NUMBER(N).
 {
 	CountFeature *f = count_feature_new(validator_set_object_max_properties);
-	if (f)
-	{
-		if (!count_feature_set_value(f, N.string.str, N.string.str_len))
-			parser_context_set_error(context, "Invalid maxProperties format");
-	}
-	else PARSE_FAILED;
+	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
+		parser_context_set_error(context, "Invalid maxProperties format");
 	A = &f->base;
 }
 
@@ -522,12 +475,8 @@ schema_feature(A) ::= KEY_MAX_PROPERTIES NUMBER(N).
 schema_feature(A) ::= KEY_MIN_PROPERTIES NUMBER(N).
 {
 	CountFeature *f = count_feature_new(validator_set_object_min_properties);
-	if (f)
-	{
-		if (!count_feature_set_value(f, N.string.str, N.string.str_len))
-			parser_context_set_error(context, "Invalid minProperties format");
-	}
-	else PARSE_FAILED;
+	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
+		parser_context_set_error(context, "Invalid minProperties format");
 	A = &f->base;
 }
 
@@ -537,9 +486,7 @@ schema_feature(A) ::= KEY_MIN_PROPERTIES NUMBER(N).
 schema_feature(A) ::= KEY_ITEMS schema(V).
 {
 	ArrayItems *a = array_items_new();
-	if (a)
-		array_items_set_generic_item(a, V);
-	else PARSE_FAILED;
+	array_items_set_generic_item(a, V);
 	A = &a->base;
 }
 
@@ -550,9 +497,7 @@ schema_feature(A) ::= KEY_ITEMS ARR_START items(B) ARR_END.
 	else
 	{
 		ArrayItems *a = array_items_new();
-		if (a)
-			array_items_set_zero_items(a);
-		else PARSE_FAILED;
+		array_items_set_zero_items(a);
 		A = &a->base;
 	}
 }
@@ -568,9 +513,7 @@ items(A) ::= .
 items(A) ::= items(B) schema(V).
 {
 	A = B ? B : array_items_new();
-	if (A)
-		array_items_add_item(A, V);
-	else PARSE_FAILED;
+	array_items_add_item(A, V);
 }
 
 
@@ -579,20 +522,16 @@ items(A) ::= items(B) schema(V).
 schema_feature(A) ::= KEY_ADDITIONAL_ITEMS schema(V).
 {
 	AdditionalFeature *f = additional_feature_new(validator_set_array_additional_items);
-	if (f)
-		additional_feature_set_validator(f, V);
-	else PARSE_FAILED;
+	additional_feature_set_validator(f, V);
 	A = &f->base;
 }
 
 schema_feature(A) ::= KEY_ADDITIONAL_ITEMS BOOLEAN(B).
 {
 	AdditionalFeature *f = additional_feature_new(validator_set_array_additional_items);
-	if (f)
-		additional_feature_set_validator(f, B.boolean
-		                                    ? GENERIC_VALIDATOR
-		                                    : NULL);
-	else PARSE_FAILED;
+	additional_feature_set_validator(f, B.boolean
+	                                    ? GENERIC_VALIDATOR
+	                                    : NULL);
 	A = &f->base;
 }
 
@@ -602,12 +541,8 @@ schema_feature(A) ::= KEY_ADDITIONAL_ITEMS BOOLEAN(B).
 schema_feature(A) ::= KEY_MAX_ITEMS NUMBER(N).
 {
 	CountFeature *f = count_feature_new(validator_set_array_max_items);
-	if (f)
-	{
-		if (!count_feature_set_value(f, N.string.str, N.string.str_len))
-			parser_context_set_error(context, "Invalid maxItems format");
-	}
-	else PARSE_FAILED;
+	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
+		parser_context_set_error(context, "Invalid maxItems format");
 	A = &f->base;
 }
 
@@ -617,12 +552,8 @@ schema_feature(A) ::= KEY_MAX_ITEMS NUMBER(N).
 schema_feature(A) ::= KEY_MIN_ITEMS NUMBER(N).
 {
 	CountFeature *f = count_feature_new(validator_set_array_min_items);
-	if (f)
-	{
-		if (!count_feature_set_value(f, N.string.str, N.string.str_len))
-			parser_context_set_error(context, "Invalid minItems format");
-	}
-	else PARSE_FAILED;
+	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
+		parser_context_set_error(context, "Invalid minItems format");
 	A = &f->base;
 }
 
@@ -633,7 +564,6 @@ schema_feature(A) ::= KEY_MAXIMUM NUMBER(N).
 {
 	NumberFeature *f = number_feature_new(N.string.str, N.string.str_len,
 	                                      validator_set_number_maximum);
-	if (!f) PARSE_FAILED;
 	A = &f->base;
 }
 
@@ -643,9 +573,7 @@ schema_feature(A) ::= KEY_MAXIMUM NUMBER(N).
 schema_feature(A) ::= KEY_EXCLUSIVE_MAXIMUM BOOLEAN(B).
 {
 	BooleanFeature *f = boolean_feature_new(validator_set_number_maximum_exclusive);
-	if (f)
-		boolean_feature_set_value(f, B.boolean);
-	else PARSE_FAILED;
+	boolean_feature_set_value(f, B.boolean);
 	A = &f->base;
 }
 
@@ -656,7 +584,6 @@ schema_feature(A) ::= KEY_MINIMUM NUMBER(N).
 {
 	NumberFeature *f = number_feature_new(N.string.str, N.string.str_len,
 	                                      validator_set_number_minimum);
-	if (!f) PARSE_FAILED;
 	A = &f->base;
 }
 
@@ -666,9 +593,7 @@ schema_feature(A) ::= KEY_MINIMUM NUMBER(N).
 schema_feature(A) ::= KEY_EXCLUSIVE_MINIMUM BOOLEAN(B).
 {
 	BooleanFeature *f = boolean_feature_new(validator_set_number_minimum_exclusive);
-	if (f)
-		boolean_feature_set_value(f, B.boolean);
-	else PARSE_FAILED;
+	boolean_feature_set_value(f, B.boolean);
 	A = &f->base;
 }
 
@@ -678,12 +603,8 @@ schema_feature(A) ::= KEY_EXCLUSIVE_MINIMUM BOOLEAN(B).
 schema_feature(A) ::= KEY_MAX_LENGTH NUMBER(N).
 {
 	CountFeature *f = count_feature_new(validator_set_string_max_length);
-	if (f)
-	{
-		if (!count_feature_set_value(f, N.string.str, N.string.str_len))
-			parser_context_set_error(context, "Invalid maxLength format");
-	}
-	else PARSE_FAILED;
+	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
+		parser_context_set_error(context, "Invalid maxLength format");
 	A = &f->base;
 }
 
@@ -693,12 +614,8 @@ schema_feature(A) ::= KEY_MAX_LENGTH NUMBER(N).
 schema_feature(A) ::= KEY_MIN_LENGTH NUMBER(N).
 {
 	CountFeature *f = count_feature_new(validator_set_string_min_length);
-	if (f)
-	{
-		if (!count_feature_set_value(f, N.string.str, N.string.str_len))
-			parser_context_set_error(context, "Invalid minLength format");
-	}
-	else PARSE_FAILED;
+	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
+		parser_context_set_error(context, "Invalid minLength format");
 	A = &f->base;
 }
 
@@ -719,9 +636,7 @@ schema_enum(A) ::= KEY_ENUM ARR_START enum_list(B) ARR_END.
 enum_list(A) ::= value_validator(V).
 {
 	A = one_of_validator_new();
-	if (A)
-		combined_validator_add_value(A, V);
-	else PARSE_FAILED;
+	combined_validator_add_value(A, V);
 }
 
 enum_list(A) ::= enum_list(B) value_validator(V).
@@ -739,37 +654,26 @@ enum_list(A) ::= enum_list(B) value_validator(V).
 value_validator(A) ::= NULL.
 {
 	A = NULL_VALIDATOR;
-	if (!A) PARSE_FAILED;
 }
 
 value_validator(A) ::= BOOLEAN(V).
 {
 	BooleanValidator *b = boolean_validator_new_with_value(V.boolean);
-	if (!b) PARSE_FAILED;
 	A = &b->base;
 }
 
 value_validator(A) ::= STRING(V).
 {
 	StringValidator *s = string_validator_new();
-	if (s)
-	{
-		if (!string_validator_add_expected_value(s, &V.string))
-			PARSE_FAILED;
-	}
-	else PARSE_FAILED;
+	string_validator_add_expected_value(s, &V.string);
 	A = &s->base;
 }
 
 value_validator(A) ::= NUMBER(V).
 {
 	NumberValidator *n = number_validator_new();
-	if (n)
-	{
-		if (!number_validator_add_expected_value(n, &V.string))
-			PARSE_FAILED;
-	}
-	else PARSE_FAILED;
+	if (!number_validator_add_expected_value(n, &V.string))
+		PARSE_FAILED;
 	A = &n->base;
 }
 
@@ -777,14 +681,10 @@ value_validator(A) ::= ARR_START value_validator_items(B) ARR_END.
 {
 	ArrayValidator *a = array_validator_new();
 	A = &a->base;
-	if (A)
-	{
-		size_t count = array_items_items_length(B);
-		validator_set_array_max_items(A, count);
-		validator_set_array_min_items(A, count);
-		validator_set_array_items(A, B);
-	}
-	else PARSE_FAILED;
+	size_t count = array_items_items_length(B);
+	validator_set_array_max_items(A, count);
+	validator_set_array_min_items(A, count);
+	validator_set_array_items(A, B);
 	array_items_unref(B);
 }
 
@@ -794,28 +694,23 @@ value_validator(A) ::= ARR_START value_validator_items(B) ARR_END.
 value_validator_items(A) ::= .
 {
 	A = array_items_new();
-	if (!A) PARSE_FAILED;
 }
 
 value_validator_items(A) ::= value_validator_items(B) value_validator(V).
 {
 	A = B;
-	if (!array_items_add_item(A, V)) PARSE_FAILED;
+	array_items_add_item(A, V);
 }
 
 value_validator(A) ::= OBJ_START value_validator_properties(B) OBJ_END.
 {
 	ObjectValidator *o = object_validator_new();
 	A = &o->base;
-	if (A)
-	{
-		size_t count = object_properties_length(B);
-		validator_set_object_max_properties(A, count);
-		validator_set_object_min_properties(A, count);
-		validator_set_object_properties(A, B);
-		validator_set_object_additional_properties(A, NULL);
-	}
-	else PARSE_FAILED;
+	size_t count = object_properties_length(B);
+	validator_set_object_max_properties(A, count);
+	validator_set_object_min_properties(A, count);
+	validator_set_object_properties(A, B);
+	validator_set_object_additional_properties(A, NULL);
 	object_properties_unref(B);
 }
 
@@ -825,14 +720,12 @@ value_validator(A) ::= OBJ_START value_validator_properties(B) OBJ_END.
 value_validator_properties(A) ::= .
 {
 	A = object_properties_new();
-	if (!A) PARSE_FAILED;
 }
 
 value_validator_properties(A) ::= value_validator_properties(B) any_object_key(K) value_validator(V).
 {
 	A = B;
-	if (!object_properties_add_key_n(A, K.string.str, K.string.str_len, V))
-		PARSE_FAILED;
+	object_properties_add_key_n(A, K.string.str, K.string.str_len, V);
 }
 
 
@@ -845,7 +738,6 @@ value_validator_properties(A) ::= value_validator_properties(B) any_object_key(K
 schema_default(A) ::= KEY_DEFAULT instance(V).
 {
 	A = &jvalue_feature_new(V, validator_set_default)->base;
-	if (!A) PARSE_FAILED;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

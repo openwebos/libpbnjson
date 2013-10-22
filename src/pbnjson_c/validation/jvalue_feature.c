@@ -44,11 +44,6 @@ static FeatureVtable jvalue_feature_vtable =
 JvalueFeature *jvalue_feature_new(jvalue_ref value, JvalueFeatureFunc apply_func)
 {
 	JvalueFeature *j = g_new0(JvalueFeature, 1);
-	if (!j)
-	{
-		j_release(&value);
-		return NULL;
-	}
 	feature_init(&j->base, &jvalue_feature_vtable);
 	j->value = value;
 	j->apply_func = apply_func;

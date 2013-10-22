@@ -52,8 +52,6 @@ static FeatureVtable array_items_vtable =
 ArrayItems* array_items_new(void)
 {
 	ArrayItems *a = g_new0(ArrayItems, 1);
-	if (!a)
-		return NULL;
 	feature_init(&a->base, &array_items_vtable);
 	return a;
 }
@@ -68,7 +66,7 @@ void array_items_unref(ArrayItems *a)
 	feature_unref(&a->base);
 }
 
-bool array_items_set_generic_item(ArrayItems *a, Validator *v)
+void array_items_set_generic_item(ArrayItems *a, Validator *v)
 {
 	// clean up old items before setting general one
 	g_list_free_full(a->validators, _validator_release);
@@ -77,17 +75,15 @@ bool array_items_set_generic_item(ArrayItems *a, Validator *v)
 		validator_unref(a->generic_validator);
 
 	a->generic_validator = v;
-	return true;
 }
 
-bool array_items_add_item(ArrayItems *a, Validator *v)
+void array_items_add_item(ArrayItems *a, Validator *v)
 {
 	if (a->generic_validator)
 		validator_unref(a->generic_validator), a->generic_validator = NULL;
 
 	a->validators = g_list_append(a->validators, v);
 	++a->validator_count;
-	return true;
 }
 
 size_t array_items_items_length(ArrayItems *a)
@@ -96,7 +92,7 @@ size_t array_items_items_length(ArrayItems *a)
 	return a->validator_count;
 }
 
-bool array_items_set_zero_items(ArrayItems *a)
+void array_items_set_zero_items(ArrayItems *a)
 {
 	if (a->generic_validator)
 		validator_unref(a->generic_validator), a->generic_validator = NULL;
@@ -104,7 +100,6 @@ bool array_items_set_zero_items(ArrayItems *a)
 	g_list_free_full(a->validators, _validator_release);
 	a->validators = NULL;
 	a->validator_count = 0;
-	return true;
 }
 
 void array_items_visit(ArrayItems *a,

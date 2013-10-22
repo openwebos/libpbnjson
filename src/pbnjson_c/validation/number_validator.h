@@ -64,9 +64,9 @@ void number_validator_release(NumberValidator *v);
 
 // Methods for unit tests
 bool number_validator_add_min_constraint(NumberValidator *n, const char* val);
-bool number_validator_add_min_exclusive_constraint(NumberValidator *n, bool exclusive);
+void number_validator_add_min_exclusive_constraint(NumberValidator *n, bool exclusive);
 bool number_validator_add_max_constraint(NumberValidator *n, const char* val);
-bool number_validator_add_max_exclusive_constraint(NumberValidator *n, bool exclusive);
+void number_validator_add_max_exclusive_constraint(NumberValidator *n, bool exclusive);
 
 /** @brief Set an exact expected value (for enum validation) */
 bool number_validator_add_expected_value(NumberValidator *n, StringSpan *span);

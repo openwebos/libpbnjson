@@ -46,16 +46,7 @@ static FeatureVtable object_required_vtable =
 ObjectRequired* object_required_new(void)
 {
 	ObjectRequired *o = g_new0(ObjectRequired, 1);
-	if (!o)
-		return NULL;
-
 	o->keys = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	if (!o->keys)
-	{
-		g_free(o);
-		return NULL;
-	}
-
 	feature_init(&o->base, &object_required_vtable);
 	return o;
 }
@@ -77,28 +68,22 @@ guint object_required_size(ObjectRequired *o)
 
 bool object_required_add_key(ObjectRequired *o, char const *key)
 {
+	if (g_hash_table_lookup(o->keys, key))
+		return false;
 	char *skey = g_strdup(key);
-	if (!skey)
-		return false;
-	if (g_hash_table_lookup(o->keys, skey))
-	{
-		g_free(skey);
-		return false;
-	}
 	g_hash_table_insert(o->keys, skey, skey);
 	return true;
 }
 
 bool object_required_add_key_n(ObjectRequired *o, char const *key, size_t key_len)
 {
+	char bkey[key_len + 1];
+	strncpy(bkey, key, key_len);
+	bkey[key_len] = 0;
+
+	if (g_hash_table_lookup(o->keys, bkey))
+		return false;
 	char *skey = g_strndup(key, key_len);
-	if (!skey)
-		return false;
-	if (g_hash_table_lookup(o->keys, skey))
-	{
-		g_free(skey);
-		return false;
-	}
 	g_hash_table_insert(o->keys, skey, skey);
 	return o->keys;
 }

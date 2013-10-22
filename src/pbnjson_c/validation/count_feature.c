@@ -44,8 +44,6 @@ static FeatureVtable count_feature_vtable =
 CountFeature* count_feature_new(CountFeatureFunc apply_func)
 {
 	CountFeature *n = g_new0(CountFeature, 1);
-	if (!n)
-		return NULL;
 	feature_init(&n->base, &count_feature_vtable);
 	n->apply_func = apply_func;
 	return n;
@@ -63,8 +61,8 @@ void count_feature_unref(CountFeature *n)
 
 bool count_feature_set_value(CountFeature *n, const char *val, size_t val_len)
 {
-	if (!n)
-		return false;
+	assert(n);
+
 	Number num;
 	number_init(&num);
 	if (number_set_n(&num, val, val_len) ||

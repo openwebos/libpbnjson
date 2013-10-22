@@ -203,7 +203,7 @@ TEST_F(TestArrayValidator, AnyValue)
 TEST_F(TestArrayValidator, GeneralValidatorPositive)
 {
 	auto vnum = mk_ptr((Validator *)number_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_set_generic_item(items, validator_ref(vnum.get())));
+	array_items_set_generic_item(items, validator_ref(vnum.get()));
 	EXPECT_EQ(2, ((NumberValidator *)vnum.get())->ref_count);
 	ASSERT_EQ(vnum.get(), items->generic_validator);
 	ASSERT_EQ(NULL, items->validators);
@@ -218,7 +218,7 @@ TEST_F(TestArrayValidator, GeneralValidatorPositive)
 TEST_F(TestArrayValidator, GeneralValidatorNegative)
 {
 	auto vnum = mk_ptr((Validator *)number_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_set_generic_item(items, validator_ref(vnum.get())));
+	array_items_set_generic_item(items, validator_ref(vnum.get()));
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
 	EXPECT_TRUE(validation_check(&(e = validation_event_number("1", 1)), s, NULL));
@@ -230,7 +230,7 @@ TEST_F(TestArrayValidator, GeneralValidatorNegative)
 TEST_F(TestArrayValidator, GeneralArrayValidatorPositive)
 {
 	auto varr = mk_ptr((Validator *)array_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_set_generic_item(items, validator_ref(varr.get())));
+	array_items_set_generic_item(items, validator_ref(varr.get()));
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
 	EXPECT_EQ(1, g_slist_length(s->validator_stack));
@@ -254,7 +254,7 @@ TEST_F(TestArrayValidator, GeneralArrayValidatorPositive)
 TEST_F(TestArrayValidator, GeneralArrayValidatorNegative)
 {
 	auto varr = mk_ptr((Validator *)array_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_set_generic_item(items, validator_ref(varr.get())));
+	array_items_set_generic_item(items, validator_ref(varr.get()));
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
 	EXPECT_EQ(1, g_slist_length(s->validator_stack));
@@ -271,7 +271,7 @@ TEST_F(TestArrayValidator, GeneralArrayValidatorNegative)
 TEST_F(TestArrayValidator, GeneralObjectValidatorPositive)
 {
 	auto vobj = mk_ptr((Validator *)object_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_set_generic_item(items, validator_ref(vobj.get())));
+	array_items_set_generic_item(items, validator_ref(vobj.get()));
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
 	EXPECT_EQ(1, g_slist_length(s->validator_stack));
@@ -297,7 +297,7 @@ TEST_F(TestArrayValidator, GeneralObjectValidatorPositive)
 TEST_F(TestArrayValidator, GeneralObjectValidatorNegative)
 {
 	auto vobj = mk_ptr((Validator *)object_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_set_generic_item(items, validator_ref(vobj.get())));
+	array_items_set_generic_item(items, validator_ref(vobj.get()));
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
 	EXPECT_EQ(1, g_slist_length(s->validator_stack));
@@ -314,10 +314,10 @@ TEST_F(TestArrayValidator, GeneralObjectValidatorNegative)
 TEST_F(TestArrayValidator, SpecificValidatorsLessThanNeeded)
 {
 	auto vnum = mk_ptr((Validator *)number_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_add_item(items, validator_ref(vnum.get())));
+	array_items_add_item(items, validator_ref(vnum.get()));
 
 	auto vstr = mk_ptr((Validator *)string_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_add_item(items, validator_ref(vstr.get())));
+	array_items_add_item(items, validator_ref(vstr.get()));
 
 	ASSERT_TRUE(v->items);
 	ASSERT_EQ(2, array_items_items_length(v->items));
@@ -337,10 +337,10 @@ TEST_F(TestArrayValidator, SpecificValidatorsLessThanNeeded)
 TEST_F(TestArrayValidator, SpecificValidatorsPerfectMatch)
 {
 	auto vnum = mk_ptr((Validator *)number_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_add_item(items, validator_ref(vnum.get())));
+	array_items_add_item(items, validator_ref(vnum.get()));
 
 	auto vstr = mk_ptr((Validator *)string_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_add_item(items, validator_ref(vstr.get())));
+	array_items_add_item(items, validator_ref(vstr.get()));
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
 	EXPECT_EQ(1, g_slist_length(s->validator_stack));
@@ -355,10 +355,10 @@ TEST_F(TestArrayValidator, SpecificValidatorsPerfectMatch)
 TEST_F(TestArrayValidator, SpecificValidatorsMoreThanNeeded)
 {
 	auto vnum = mk_ptr((Validator *)number_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_add_item(items, validator_ref(vnum.get())));
+	array_items_add_item(items, validator_ref(vnum.get()));
 
 	auto vstr = mk_ptr((Validator *)string_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_add_item(items, validator_ref(vstr.get())));
+	array_items_add_item(items, validator_ref(vstr.get()));
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
 	EXPECT_EQ(1, g_slist_length(s->validator_stack));
@@ -374,7 +374,7 @@ TEST_F(TestArrayValidator, SpecificValidatorsMoreThanNeeded)
 
 TEST_F(TestArrayValidator, AdditionalItemsDisallowedPositive)
 {
-	ASSERT_TRUE(array_items_add_item(items, GENERIC_VALIDATOR));
+	array_items_add_item(items, GENERIC_VALIDATOR);
 	validator_set_array_additional_items(&v->base, NULL);
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
@@ -387,7 +387,7 @@ TEST_F(TestArrayValidator, AdditionalItemsDisallowedPositive)
 
 TEST_F(TestArrayValidator, AdditionalItemsDisallowedNegative)
 {
-	ASSERT_TRUE(array_items_add_item(items, GENERIC_VALIDATOR));
+	array_items_add_item(items, GENERIC_VALIDATOR);
 	validator_set_array_additional_items(&v->base, NULL);
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
@@ -402,7 +402,7 @@ TEST_F(TestArrayValidator, AdditionalItemsDisallowedNegative)
 TEST_F(TestArrayValidator, AdditionalItemsPositive)
 {
 	auto vstr = mk_ptr((Validator *)string_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_add_item(items, validator_ref(vstr.get())));
+	array_items_add_item(items, validator_ref(vstr.get()));
 
 	auto vnum = mk_ptr((Validator *)number_validator_new(), validator_unref);
 	validator_set_array_additional_items(&v->base, vnum.get());
@@ -418,7 +418,7 @@ TEST_F(TestArrayValidator, AdditionalItemsPositive)
 TEST_F(TestArrayValidator, AdditionalItemsNegative)
 {
 	auto vstr = mk_ptr((Validator *)string_validator_new(), validator_unref);
-	ASSERT_TRUE(array_items_add_item(items, validator_ref(vstr.get())));
+	array_items_add_item(items, validator_ref(vstr.get()));
 
 	auto vnum = mk_ptr((Validator *)number_validator_new(), validator_unref);
 	validator_set_array_additional_items(&v->base, vnum.get());
@@ -433,7 +433,7 @@ TEST_F(TestArrayValidator, AdditionalItemsNegative)
 
 TEST_F(TestArrayValidator, OnlyEmptyArrayAllowedPositive)
 {
-	ASSERT_TRUE(array_items_set_zero_items(items));
+	array_items_set_zero_items(items);
 	validator_set_array_additional_items(&v->base, NULL);
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
@@ -444,7 +444,7 @@ TEST_F(TestArrayValidator, OnlyEmptyArrayAllowedPositive)
 
 TEST_F(TestArrayValidator, OnlyEmptyArrayAllowedNegative)
 {
-	ASSERT_TRUE(array_items_set_zero_items(items));
+	array_items_set_zero_items(items);
 	validator_set_array_additional_items(&v->base, NULL);
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
@@ -456,7 +456,7 @@ TEST_F(TestArrayValidator, OnlyEmptyArrayAllowedNegative)
 
 TEST_F(TestArrayValidator, MinItemsPositive)
 {
-	ASSERT_TRUE(array_validator_set_min_items(v, 2));
+	array_validator_set_min_items(v, 2);
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
 	EXPECT_TRUE(validation_check(&(e = validation_event_null()), s, this));
@@ -467,7 +467,7 @@ TEST_F(TestArrayValidator, MinItemsPositive)
 
 TEST_F(TestArrayValidator, MinItemsNegative)
 {
-	ASSERT_TRUE(array_validator_set_min_items(v, 2));
+	array_validator_set_min_items(v, 2);
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
 	EXPECT_TRUE(validation_check(&(e = validation_event_null()), s, this));
@@ -478,7 +478,7 @@ TEST_F(TestArrayValidator, MinItemsNegative)
 
 TEST_F(TestArrayValidator, MaxItemsPositive)
 {
-	ASSERT_TRUE(array_validator_set_max_items(v, 2));
+	array_validator_set_max_items(v, 2);
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
 	EXPECT_TRUE(validation_check(&(e = validation_event_null()), s, this));
@@ -489,7 +489,7 @@ TEST_F(TestArrayValidator, MaxItemsPositive)
 
 TEST_F(TestArrayValidator, MaxItemsNegative)
 {
-	ASSERT_TRUE(array_validator_set_max_items(v, 2));
+	array_validator_set_max_items(v, 2);
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_arr_start()), s, NULL));
 	EXPECT_TRUE(validation_check(&(e = validation_event_null()), s, this));

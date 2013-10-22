@@ -89,7 +89,7 @@ void schema_parsing_unref(SchemaParsing *s);
  * Implements move semantics: feature's reference counter isn't incremented,
  * and will be decremented when the SchemaParsing is destroyed.
  */
-bool schema_parsing_add_feature(SchemaParsing *s, Feature *feature);
+void schema_parsing_add_feature(SchemaParsing *s, Feature *feature);
 
 /** @brief Set validator created from the attribute "type".
  *
@@ -102,7 +102,7 @@ void schema_parsing_set_validator(SchemaParsing *s, Validator *v);
  *
  * New string is allocated, copying the span from the source.
  */
-bool schema_parsing_set_id(SchemaParsing *s, StringSpan id);
+void schema_parsing_set_id(SchemaParsing *s, StringSpan id);
 
 /** @brief Remember definitions of subschemas under "definitions".
  *
@@ -115,9 +115,9 @@ void schema_parsing_set_definitions(SchemaParsing *s, Definitions *d);
  * Move semantics: validator's reference count isn't incremented, but
  * the ownership is taken.
  */
-bool schema_parsing_add_combinator(SchemaParsing *s, Validator *v);
+void schema_parsing_add_combinator(SchemaParsing *s, Validator *v);
 
-bool schema_parsing_set_extends(SchemaParsing *s, Validator *extends);
+void schema_parsing_set_extends(SchemaParsing *s, Validator *extends);
 
 #ifdef __cplusplus
 }

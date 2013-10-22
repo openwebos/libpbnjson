@@ -299,8 +299,6 @@ ValidatorVtable object_vtable =
 ObjectValidator* object_validator_new(void)
 {
 	ObjectValidator *self = g_new0(ObjectValidator, 1);
-	if (!self)
-		return NULL;
 	self->ref_count = 1;
 	self->max_properties = -1;
 	self->min_properties = -1;
@@ -319,14 +317,12 @@ void object_validator_release(ObjectValidator *v)
 	g_free(v);
 }
 
-bool object_validator_set_max_properties(ObjectValidator *o, size_t max)
+void object_validator_set_max_properties(ObjectValidator *o, size_t max)
 {
 	o->max_properties = max;
-	return true;
 }
 
-bool object_validator_set_min_properties(ObjectValidator *o, size_t min)
+void object_validator_set_min_properties(ObjectValidator *o, size_t min)
 {
 	o->min_properties = min;
-	return true;
 }

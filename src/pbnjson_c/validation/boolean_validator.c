@@ -95,8 +95,6 @@ Validator *BOOLEAN_VALIDATOR = &BOOLEAN_VALIDATOR_IMPL.base;
 BooleanValidator *boolean_validator_new(void)
 {
 	BooleanValidator *b = g_new0(BooleanValidator, 1);
-	if (!b)
-		return NULL;
 	b->ref_count = 1;
 	validator_init(&b->base, &boolean_vtable);
 	return b;

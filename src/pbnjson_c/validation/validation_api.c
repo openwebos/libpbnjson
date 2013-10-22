@@ -146,8 +146,6 @@ bool validate_json_n(char const *json, size_t json_len, Validator *v,
 	};
 
 	ctxt.s = validation_state_new(v, u, &ctxt.notify);
-	if (!ctxt.s)
-		return false;
 
 	const bool allow_comments = true;
 

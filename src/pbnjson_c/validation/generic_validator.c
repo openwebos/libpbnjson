@@ -140,8 +140,6 @@ static ValidatorVtable generic_static_vtable =
 GenericValidator *generic_validator_new(void)
 {
 	GenericValidator *v = g_new0(GenericValidator, 1);
-	if (!v)
-		return NULL;
 	v->ref_count = 1;
 	validator_init(&v->base, &generic_vtable);
 	return v;

@@ -112,8 +112,6 @@ static ValidatorVtable definitions_vtable =
 Definitions* definitions_new(void)
 {
 	Definitions *d = g_new0(Definitions, 1);
-	if (!d)
-		return NULL;
 	d->ref_count = 1;
 	validator_init(&d->base, &definitions_vtable);
 	return d;
@@ -124,25 +122,15 @@ void definitions_unref(Definitions *d)
 	validator_unref(&d->base);
 }
 
-bool definitions_set_name(Definitions *d, StringSpan *name)
+void definitions_set_name(Definitions *d, StringSpan *name)
 {
 	d->name = g_strndup(name->str, name->str_len);
-	return d->name != NULL;
 }
 
-bool definitions_add(Definitions *d, StringSpan *name, Validator *v)
+void definitions_add(Definitions *d, StringSpan *name, Validator *v)
 {
 	NameValidator *nv = g_new0(NameValidator, 1);
-	if (!nv)
-		return false;
 	nv->name = g_strndup(name->str, name->str_len);
-	if (!nv->name)
-	{
-		g_free(nv);
-		validator_unref(v);
-		return false;
-	}
 	nv->validator = v;
 	d->validators = g_slist_prepend(d->validators, nv);
-	return true;
 }

@@ -54,9 +54,8 @@ void object_properties_unref(ObjectProperties *o);
  * @param[in] o This object
  * @param[in] key Key in {"properties": {"key": {...}}}
  * @param[in] v Validator for subschema in {"properties": {"key": {...}}}
- * @return true if succeeded, false if OOM
  */
-bool object_properties_add_key(ObjectProperties *o, char const *key, Validator *v);
+void object_properties_add_key(ObjectProperties *o, char const *key, Validator *v);
 
 /** @brief Remember a key with corresponding validator.
  *
@@ -66,9 +65,8 @@ bool object_properties_add_key(ObjectProperties *o, char const *key, Validator *
  * @param[in] key Key in {"properties": {"key": {...}}}
  * @param[in] key_len Length of the key
  * @param[in] v Validator for subschema in {"properties": {"key": {...}}}
- * @return true if succeeded, false if OOM
  */
-bool object_properties_add_key_n(ObjectProperties *o, char const *key, size_t key_len, Validator *v);
+void object_properties_add_key_n(ObjectProperties *o, char const *key, size_t key_len, Validator *v);
 
 /** @brief Calculate the count of properties. */
 size_t object_properties_length(ObjectProperties *o);

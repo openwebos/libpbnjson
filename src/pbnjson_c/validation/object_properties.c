@@ -51,15 +51,8 @@ static FeatureVtable object_properties_vtable =
 ObjectProperties* object_properties_new(void)
 {
 	ObjectProperties *o = g_new0(ObjectProperties, 1);
-	if (!o)
-		return NULL;
 	feature_init(&o->base, &object_properties_vtable);
 	o->keys = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, _validator_release);
-	if (!o->keys)
-	{
-		g_free(o);
-		return NULL;
-	}
 	return o;
 }
 
@@ -73,29 +66,17 @@ void object_properties_unref(ObjectProperties *o)
 	feature_unref(&o->base);
 }
 
-bool object_properties_add_key(ObjectProperties *o, char const *key, Validator *v)
+void object_properties_add_key(ObjectProperties *o, char const *key, Validator *v)
 {
 	char *skey = g_strdup(key);
-	if (!skey)
-	{
-		validator_unref(v);
-		return false;
-	}
 	g_hash_table_insert(o->keys, skey, v);
-	return true;
 }
 
-bool object_properties_add_key_n(ObjectProperties *o, char const *key, size_t key_len, Validator *v)
+void object_properties_add_key_n(ObjectProperties *o, char const *key, size_t key_len, Validator *v)
 {
 	assert(o && o->keys);
 	char *skey = g_strndup(key, key_len);
-	if (!skey)
-	{
-		validator_unref(v);
-		return false;
-	}
 	g_hash_table_insert(o->keys, skey, v);
-	return true;
 }
 
 size_t object_properties_length(ObjectProperties *o)
@@ -156,8 +137,6 @@ GHashTable *object_properties_gather_default(ObjectProperties *o, ValidationStat
 		if (!result)
 		{
 			result = g_hash_table_new(g_str_hash, g_str_equal);
-			if (!result)
-				return NULL;
 		}
 		g_hash_table_insert(result, (gpointer) key, (gpointer) def_value);
 	}

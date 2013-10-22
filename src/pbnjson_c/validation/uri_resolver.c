@@ -30,15 +30,8 @@ static void _document_release(gpointer data)
 UriResolver* uri_resolver_new(void)
 {
 	UriResolver *u = g_new0(UriResolver, 1);
-	if (!u)
-		return NULL;
 	u->documents = g_hash_table_new_full(g_str_hash, g_str_equal,
 	                                     g_free, _document_release);
-	if (!u->documents)
-	{
-		g_free(u);
-		return NULL;
-	}
 	return u;
 }
 
@@ -64,14 +57,7 @@ char const *uri_resolver_add_document(UriResolver *u, char const *document)
 
 	GHashTable *fragments = g_hash_table_new_full(g_str_hash, g_str_equal,
 	                                              g_free, _validator_release);
-	if (!fragments)
-		return false;
 	char *new_document = g_strdup(document);
-	if (!new_document)
-	{
-		g_hash_table_destroy(fragments);
-		return false;
-	}
 	g_hash_table_insert(u->documents, new_document, fragments);
 	return new_document;
 }
@@ -102,9 +88,6 @@ char const *uri_resolver_add_validator(UriResolver *u,
 		fprintf(stderr, "The same fragment %s is added second time!\n", fragment); // Look for bugs!
 
 	char *new_fragment = g_strdup(fragment);
-	if (!new_fragment)
-		return NULL;
-
 	g_hash_table_insert(fragments, new_fragment, validator_ref(v));
 	return new_fragment;
 }

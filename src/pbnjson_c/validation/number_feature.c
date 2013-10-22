@@ -47,8 +47,6 @@ NumberFeature* number_feature_new(char const *str, size_t len,
                                   NumberFeatureFunc apply_func)
 {
 	NumberFeature *n = g_new0(NumberFeature, 1);
-	if (!n)
-		return NULL;
 	n->apply_func = apply_func;
 	number_init(&n->value);
 	if (number_set_n(&n->value, str, len))

@@ -263,8 +263,6 @@ static ValidatorVtable schema_parsing_vtable =
 SchemaParsing* schema_parsing_new(void)
 {
 	SchemaParsing *s = g_new0(SchemaParsing, 1);
-	if (!s)
-		return s;
 	s->ref_count = 1;
 	validator_init(&s->base, &schema_parsing_vtable);
 	return s;
@@ -281,13 +279,13 @@ void schema_parsing_unref(SchemaParsing *s)
 	validator_unref(&s->base);
 }
 
-bool schema_parsing_add_feature(SchemaParsing *s, Feature *f)
+void schema_parsing_add_feature(SchemaParsing *s, Feature *f)
 {
+	assert(s);
 	// Skip empty features.
-	if (!s || !f)
-		return false;
+	if (!f)
+		return;
 	s->features = g_slist_prepend(s->features, f);
-	return true;
 }
 
 void schema_parsing_set_validator(SchemaParsing *s, Validator *v)
@@ -296,11 +294,10 @@ void schema_parsing_set_validator(SchemaParsing *s, Validator *v)
 	s->type_validator = v;
 }
 
-bool schema_parsing_set_id(SchemaParsing *s, StringSpan id)
+void schema_parsing_set_id(SchemaParsing *s, StringSpan id)
 {
 	g_free(s->id);
 	s->id = g_strndup(id.str, id.str_len);
-	return s->id != NULL;
 }
 
 void schema_parsing_set_definitions(SchemaParsing *s, Definitions *d)
@@ -309,29 +306,15 @@ void schema_parsing_set_definitions(SchemaParsing *s, Definitions *d)
 	s->definitions = d;
 }
 
-bool schema_parsing_add_combinator(SchemaParsing *s, Validator *v)
+void schema_parsing_add_combinator(SchemaParsing *s, Validator *v)
 {
-	if (!v)
-		return false;
-	if (!s)
-	{
-		validator_unref(v);
-		return false;
-	}
+	assert(s && v);
 	s->validator_combinators = g_slist_prepend(s->validator_combinators, v);
-	return s->validator_combinators;
 }
 
-bool schema_parsing_set_extends(SchemaParsing *s, Validator *extends)
+void schema_parsing_set_extends(SchemaParsing *s, Validator *extends)
 {
-	if (!extends)
-		return false;
-	if (!s)
-	{
-		validator_unref(extends);
-		return false;
-	}
+	assert(s);
 	validator_unref(s->extends);
 	s->extends = extends;
-	return true;
 }

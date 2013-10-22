@@ -50,13 +50,13 @@ ArrayItems* array_items_ref(ArrayItems *o);
 void array_items_unref(ArrayItems *o);
 
 /** @brief Remember the generic item validator. Move semantics. */
-bool array_items_set_generic_item(ArrayItems *a, Validator *v);
+void array_items_set_generic_item(ArrayItems *a, Validator *v);
 
 /** @brief Equivalent of "items = []" in array schema. */
-bool array_items_set_zero_items(ArrayItems *a);
+void array_items_set_zero_items(ArrayItems *a);
 
 /** @brief Add a specified item to the list. */
-bool array_items_add_item(ArrayItems *a, Validator *v);
+void array_items_add_item(ArrayItems *a, Validator *v);
 
 /** @brief Access the count of specified items. */
 size_t array_items_items_length(ArrayItems *a);

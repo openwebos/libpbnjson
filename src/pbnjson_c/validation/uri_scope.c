@@ -160,10 +160,7 @@ char const *uri_scope_push_fragment(UriScope *u, char const *fragment)
 	char const *hash = strchr(fragment, '#');
 	fragment = hash ? hash : "#";
 
-	char *f = g_strdup(fragment);
-	if (!f)
-		return NULL;
-	u->fragment_stack = g_slist_prepend(u->fragment_stack, f);
+	u->fragment_stack = g_slist_prepend(u->fragment_stack, g_strdup(fragment));
 	return uri_scope_get_fragment(u);
 }
 
@@ -182,8 +179,6 @@ bool uri_scope_push_uri(UriScope *u, char const *uri)
 {
 	UriParserStateA state;
 	UriUriA *result = g_new0(UriUriA, 1);
-	if (!result)
-		return false;
 	UriUriA a;
 
 	state.uri = &a;
@@ -249,8 +244,6 @@ char const *uri_scope_push_fragment_leaf(UriScope *u, char const *leaf)
 		++leaf;
 
 	char *new_f = g_strconcat(f, "/", leaf, NULL);
-	if (!new_f)
-		return NULL;
 	u->fragment_stack->data = new_f;
 	g_free(f);
 	return uri_scope_get_fragment(u);

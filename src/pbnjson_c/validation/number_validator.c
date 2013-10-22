@@ -164,8 +164,6 @@ static ValidatorVtable number_vtable =
 NumberValidator* number_validator_new(void)
 {
 	NumberValidator *self = g_new0(NumberValidator, 1);
-	if (!self)
-		return NULL;
 	self->ref_count = 1;
 	validator_init(&self->base, &number_vtable);
 	return self;
@@ -204,10 +202,9 @@ bool number_validator_add_min_constraint(NumberValidator *n, const char* val)
 	return true;
 }
 
-bool number_validator_add_min_exclusive_constraint(NumberValidator *n, bool exclusive)
+void number_validator_add_min_exclusive_constraint(NumberValidator *n, bool exclusive)
 {
 	n->min_exclusive = exclusive;
-	return true;
 }
 
 bool number_validator_add_max_constraint(NumberValidator *n, const char* val)
@@ -224,10 +221,9 @@ bool number_validator_add_max_constraint(NumberValidator *n, const char* val)
 	return true;
 }
 
-bool number_validator_add_max_exclusive_constraint(NumberValidator *n, bool exclusive)
+void number_validator_add_max_exclusive_constraint(NumberValidator *n, bool exclusive)
 {
 	n->max_exclusive = exclusive;
-	return true;
 }
 
 bool number_validator_add_expected_value(NumberValidator *n, StringSpan *span)

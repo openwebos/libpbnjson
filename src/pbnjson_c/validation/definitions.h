@@ -47,16 +47,15 @@ Definitions* definitions_new(void);
 void definitions_unref(Definitions *d);
 
 /** @brief Set name for this definitions */
-bool definitions_set_name(Definitions *d, StringSpan *name);
+void definitions_set_name(Definitions *d, StringSpan *name);
 
 /** @brief Add a definition
  *
  * @param[in] d This object
  * @param[in] name Name of the subschema in {"definitions": {"name": {...}}}
  * @param[in] v Validator for the subschema in {"definitions": {"name": {...}}}
- * @return true If succeeded, false if failed to allocate enough memory.
  */
-bool definitions_add(Definitions *d, StringSpan *name, Validator *v);
+void definitions_add(Definitions *d, StringSpan *name, Validator *v);
 
 #ifdef __cplusplus
 }

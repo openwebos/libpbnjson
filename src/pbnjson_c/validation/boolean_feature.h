@@ -50,7 +50,7 @@ BooleanFeature* boolean_feature_ref(BooleanFeature *n);
 void boolean_feature_unref(BooleanFeature *n);
 
 /** @brief Remember the boolean value */
-bool boolean_feature_set_value(BooleanFeature *n, bool value);
+void boolean_feature_set_value(BooleanFeature *n, bool value);
 
 #ifdef __cplusplus
 }

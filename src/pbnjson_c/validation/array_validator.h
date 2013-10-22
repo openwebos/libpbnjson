@@ -64,10 +64,10 @@ ArrayValidator* array_validator_new();
 void array_validator_release(ArrayValidator *v);
 
 /** @brief Set maximal item count in the array. */
-bool array_validator_set_max_items(ArrayValidator *v, size_t max);
+void array_validator_set_max_items(ArrayValidator *v, size_t max);
 
 /** @brief Set minimal item count in the array. */
-bool array_validator_set_min_items(ArrayValidator *v, size_t min);
+void array_validator_set_min_items(ArrayValidator *v, size_t min);
 
 #ifdef __cplusplus
 }

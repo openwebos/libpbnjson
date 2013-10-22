@@ -44,8 +44,6 @@ static FeatureVtable boolean_feature_vtable =
 BooleanFeature* boolean_feature_new(BooleanFeatureFunc apply_func)
 {
 	BooleanFeature *n = g_new0(BooleanFeature, 1);
-	if (!n)
-		return NULL;
 	feature_init(&n->base, &boolean_feature_vtable);
 	n->apply_func = apply_func;
 	return n;
@@ -61,10 +59,8 @@ void boolean_feature_unref(BooleanFeature *n)
 	feature_unref(&n->base);
 }
 
-bool boolean_feature_set_value(BooleanFeature *n, bool value)
+void boolean_feature_set_value(BooleanFeature *n, bool value)
 {
-	if (!n)
-		return false;
+	assert(n);
 	n->value = value;
-	return true;
 }

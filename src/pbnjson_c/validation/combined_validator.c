@@ -284,8 +284,6 @@ ValidatorVtable combined_vtable =
 CombinedValidator* combined_validator_new(void)
 {
 	CombinedValidator *self = g_new0(CombinedValidator, 1);
-	if (!self)
-		return NULL;
 	self->ref_count = 1;
 	validator_init(&self->base, &combined_vtable);
 	return self;

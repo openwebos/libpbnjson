@@ -30,8 +30,7 @@ typedef enum _ValidatorType ValidatorType;
 enum TypeParserError
 {
 	TPE_OK = 0,           /**< No error */
-	TPE_UNKNOWN_TYPE,     /**< Unknown type keyword */
-	TPE_NO_MEMORY         /**< No memory for allocation */
+	TPE_UNKNOWN_TYPE      /**< Unknown type keyword */
 };
 
 /** @brief Create validator that corresponds to a specific type in {"type": ...}.

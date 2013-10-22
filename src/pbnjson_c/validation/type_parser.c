@@ -32,12 +32,6 @@ Validator* type_parser_parse_simple(StringSpan const *s, enum TypeParserError *e
 	}
 
 	Validator *v = f->create();
-	if (!v)
-	{
-		if (error)
-			*error = TPE_NO_MEMORY;
-		return NULL;
-	}
 	if (error)
 		*error = TPE_OK;
 	return v;

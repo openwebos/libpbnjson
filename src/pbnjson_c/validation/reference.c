@@ -161,8 +161,6 @@ static ValidatorVtable reference_vtable =
 Reference *reference_new(void)
 {
 	Reference *r = g_new0(Reference, 1);
-	if (!r)
-		return NULL;
 	r->ref_count = 1;
 	validator_init(&r->base, &reference_vtable);
 	return r;
@@ -181,14 +179,10 @@ void reference_unref(Reference *r)
 		validator_unref(&r->base);
 }
 
-bool reference_set_target(Reference *r, StringSpan *target)
+void reference_set_target(Reference *r, StringSpan *target)
 {
-	if (!r)
-		return true;
-	char *t = g_strndup(target->str, target->str_len);
-	if (!t)
-		return false;
+	assert(r);
+
 	g_free(r->target);
-	r->target = t;
-	return true;
+	r->target = g_strndup(target->str, target->str_len);
 }

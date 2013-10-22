@@ -54,7 +54,7 @@ void string_validator_add_min_length_constraint(StringValidator *v, size_t min_l
 void string_validator_add_max_length_constraint(StringValidator *v, size_t max_length);
 
 /** @brief Remember expected value (for enums) */
-bool string_validator_add_expected_value(StringValidator *v, StringSpan *span);
+void string_validator_add_expected_value(StringValidator *v, StringSpan *span);
 
 #ifdef __cplusplus
 }

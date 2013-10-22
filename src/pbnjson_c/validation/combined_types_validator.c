@@ -274,8 +274,6 @@ ValidatorVtable combined_types_vtable =
 CombinedTypesValidator* combined_types_validator_new(void)
 {
 	CombinedTypesValidator *self = g_new0(CombinedTypesValidator, 1);
-	if (!self)
-		return NULL;
 	self->ref_count = 1;
 	validator_init(&self->base, &combined_types_vtable);
 	return self;

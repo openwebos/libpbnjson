@@ -69,10 +69,10 @@ ObjectValidator* object_validator_new(void);
 void object_validator_release(ObjectValidator *v);
 
 /** @brief Set maximal count of properties. */
-bool object_validator_set_max_properties(ObjectValidator *v, size_t max);
+void object_validator_set_max_properties(ObjectValidator *v, size_t max);
 
 /** @brief Set minimal count of properties. */
-bool object_validator_set_min_properties(ObjectValidator *v, size_t min);
+void object_validator_set_min_properties(ObjectValidator *v, size_t min);
 
 #ifdef __cplusplus
 }
