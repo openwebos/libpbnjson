@@ -54,6 +54,7 @@ SET(UnitTest
 	SmokeTestMemLeakBadInput
 	TestParse
 	TestDOM
+	TestJvalue
 	TestJobject
 	TestSchemaSanity
 	TestSchemaContact

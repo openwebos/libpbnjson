@@ -89,9 +89,3 @@ TEST(JobjRemove2, ObjectRemoveHashCollision)
 	ASSERT_FALSE(jobject_containskey(obj, j_cstr_to_buffer("ab")));
 	ASSERT_TRUE(jobject_containskey(obj, j_cstr_to_buffer("b")));
 }
-
-int main(int argc, char *argv[])
-{
-	::testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
-}

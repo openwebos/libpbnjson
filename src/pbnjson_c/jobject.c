@@ -200,6 +200,38 @@ jvalue_ref jvalue_duplicate (jvalue_ref val)
 	return result;
 }
 
+static bool jarray_equal(jvalue_ref arr, jvalue_ref other) NON_NULL(1, 2);
+static bool jobject_equal(jvalue_ref obj, jvalue_ref other) NON_NULL(1, 2);
+
+bool jvalue_equal(jvalue_ref val1, jvalue_ref val2)
+{
+	SANITY_CHECK_POINTER(val1);
+	SANITY_CHECK_POINTER(val2);
+
+	if (val1 == val2)
+		return true;
+
+	if (val1->m_type != val2->m_type)
+		return false;
+
+	switch (val1->m_type) {
+		case JV_NULL:
+			return true;
+		case JV_BOOL:
+			return jboolean_deref_to_value(val1) == jboolean_deref_to_value(val2);
+		case JV_NUM:
+			return jnumber_compare(val1, val2) == 0;
+		case JV_STR:
+			return jstring_equal(val1, val2);
+		case JV_ARRAY:
+			return jarray_equal(val1, val2);
+		case JV_OBJECT:
+			return jobject_equal(val1, val2);
+	}
+
+	return false;
+}
+
 static void j_destroy_object (jvalue_ref obj) NON_NULL(1);
 static void j_destroy_array (jvalue_ref arr) NON_NULL(1);
 static void j_destroy_string (jvalue_ref str) NON_NULL(1);
@@ -444,6 +476,33 @@ bool jis_object (jvalue_ref val)
 	assert((s_inGdb || val->m_refCnt > 0) && "val is garbage");
 
 	return val->m_type == JV_OBJECT;
+}
+
+static bool jobject_equal(jvalue_ref obj, jvalue_ref other)
+{
+	SANITY_CHECK_POINTER(obj);
+	SANITY_CHECK_POINTER(other);
+
+	assert(jis_object(obj));
+	assert(jis_object(other));
+
+	if (jobject_size(obj) != jobject_size(other))
+		return false;
+
+	jobject_iter it;
+	jobject_key_value pair;
+	jobject_iter_init(&it, obj);
+	while (jobject_iter_next(&it, &pair))
+	{
+		jvalue_ref val = NULL;
+		if (!jobject_get_exists2(other, pair.key, &val))
+			return false;
+
+		if (!jvalue_equal(pair.value, val))
+			return false;
+	}
+
+	return true;
 }
 
 size_t jobject_size(jvalue_ref obj)
@@ -751,6 +810,27 @@ bool jis_array (jvalue_ref val)
 	assert(s_inGdb || val->m_refCnt > 0);
 
 	return val->m_type == JV_ARRAY;
+}
+
+static bool jarray_equal(jvalue_ref arr, jvalue_ref other)
+{
+	SANITY_CHECK_POINTER(arr);
+	SANITY_CHECK_POINTER(other);
+
+	assert(jis_array(arr));
+	assert(jis_array(other));
+
+	ssize_t size = jarray_size(arr);
+	if (size != jarray_size(other))
+		return false;
+
+	for (ssize_t i = 0; i < size; ++i)
+	{
+		if (!jvalue_equal(jarray_get(arr, i), jarray_get(other, i)))
+			return false;
+	}
+
+	return true;
 }
 
 ssize_t jarray_size (jvalue_ref arr)

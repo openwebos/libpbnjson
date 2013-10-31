@@ -95,6 +95,15 @@ PJSON_API jvalue_ref jvalue_copy(jvalue_ref val);
 PJSON_API jvalue_ref jvalue_duplicate(jvalue_ref val);
 
 /**
+ * Check if two JSON values are identical
+ *
+ * @param val JSON value to compare with
+ * @param other JSON value to compare with
+ * @return true if values are identical else otherwise
+ */
+PJSON_API bool jvalue_equal(jvalue_ref val, jvalue_ref other) NON_NULL(1, 2);
+
+/**
  * Release ownership from *val.  *val has an undefined value afterwards.  It is an error
  * to call this on references for which ownership does not preside with the caller
  * (i.e. only call when there was a _create or _copy call was made without a corresponding put, append, or release)
@@ -205,6 +214,7 @@ PJSON_API jvalue_ref jobject_create_var(jobject_key_value item, ...);
  * key-value pairs.
  */
 PJSON_API jvalue_ref jobject_create_hint(int capacityHint);
+
 /**
  * Returns whether or not this JSON value reference is an object or not.
  * @param val The reference to test

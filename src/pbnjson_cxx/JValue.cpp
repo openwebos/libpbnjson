@@ -222,65 +222,7 @@ JValue JValue::Value<bool>(const bool& value)
 
 bool JValue::operator==(const JValue& other) const
 {
-	if (this == &other)
-		return true;
-	if (m_jval == other.m_jval)
-		return true;
-	assert(!isNull() || !other.isNull());
-	if (isNull() || other.isNull())
-		return false;
-
-	if (isObject()) {
-		if (!other.isObject())
-			return false;
-		if (jobject_size(m_jval) != jobject_size(other.m_jval))
-			return false;
-		jobject_key_value value;
-		jobject_iter it;
-		jobject_iter_init(&it, m_jval);
-		while (jobject_iter_next(&it, &value))
-		{
-			jvalue_ref tmpVal;
-			if (!jobject_get_exists(other.m_jval, jstring_get_fast(value.key), &tmpVal))
-				return false;
-			//tmpVal is owned by 'other'
-			//value is already a copy, but it goes out of scope, as does tmpVal
-			if (JValue(jvalue_copy(value.value)) != JValue(jvalue_copy(tmpVal)))
-				return false;
-		}
-		return true;
-	} else if (isArray()) {
-		if (!other.isArray())
-			return false;
-		if (jarray_size(m_jval) != jarray_size(other.m_jval))
-			return false;
-		for (ssize_t i = jarray_size(m_jval) - 1; i >= 0; i--) {
-			//Just as in the isObject() block above, these JValue constructors assume ownership of the values.
-			//Copies of the values are necessary.
-			if (JValue(jvalue_copy(jarray_get(m_jval, i))) != JValue(jvalue_copy(jarray_get(other.m_jval, i))))
-				return false;
-		}
-		return true;
-	} else if (isString()) {
-		if (!other.isString())
-			return false;
-		return jstring_equal(m_jval, other.m_jval);
-	} else if (isNumber()) {
-		if (!other.isNumber())
-			return false;
-		double myNumber, otherNumber;
-
-		ConversionResultFlags myError = asNumber(myNumber);
-		ConversionResultFlags otherError = other.asNumber(otherNumber);
-
-		return myError == CONV_OK && otherError == CONV_OK && myNumber == otherNumber;
-	}
-	ConversionResultFlags isBool, otherIsBool;
-	bool myVal, otherVal;
-	isBool = asBool(myVal);
-	otherIsBool = other.asBool(otherVal);
-
-	return isBool == CONV_OK && otherIsBool == CONV_OK && myVal == otherVal;
+	return jvalue_equal(m_jval, other.m_jval);
 }
 
 template <class T>
