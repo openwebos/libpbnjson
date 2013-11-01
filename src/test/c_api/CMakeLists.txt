@@ -58,6 +58,7 @@ SET(UnitTest
 	TestJobject
 	TestSchemaSanity
 	TestSchemaContact
+	TestSchemaUniqueItems
 	)
 
 FOREACH(TEST ${UnitTest})

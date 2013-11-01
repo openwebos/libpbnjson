@@ -151,6 +151,14 @@ Validator* validator_set_array_additional_items(Validator *v, Validator *additio
 	return v;
 }
 
+Validator* validator_set_array_unique_items(Validator *v, bool unique)
+{
+	assert(v && v->vtable);
+	if (v->vtable->set_array_unique_items)
+		return v->vtable->set_array_unique_items(v, unique);
+	return v;
+}
+
 Validator* validator_set_number_maximum(Validator *v, Number *n)
 {
 	assert(v && v->vtable);

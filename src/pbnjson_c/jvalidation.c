@@ -101,7 +101,7 @@ static bool check_schema_jarray(jvalue_ref jref, ValidationState *validation_sta
 	}
 
 	e = validation_event_arr_end();
-	if (!validation_check(&e, validation_state, NULL))
+	if (!validation_check(&e, validation_state, jref))
 		return false;
 
 	return true;
@@ -162,6 +162,16 @@ static bool check_schema_jvalue_internal(jvalue_ref jref, ValidationState *valid
 	return false;
 }
 
+static bool has_array_duplicates(ValidationState *s, void *ctxt)
+{
+	return jarray_has_duplicates((jvalue_ref) ctxt);
+}
+
+static Notification jvalue_check_notification =
+{
+	.has_array_duplicates = &has_array_duplicates,
+};
+
 bool jvalue_check_schema(jvalue_ref jref, const JSchemaInfoRef schema_info)
 {
 	if (jref == NULL)
@@ -193,7 +203,7 @@ bool jvalue_check_schema(jvalue_ref jref, const JSchemaInfoRef schema_info)
 	validation_state_init(&validation_state,
 	                      validator,
 	                      uri_resolver,
-	                      NULL);    // TODO: report errors
+	                      &jvalue_check_notification);    // TODO: report errors
 
 	bool retVal = check_schema_jvalue_internal(jref, &validation_state);
 

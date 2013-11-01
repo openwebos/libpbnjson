@@ -154,6 +154,7 @@ typedef struct _ValidatorVtable
 	Validator* (*set_array_additional_items)(Validator *v, Validator *additional);
 	Validator* (*set_array_max_items)(Validator *v, size_t maxItems);
 	Validator* (*set_array_min_items)(Validator *v, size_t minItems);
+	Validator* (*set_array_unique_items)(Validator *v, bool unique);
 	Validator* (*set_number_maximum)(Validator *v, Number *n);
 	Validator* (*set_number_maximum_exclusive)(Validator *v, bool exclusive);
 	Validator* (*set_number_minimum)(Validator *v, Number *n);
@@ -256,6 +257,7 @@ Validator* validator_set_array_items(Validator *v, ArrayItems *a);
 Validator* validator_set_array_additional_items(Validator *v, Validator *additional);
 Validator* validator_set_array_max_items(Validator *v, size_t maxItems);
 Validator* validator_set_array_min_items(Validator *v, size_t minItems);
+Validator* validator_set_array_unique_items(Validator *v, bool unique);
 Validator* validator_set_number_maximum(Validator *v, Number *n);
 Validator* validator_set_number_maximum_exclusive(Validator *v, bool exclusive);
 Validator* validator_set_number_minimum(Validator *v, Number *n);

@@ -1223,6 +1223,26 @@ bool jarray_splice_append (jvalue_ref array, jvalue_ref arrayToAppend, JSpliceOw
 	return jarray_splice (array, jarray_size (array) - 1, 0, arrayToAppend, 0, jarray_size (arrayToAppend), ownership);
 }
 
+bool jarray_has_duplicates(jvalue_ref arr)
+{
+	SANITY_CHECK_POINTER(arr);
+
+	assert(jis_array(arr));
+
+	ssize_t size = jarray_size(arr);
+	if (size < 2)
+		return false;
+
+	for (ssize_t i = 0; i < size - 1; ++i)
+		for (ssize_t j = i + 1; j < size; ++j)
+		{
+			if (jvalue_equal(*jarray_get_unsafe(arr, i), *jarray_get_unsafe(arr, j)))
+				return true;
+		}
+
+	return false;
+}
+
 
 /****************************** JSON STRING API ************************/
 #define SANITY_CHECK_JSTR_BUFFER(jval)					\

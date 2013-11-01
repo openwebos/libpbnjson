@@ -413,6 +413,7 @@ any_object_key(A) ::= KEY_PROPERTIES(B). { A = B; }
 any_object_key(A) ::= KEY_REQUIRED(B). { A = B; }
 any_object_key(A) ::= KEY_TITLE(B). { A = B; }
 any_object_key(A) ::= KEY_TYPE(B). { A = B; }
+any_object_key(A) ::= KEY_UNIQUE_ITEMS(B). { A = B; }
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -554,6 +555,16 @@ schema_feature(A) ::= KEY_MIN_ITEMS NUMBER(N).
 	CountFeature *f = count_feature_new(validator_set_array_min_items);
 	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
 		parser_context_set_error(context, "Invalid minItems format");
+	A = &f->base;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Array uniqueItems
+schema_feature(A) ::= KEY_UNIQUE_ITEMS BOOLEAN(B).
+{
+	BooleanFeature *f = boolean_feature_new(validator_set_array_unique_items);
+	boolean_feature_set_value(f, B.boolean);
 	A = &f->base;
 }
 

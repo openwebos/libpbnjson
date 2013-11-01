@@ -64,3 +64,4 @@ properties,           TOKEN_KEY_PROPERTIES
 required,             TOKEN_KEY_REQUIRED
 title,                TOKEN_KEY_TITLE
 type,                 TOKEN_KEY_TYPE
+uniqueItems,          TOKEN_KEY_UNIQUE_ITEMS

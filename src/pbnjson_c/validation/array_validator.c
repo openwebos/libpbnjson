@@ -54,7 +54,7 @@ static Validator* _get_current_validator(ArrayValidator *varr, MyContext *ctxt)
 	return v;
 }
 
-static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
+static bool check(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
 {
 	ArrayValidator *varr = (ArrayValidator *) v;
 	MyContext *my_ctxt = (MyContext *) validation_state_get_context(s);
@@ -77,6 +77,12 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 		if (varr->min_items != -1 && my_ctxt->items_count < varr->min_items)
 		{
 			validation_state_notify_error(s, VEC_ARRAY_TOO_SHORT, c);
+			res = false;
+		}
+		else if (varr->unique_items && s->notify && s->notify->has_array_duplicates &&
+		         s->notify->has_array_duplicates(s, c))
+		{
+			validation_state_notify_error(s, VEC_ARRAY_HAS_DUPLICATES, c);
 			res = false;
 		}
 		validation_state_pop_validator(s);
@@ -212,6 +218,13 @@ static Validator* set_min_items(Validator *v, size_t min)
 	return v;
 }
 
+static Validator* set_unique_items(Validator *v, bool unique)
+{
+	ArrayValidator *a = (ArrayValidator *) v;
+	a->unique_items = unique;
+	return v;
+}
+
 static Validator* set_default(Validator *v, jvalue_ref def_value)
 {
 	ArrayValidator *a = (ArrayValidator *) v;
@@ -244,6 +257,11 @@ static Validator* set_max_items_generic(Validator *v, size_t max)
 static Validator* set_min_items_generic(Validator *v, size_t min)
 {
 	return set_min_items(&array_validator_new()->base, min);
+}
+
+static Validator* set_unique_items_generic(Validator *v, bool unique)
+{
+	return set_unique_items(&array_validator_new()->base, unique);
 }
 
 static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
@@ -293,6 +311,7 @@ static ValidatorVtable generic_array_vtable =
 	.set_array_additional_items = set_additional_items_generic,
 	.set_array_max_items = set_max_items_generic,
 	.set_array_min_items = set_min_items_generic,
+	.set_array_unique_items = set_unique_items_generic,
 	.set_default = set_default_generic,
 	.dump_enter = dump_enter,
 	.dump_exit = dump_exit,
@@ -300,7 +319,7 @@ static ValidatorVtable generic_array_vtable =
 
 ValidatorVtable array_vtable =
 {
-	.check = _check,
+	.check = check,
 	.init_state = _init_state,
 	.cleanup_state = _cleanup_state,
 	.ref = ref,
@@ -310,6 +329,7 @@ ValidatorVtable array_vtable =
 	.set_array_additional_items = set_additional_items,
 	.set_array_max_items = set_max_items,
 	.set_array_min_items = set_min_items,
+	.set_array_unique_items = set_unique_items,
 	.set_default = set_default,
 	.get_default = get_default,
 	.dump_enter = dump_enter,
@@ -322,6 +342,7 @@ ArrayValidator* array_validator_new(void)
 	self->ref_count = 1;
 	self->max_items = -1;
 	self->min_items = -1;
+	self->unique_items = false;
 	validator_init(&self->base, &array_vtable);
 	self->additional_items = GENERIC_VALIDATOR;
 	return self;

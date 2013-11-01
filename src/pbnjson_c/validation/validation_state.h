@@ -52,6 +52,16 @@ typedef struct _Notification
 	 *                 track where to insert the default value.
 	 */
 	bool (*default_property_func)(ValidationState *s, char const *key, jvalue_ref value, void *ctxt);
+
+	/** @brief Function to check if created array contains duplicate items
+	 *
+	 * If this function is NULL, the uniqueItems feature is not activated
+	 * @param[in] s Validation state
+	 * @param[in] ctxt User-supplied pointer (see validation_check()). This pointer must somehow
+	 *                 track array needed to be checked.
+	 * @return true if array contains duplicate items, false otherwise
+	 */
+	bool (*has_array_duplicates)(ValidationState *s, void *ctxt);
 } Notification;
 
 

@@ -543,7 +543,7 @@ int my_bounce_end_array(void *ctxt)
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
 
 	ValidationEvent e = validation_event_arr_end();
-	if (!validation_check(&e, spring->validation_state, NULL))
+	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
 	DEREF_CALLBACK(spring->m_handlers->yajl_end_array, ctxt);
@@ -760,9 +760,19 @@ static bool on_default_property(ValidationState *s, char const *key, jvalue_ref 
 	return inject_default_jvalue(value, spring);
 }
 
+static bool has_array_duplicates(ValidationState *s, void *ctxt)
+{
+	assert(ctxt);
+	DomInfo *data = getDOMContext((JSAXContextRef) ctxt);
+	assert(data && data->m_prev && data->m_prev->m_value && jis_array(data->m_prev->m_value));
+
+	return jarray_has_duplicates(data->m_prev->m_value);
+}
+
 static Notification jparse_notification =
 {
 	.default_property_func = &on_default_property,
+	.has_array_duplicates = &has_array_duplicates,
 	//void (*error_func)(ValidationState *s, ValidationErrorCode error, void *ctxt);
 };
 

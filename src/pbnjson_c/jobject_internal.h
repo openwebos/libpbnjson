@@ -116,6 +116,8 @@ extern PJSON_LOCAL bool jbuffer_equal(raw_buffer buffer1, raw_buffer buffer2);
 
 extern PJSON_LOCAL raw_buffer jnumber_deref_raw(jvalue_ref num);
 
+extern PJSON_LOCAL bool jarray_has_duplicates(jvalue_ref arr);
+
 inline static jbool* jboolean_deref(jvalue_ref boolean) { return (jbool*)boolean; }
 
 inline static jnum* jnum_deref(jvalue_ref num) { return (jnum*)num; }

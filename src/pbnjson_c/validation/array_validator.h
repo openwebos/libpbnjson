@@ -36,7 +36,7 @@ typedef struct _ArrayValidator
 	/** @brief Base class is Validator */
 	Validator base;
 
-	/**< @brief Reference count */
+	/** @brief Reference count */
 	unsigned ref_count;
 
 	/** @brief Items of the array from "items": [...]. */
@@ -51,7 +51,13 @@ typedef struct _ArrayValidator
 	/** @brief Minimal count of items in the array. */
 	int min_items;
 
-	/**< @brief Default value attached to this validator */
+	/** @brief Is array can't contain duplicate items.
+	 *
+	 * NOTE: Featule will work only if has_array_duplicates() is provided
+	 */
+	bool unique_items;
+
+	/** @brief Default value attached to this validator */
 	jvalue_ref def_value;
 } ArrayValidator;
 
