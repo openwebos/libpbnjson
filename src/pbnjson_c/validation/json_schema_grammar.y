@@ -635,7 +635,9 @@ schema_enum(A) ::= KEY_ENUM ARR_START enum_list(B) ARR_END.
 
 enum_list(A) ::= value_validator(V).
 {
-	A = one_of_validator_new();
+	// TODO: anyOf is a bit faster than oneOf. Enum consistency checks
+	// must be carried out during schema compilation.
+	A = any_of_validator_new();
 	combined_validator_add_value(A, V);
 }
 

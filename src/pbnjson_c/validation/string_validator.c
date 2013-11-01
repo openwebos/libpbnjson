@@ -35,7 +35,8 @@ static bool _check_conditions(StringValidator *v, ValidationEvent const *e,
 	}
 
 	if (v->expected_value &&
-	    strncmp(v->expected_value, e->value.string.ptr, e->value.string.len))
+	    (strlen(v->expected_value) != e->value.string.len
+	    || strncmp(v->expected_value, e->value.string.ptr, e->value.string.len)))
 	{
 		validation_state_notify_error(s, VEC_UNEXPECTED_VALUE, c);
 		return false;

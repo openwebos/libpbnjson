@@ -117,3 +117,32 @@ TEST(TestEnum, Objects)
 	EXPECT_FALSE(validate_json_plain("{\"a\":0}", v.get()));
 	EXPECT_FALSE(validate_json_plain("{\"a\":0, \"b\":true, \"c\": null}", v.get()));
 }
+
+TEST(TestEnum, StringWithArrayInEnum)
+{
+	char const *const SCHEMA =
+		"{"
+			"\"enum\": ["
+				"\"Dummy\","
+				"\"Array\","
+				"\"ArrayExt\","
+				"\"Range\","
+				"\"Date\","
+				"\"Callback\","
+				"\"File\""
+				"]"
+		"}";
+	auto v = mk_ptr(parse_schema_bare(SCHEMA), validator_unref);
+	ASSERT_TRUE(v != NULL);
+
+	EXPECT_TRUE(validate_json_plain("\"Array\"", v.get()));
+	EXPECT_TRUE(validate_json_plain("\"ArrayExt\"", v.get()));
+	EXPECT_TRUE(validate_json_plain("\"Dummy\"", v.get()));
+	EXPECT_TRUE(validate_json_plain("\"Range\"", v.get()));
+	EXPECT_TRUE(validate_json_plain("\"Date\"", v.get()));
+	EXPECT_TRUE(validate_json_plain("\"Callback\"", v.get()));
+	EXPECT_TRUE(validate_json_plain("\"File\"", v.get()));
+
+	EXPECT_FALSE(validate_json_plain("\"array\"", v.get()));
+	EXPECT_FALSE(validate_json_plain("\"file\"", v.get()));
+}

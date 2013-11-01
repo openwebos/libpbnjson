@@ -18,6 +18,7 @@
 
 #include "../string_validator.h"
 #include "../validation_api.h"
+#include "../parser_context.h"
 #include <gtest/gtest.h>
 
 using namespace std;
@@ -138,4 +139,18 @@ TEST_F(TestStringValidator, StringWithMinMaxLengthNegativeGreater)
 	EXPECT_FALSE(validation_check(&(e = validation_event_string("hello world", 11)), s, this));
 	EXPECT_EQ(VEC_STRING_TOO_LONG, error);
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
+}
+
+TEST_F(TestStringValidator, ExpectedValue)
+{
+	StringSpan expected_value = { "hello world", 11 };
+	string_validator_add_expected_value(v, &expected_value);
+	EXPECT_TRUE(validation_check(&(e = validation_event_string("hello world", 11)), s, this));
+}
+
+TEST_F(TestStringValidator, ExpectedValueNegative)
+{
+	StringSpan expected_value = { "hello world", 11 };
+	string_validator_add_expected_value(v, &expected_value);
+	EXPECT_FALSE(validation_check(&(e = validation_event_string("hello", 5)), s, this));
 }
