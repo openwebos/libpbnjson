@@ -306,8 +306,9 @@ void schema_parsing_set_definitions(SchemaParsing *s, Definitions *d)
 
 void schema_parsing_add_combinator(SchemaParsing *s, Validator *v)
 {
-	assert(s && v);
-	s->validator_combinators = g_slist_prepend(s->validator_combinators, v);
+	assert(s);
+	if (v)
+		s->validator_combinators = g_slist_prepend(s->validator_combinators, v);
 }
 
 void schema_parsing_set_extends(SchemaParsing *s, Validator *extends)

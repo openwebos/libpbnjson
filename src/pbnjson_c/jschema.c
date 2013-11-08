@@ -87,7 +87,7 @@ static void _OnError(size_t offset, char const *message, void *ctxt)
 			.m_errors = callbacks,
 			.errorDescription = (char *) message,
 		};
-		callbacks->m_parser(NULL, &fake_sax_ctxt);
+		callbacks->m_parser(callbacks->m_ctxt, &fake_sax_ctxt);
 	}
 }
 

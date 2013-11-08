@@ -331,26 +331,28 @@ type_list(A) ::= STRING(B).
 	type_parser_parse_to_type(&B.string, &error);
 	switch (error)
 	{
-	case TPE_OK: break;
+	case TPE_OK:
+		A = (Validator *) combined_types_validator_new();
+		combined_types_validator_set_type((CombinedTypesValidator *) A, B.string.str, B.string.str_len);
+		break;
 	case TPE_UNKNOWN_TYPE: parser_context_set_error(context, "Invalid type"); break;
 	default: PARSE_FAILED;
 	}
-	A = (Validator *) combined_types_validator_new();
-	combined_types_validator_set_type((CombinedTypesValidator *) A, B.string.str, B.string.str_len);
 }
 
 type_list(A) ::= type_list(B) STRING(C).
 {
 	enum TypeParserError error = TPE_OK;
 	type_parser_parse_to_type(&C.string, &error);
+	A = B;
 	switch (error)
 	{
-	case TPE_OK: break;
+	case TPE_OK:
+		combined_types_validator_set_type((CombinedTypesValidator *) A, C.string.str, C.string.str_len);
+		break;
 	case TPE_UNKNOWN_TYPE: parser_context_set_error(context, "Invalid type"); break;
 	default: PARSE_FAILED;
 	}
-	A = B;
-	combined_types_validator_set_type((CombinedTypesValidator *) A, C.string.str, C.string.str_len);
 }
 
 

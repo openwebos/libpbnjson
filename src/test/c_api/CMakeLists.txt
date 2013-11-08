@@ -16,7 +16,12 @@
 #
 # LICENSE@@@
 
-include_directories(${API_HEADERS})
+include_directories(
+	${API_HEADERS}
+	${API_HEADERS}/pbnjson
+	${API_HEADERS}/pbnjson/c
+	)
+
 webos_add_compiler_flags(ALL -Wall "-std=gnu++0x")
 
 # Find CJSON for comparison benchmarks
@@ -59,6 +64,7 @@ SET(UnitTest
 	TestSchemaSanity
 	TestSchemaContact
 	TestSchemaUniqueItems
+	TestSchemaParsingErrorReporting
 	)
 
 FOREACH(TEST ${UnitTest})
