@@ -42,6 +42,7 @@ typedef enum _ValidationErrorCode
 	VEC_STRING_TOO_LONG,
 	VEC_NOT_OBJECT,
 	VEC_NOT_ENOUGH_KEYS,
+	VEC_MISSING_REQUIRED_KEY,
 	VEC_TOO_MANY_KEYS,
 	VEC_OBJECT_PROPERTY_NOT_ALLOWED,
 	VEC_TYPE_NOT_ALLOWED,
@@ -52,7 +53,7 @@ typedef enum _ValidationErrorCode
 } ValidationErrorCode;
 
 /** @brief Get human readable message for specific error code. */
-char const *ValidationGetErrorMessage(ValidationErrorCode code);
+char const *ValidationGetErrorMessage(int code);
 
 #ifdef __cplusplus
 }

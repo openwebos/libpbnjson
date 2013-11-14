@@ -499,7 +499,7 @@ int my_bounce_start_map(void *ctxt)
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
 
 	ValidationEvent e = validation_event_obj_start();
-	if (!validation_check(&e, spring->validation_state, NULL))
+	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
 	DEREF_CALLBACK(spring->m_handlers->yajl_start_map, ctxt);
@@ -510,7 +510,7 @@ int my_bounce_map_key(void *ctxt, const unsigned char *str, yajl_size_t strLen)
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
 
 	ValidationEvent e = validation_event_obj_key((char const *) str, strLen);
-	if (!validation_check(&e, spring->validation_state, NULL))
+	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
 	DEREF_CALLBACK(spring->m_handlers->yajl_map_key, ctxt, str, strLen);
@@ -532,7 +532,7 @@ int my_bounce_start_array(void *ctxt)
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
 
 	ValidationEvent e = validation_event_arr_start();
-	if (!validation_check(&e, spring->validation_state, NULL))
+	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
 	DEREF_CALLBACK(spring->m_handlers->yajl_start_array, ctxt);
@@ -554,7 +554,7 @@ int my_bounce_string(void *ctxt, const unsigned char *str, yajl_size_t strLen)
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
 
 	ValidationEvent e = validation_event_string((char const *) str, strLen);
-	if (!validation_check(&e, spring->validation_state, NULL))
+	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
 	DEREF_CALLBACK(spring->m_handlers->yajl_string, ctxt, str, strLen);
@@ -565,7 +565,7 @@ int my_bounce_number(void *ctxt, const char *numberVal, yajl_size_t numberLen)
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
 
 	ValidationEvent e = validation_event_number(numberVal, numberLen);
-	if (!validation_check(&e, spring->validation_state, NULL))
+	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
 	DEREF_CALLBACK(spring->m_handlers->yajl_number, ctxt, numberVal, numberLen);
@@ -576,7 +576,7 @@ int my_bounce_boolean(void *ctxt, int boolVal)
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
 
 	ValidationEvent e = validation_event_boolean(boolVal);
-	if (!validation_check(&e, spring->validation_state, NULL))
+	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
 	DEREF_CALLBACK(spring->m_handlers->yajl_boolean, ctxt, boolVal);
@@ -587,7 +587,7 @@ int my_bounce_null(void *ctxt)
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
 
 	ValidationEvent e = validation_event_null();
-	if (!validation_check(&e, spring->validation_state, NULL))
+	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
 	DEREF_CALLBACK(spring->m_handlers->yajl_null, ctxt);
@@ -769,11 +769,22 @@ static bool has_array_duplicates(ValidationState *s, void *ctxt)
 	return jarray_has_duplicates(data->m_prev->m_value);
 }
 
+static void validation_error(ValidationState *s, ValidationErrorCode error, void *ctxt)
+{
+	assert(ctxt);
+	JSAXContextRef spring = (JSAXContextRef) ctxt;
+	if (spring->m_errors && spring->m_errors->m_schema)
+	{
+		spring->m_error_code = error;
+		spring->m_errors->m_schema(spring->m_errors->m_ctxt, spring);
+	}
+}
+
 static Notification jparse_notification =
 {
 	.default_property_func = &on_default_property,
 	.has_array_duplicates = &has_array_duplicates,
-	//void (*error_func)(ValidationState *s, ValidationErrorCode error, void *ctxt);
+	.error_func = &validation_error,
 };
 
 static bool handle_yajl_error(yajl_status parseResult,
@@ -874,6 +885,7 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser,
 		.ctxt = (ctxt != NULL ? *ctxt : NULL),
 		.m_handlers = &yajl_cb,
 		.m_errors = schemaInfo->m_errHandler,
+		.m_error_code = 0,
 		.errorDescription = NULL,
 		.validation_state = &validation_state,
 	};

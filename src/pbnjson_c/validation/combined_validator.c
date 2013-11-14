@@ -25,6 +25,7 @@
 typedef struct _MyContext
 {
 	GList *states;
+	Notification *notify;
 } MyContext;
 
 static bool _all_of_check(ValidationEvent const *e,
@@ -41,7 +42,9 @@ static bool _all_of_check(ValidationEvent const *e,
 		ValidationState *s = it->data;
 		if (!validation_check(e, s, ctxt))
 		{
-			validation_state_notify_error(real_state, VEC_NOT_EVERY_ALL_OF, ctxt);
+			// context notifications used only if inner errors are suppressed
+			if (my_ctxt->notify)
+				validation_state_notify_error(real_state, VEC_NOT_EVERY_ALL_OF, ctxt);
 			return false;
 		}
 
@@ -54,10 +57,11 @@ static bool _all_of_check(ValidationEvent const *e,
 	return true;
 }
 
-static bool _any_of_check(ValidationEvent const *e,
-                          ValidationState *real_state,
-                          void *ctxt,
-                          bool *all_finished)
+static bool any_of_check_with_error(ValidationEvent const *e,
+                                    ValidationState *real_state,
+                                    void *ctxt,
+                                    bool *all_finished,
+                                    ValidationErrorCode error)
 {
 	MyContext *my_ctxt = (MyContext *) validation_state_get_context(real_state);
 
@@ -95,9 +99,29 @@ static bool _any_of_check(ValidationEvent const *e,
 	}
 
 	if (*all_finished && !res)
-		validation_state_notify_error(real_state, VEC_NEITHER_OF_ANY, ctxt);
+	{
+		// context notifications used only if inner errors are suppressed
+		if (my_ctxt->notify)
+			validation_state_notify_error(real_state, error, ctxt);
+	}
 
 	return res;
+}
+
+static bool any_of_check(ValidationEvent const *e,
+                         ValidationState *s,
+                         void *ctxt,
+                         bool *all_finished)
+{
+	return any_of_check_with_error(e, s, ctxt, all_finished, VEC_NEITHER_OF_ANY);
+}
+
+static bool enum_check(ValidationEvent const *e,
+                       ValidationState *s,
+                       void *ctxt,
+                       bool *all_finished)
+{
+	return any_of_check_with_error(e, s, ctxt, all_finished, VEC_UNEXPECTED_VALUE);
 }
 
 static bool _one_of_check(ValidationEvent const *e,
@@ -120,7 +144,9 @@ static bool _one_of_check(ValidationEvent const *e,
 			{
 				if (one_succeeded)
 				{
-					validation_state_notify_error(real_state, VEC_MORE_THAN_ONE_OF, ctxt);
+					// context notifications used only if inner errors are suppressed
+					if (my_ctxt->notify)
+						validation_state_notify_error(real_state, VEC_MORE_THAN_ONE_OF, ctxt);
 					*all_finished = true;
 					return false;
 				}
@@ -147,7 +173,9 @@ static bool _one_of_check(ValidationEvent const *e,
 
 	if (!my_ctxt->states)
 	{
-		validation_state_notify_error(real_state, VEC_NEITHER_OF_ANY, ctxt);
+		// context notifications used only if inner errors are suppressed
+		if (my_ctxt->notify)
+			validation_state_notify_error(real_state, VEC_NEITHER_OF_ANY, ctxt);
 		*all_finished = true;
 		return false;
 	}
@@ -177,28 +205,49 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 	return res;
 }
 
-static bool _init_state(Validator *v, ValidationState *s)
+static void init_states_with_notify(Validator *v, ValidationState *s, MyContext *my_ctxt, Notification* notify)
 {
 	CombinedValidator *vcomb = (CombinedValidator *) v;
-	MyContext *my_ctxt = g_slice_new0(MyContext);
-
 	GSList *it = vcomb->validators;
 	while (it)
 	{
-		// TODO: aggregate error notifiacations
-		ValidationState *substate = validation_state_new(it->data, s->uri_resolver, NULL /*s->notify*/);
+		// TODO: aggregate error notifications
+		ValidationState *substate = validation_state_new(it->data, s->uri_resolver, notify);
 		my_ctxt->states = g_list_append(my_ctxt->states, substate);
 		it = g_slist_next(it);
 	}
+}
 
+static bool init_state_collect_errors(Validator *v, ValidationState *s)
+{
+	MyContext *my_ctxt = g_slice_new0(MyContext);
+	init_states_with_notify(v, s, my_ctxt, s->notify);
 	validation_state_push_context(s, my_ctxt);
 	return true;
 }
 
-static void _cleanup_state(Validator *v, ValidationState *s)
+static bool init_state_suppress_errors(Validator *v, ValidationState *s)
+{
+	Notification *notify = NULL;
+	if (s->notify)
+	{
+		notify = g_slice_new0(Notification);
+		notify->default_property_func = s->notify->default_property_func;
+		notify->has_array_duplicates = s->notify->has_array_duplicates;
+	}
+
+	MyContext *my_ctxt = g_slice_new0(MyContext);
+	my_ctxt->notify = notify;
+	init_states_with_notify(v, s, my_ctxt, notify);
+	validation_state_push_context(s, my_ctxt);
+	return true;
+}
+
+static void cleanup_state(Validator *v, ValidationState *s)
 {
 	MyContext *c = validation_state_pop_context(s);
 	g_list_free_full(c->states, (GDestroyNotify) validation_state_free);
+	g_slice_free(Notification, c->notify);
 	g_slice_free(MyContext, c);
 }
 
@@ -271,8 +320,8 @@ static void _dump_exit(char const *key, Validator *v, void *ctxt, Validator **ne
 ValidatorVtable combined_vtable =
 {
 	.check = _check,
-	.init_state = _init_state,
-	.cleanup_state = _cleanup_state,
+	.init_state = init_state_suppress_errors,
+	.cleanup_state = cleanup_state,
 	.ref = ref,
 	.unref = unref,
 	.visit = _visit,
@@ -311,6 +360,13 @@ CombinedValidator* one_of_validator_new(void)
 	return self;
 }
 
+CombinedValidator* enum_validator_new(void)
+{
+	CombinedValidator *self = combined_validator_new();
+	combined_validator_convert_to_enum(self);
+	return self;
+}
+
 void combined_validator_convert_to_all_of(CombinedValidator *v)
 {
 	v->check_all = _all_of_check;
@@ -318,12 +374,27 @@ void combined_validator_convert_to_all_of(CombinedValidator *v)
 
 void combined_validator_convert_to_any_of(CombinedValidator *v)
 {
-	v->check_all = _any_of_check;
+	v->check_all = any_of_check;
 }
 
 void combined_validator_convert_to_one_of(CombinedValidator *v)
 {
 	v->check_all = _one_of_check;
+}
+
+void combined_validator_convert_to_enum(CombinedValidator *v)
+{
+	v->check_all = enum_check;
+}
+
+void combined_validator_collect_errors(CombinedValidator *v)
+{
+	v->base.vtable->init_state = init_state_collect_errors;
+}
+
+void combined_validator_suppress_errors(CombinedValidator *v)
+{
+	v->base.vtable->init_state = init_state_suppress_errors;
 }
 
 

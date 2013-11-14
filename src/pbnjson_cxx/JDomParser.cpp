@@ -19,9 +19,11 @@
 #include <JDomParser.h>
 #include <pbnjson.h>
 #include "JErrorHandler.h"
+#include "JErrorHandlerUtils.h"
 #include <JSchema.h>
 #include "JSchemaResolverWrapper.h"
 #include "../pbnjson_c/jschema_types_internal.h"
+#include "../pbnjson_c/validation/error_code.h"
 
 #include <JResolver.h>
 
@@ -31,18 +33,6 @@ static inline raw_buffer strToRawBuffer(const std::string& str)
 {
 	return j_str_to_buffer(str.c_str(), str.length());
 }
-
-//static JErrorHandler::SchemaError ErrorToSchemaError(ErrorType type)
-//{
-//	switch(type)
-//	{
-//	case MISSING_REQUIRED_KEY: return JErrorHandler::ERR_SCHEMA_MISSING_REQUIRED_KEY;
-//	case UNEXPECTED_TYPE: return JErrorHandler::ERR_SCHEMA_UNEXPECTED_TYPE;
-//	default: break;
-//	}
-//
-//	return JErrorHandler::ERR_SCHEMA_GENERIC;
-//}
 
 static bool __err_parser(void *ctxt, JSAXContextRef parseCtxt)
 {
@@ -59,15 +49,7 @@ static bool __err_schema(void *ctxt, JSAXContextRef parseCtxt)
 	JErrorHandler* handler = parser->getErrorHandler();
 	if (handler)
 	{
-		// FIXME: Deliver validation errors carefully.
-		std::string reason;
-		//if (parseCtxt->m_errorstate->m_reason != jnull()) {
-		//	raw_buffer buffer = jstring_get_fast(parseCtxt->m_errorstate->m_reason);
-		//	reason = std::string(buffer.m_str, buffer.m_len);
-		//}
-		if (reason.empty())
-			reason = "unknown schema violation parsing";
-		//handler->schema(parser, ErrorToSchemaError(parseCtxt->m_errorstate->m_type), reason);
+		handler->schema(parser, ErrorToSchemaError(parseCtxt->m_error_code), ValidationGetErrorMessage(parseCtxt->m_error_code));
 	}
 	return false;
 }

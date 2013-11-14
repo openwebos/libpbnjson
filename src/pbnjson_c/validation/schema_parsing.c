@@ -141,6 +141,8 @@ static void _combine(char const *key, Validator *v, void *ctxt, Validator **new_
 			// This is the second validator (counting from type validator),
 			// all they should be combined.
 			vcomb = all_of_validator_new();
+			// Do not need to suppress errors, because it is not explicitly created allOf validator
+			combined_validator_collect_errors(vcomb);
 			combined_validator_add_value(vcomb, s->type_validator);
 			s->type_validator = &vcomb->base;
 			combined_validator_add_value(vcomb, it->data);

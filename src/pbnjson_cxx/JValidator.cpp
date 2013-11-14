@@ -19,10 +19,37 @@
 #include <JValidator.h>
 #include <JSchemaResolverWrapper.h>
 #include <pbnjson.h>
+#include "JErrorHandlerUtils.h"
+#include "../pbnjson_c/jschema_types_internal.h"
+#include "../pbnjson_c/validation/error_code.h"
 
 namespace pbnjson {
 
-bool JValidator::isValid(const JValue &jVal, const JSchema &schema, JResolver &resolver) {
+static bool err_parser(void *ctxt, JSAXContextRef parseCtxt)
+{
+	JErrorHandler* handler = static_cast<JErrorHandler *>(ctxt);
+	if (handler)
+		handler->syntax(NULL, JErrorHandler::ERR_SYNTAX_GENERIC, "unknown error parsing");
+	return false;
+}
+
+static bool err_schema(void *ctxt, JSAXContextRef parseCtxt)
+{
+	JErrorHandler* handler = static_cast<JErrorHandler *>(ctxt);
+	if (handler)
+		handler->schema(NULL, ErrorToSchemaError(parseCtxt->m_error_code), ValidationGetErrorMessage(parseCtxt->m_error_code));
+	return false;
+}
+
+static bool err_unknown(void *ctxt, JSAXContextRef parseCtxt)
+{
+	JErrorHandler* handler = static_cast<JErrorHandler *>(ctxt);
+	if (handler)
+		handler->misc(NULL, "unknown error parsing");
+	return false;
+}
+
+bool JValidator::isValid(const JValue &jVal, const JSchema &schema, JResolver &resolver, JErrorHandler *errors) {
 
 	JSchemaResolverWrapper resolverWrapper(&resolver);
 
@@ -30,17 +57,29 @@ bool JValidator::isValid(const JValue &jVal, const JSchema &schema, JResolver &r
 	schemaresolver.m_resolve = &(resolverWrapper.sax_schema_resolver);
 	schemaresolver.m_userCtxt = &resolverWrapper;
 
+	JErrorCallbacks errorHandler;
+	errorHandler.m_parser = err_parser;
+	errorHandler.m_schema = err_schema;
+	errorHandler.m_unknown = err_unknown;
+	errorHandler.m_ctxt = errors;
+
 	JSchemaInfo schemainfo;
-	jschema_info_init(&schemainfo, schema.peek(), &schemaresolver, NULL);
+	jschema_info_init(&schemainfo, schema.peek(), &schemaresolver, &errorHandler);
 
 	return jvalue_check_schema(jVal.peekRaw(), &schemainfo);
 
 }
 
-bool JValidator::isValid(const JValue &jVal, const JSchema &schema) {
+bool JValidator::isValid(const JValue &jVal, const JSchema &schema, JErrorHandler *errors) {
+
+	JErrorCallbacks errorHandler;
+	errorHandler.m_parser = err_parser;
+	errorHandler.m_schema = err_schema;
+	errorHandler.m_unknown = err_unknown;
+	errorHandler.m_ctxt = errors;
 
 	JSchemaInfo schemainfo;
-	jschema_info_init(&schemainfo, schema.peek(), NULL, NULL);
+	jschema_info_init(&schemainfo, schema.peek(), NULL, &errorHandler);
 
 	return jvalue_check_schema(jVal.peekRaw(), &schemainfo);
 }

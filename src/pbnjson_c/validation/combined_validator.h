@@ -64,6 +64,12 @@ CombinedValidator* any_of_validator_new();
 /** @brief Construct validator for {"oneOf": [...]} */
 CombinedValidator* one_of_validator_new();
 
+/** @brief Construct validator for {"enum": [...]}
+ *
+ * NOTE: Basically same as anyOf but will return UNEXPECTED_VALUE error in case of failed validation
+ */
+CombinedValidator* enum_validator_new();
+
 /** @brief Let this validator turn into {"allOf": [...]} */
 void combined_validator_convert_to_all_of(CombinedValidator *v);
 
@@ -73,8 +79,24 @@ void combined_validator_convert_to_any_of(CombinedValidator *v);
 /** @brief Let this validator turn into {"oneOf": [...]} */
 void combined_validator_convert_to_one_of(CombinedValidator *v);
 
+/** @brief Let this validator turn into {"enum": [...]} */
+void combined_validator_convert_to_enum(CombinedValidator *v);
+
 /** @brief Add validator for subschema */
 void combined_validator_add_value(CombinedValidator *a, Validator *v);
+
+/** @brief Changes error notification of combined validator to notify about each inner error
+ *
+ * By default combined validator will suppress errors from inner validators.
+ * To use general error notification callbacks for all inner errors call this method.
+ */
+void combined_validator_collect_errors(CombinedValidator *v);
+
+/** @brief Changes error notification of combined validator to suppress all inner error
+ *
+ * Vice versa of combined_validator_collect_errors() function
+ */
+void combined_validator_suppress_errors(CombinedValidator *v);
 
 #ifdef __cplusplus
 }

@@ -86,7 +86,10 @@ static bool check_integer_conditions(Number *n, ValidationEvent const *e, Valida
 	}
 
 	if (!number_is_integer(n))
+	{
+		validation_state_notify_error(s, VEC_NOT_INTEGER_NUMBER, ctxt);
 		return false;
+	}
 
 	return true;
 }

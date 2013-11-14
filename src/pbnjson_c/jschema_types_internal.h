@@ -44,6 +44,7 @@ struct __JSAXContext
 	void *ctxt;
 	yajl_callbacks *m_handlers;
 	JErrorCallbacksRef m_errors;
+	int m_error_code;
 	char *errorDescription;
 	ValidationState *validation_state;
 };

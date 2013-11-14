@@ -24,6 +24,7 @@
 #include "JValue.h"
 #include "JSchema.h"
 #include "JResolver.h"
+#include "JErrorHandler.h"
 
 namespace pbnjson {
 
@@ -37,20 +38,28 @@ public:
 	 * @param jValue A reference to the JSON object to check
 	 * @param jSchema A reference to schema
 	 * @param jResolver A reference to resolver of externals
+	 * @param errors The error handler to use if you want more detailed information if parsing failed.
 	 * @return true if val is valid against schema
 	 *
+	 * @see JValue
+	 * @see JSchema
+	 * @see JErrorHandler
 	 */
-	static bool isValid(const JValue &jValue, const JSchema &jSchema, JResolver &jResolver);
+	static bool isValid(const JValue &jValue, const JSchema &jSchema, JResolver &jResolver, JErrorHandler *errors = NULL);
 
 	/**
 	 * Check validity of JValue against JSchema. The function is not able to resolve externals
 	 *
 	 * @param jValue A reference to the JSON object to check
 	 * @param jSchema A reference to schema
+	 * @param errors The error handler to use if you want more detailed information if parsing failed.
 	 * @return true if val is valid against schema
 	 *
+	 * @see JValue
+	 * @see JSchema
+	 * @see JErrorHandler
 	 */
-	static bool isValid(const JValue &jValue, const JSchema &jSchema);
+	static bool isValid(const JValue &jValue, const JSchema &jSchema, JErrorHandler *errors = NULL);
 };
 
 }

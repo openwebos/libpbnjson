@@ -33,6 +33,7 @@ SET(CPPUnitTest
 	TestJGenerator
 	TestSchemaKeywords
 	TestErrorHandler
+	TestJValidatorErrorReporting
 	TestSchemaSanity2
 	TestSchemaContact2
 	)

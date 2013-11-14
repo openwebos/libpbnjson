@@ -220,7 +220,7 @@ TEST_F(TestObjectValidator, RequiredSchemaError)
 
 	EXPECT_TRUE(validation_check(&(e = validation_event_obj_start()), s, NULL));
 	EXPECT_FALSE(validation_check(&(e = validation_event_obj_end()), s, this));
-	EXPECT_EQ(VEC_NOT_ENOUGH_KEYS, error);
+	EXPECT_EQ(VEC_MISSING_REQUIRED_KEY, error);
 }
 
 TEST_F(TestObjectValidator, RequiredSchema)

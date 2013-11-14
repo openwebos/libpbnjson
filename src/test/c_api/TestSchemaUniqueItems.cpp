@@ -21,6 +21,9 @@
 #include <string>
 #include <memory>
 
+#include "../../pbnjson_c/jschema_types_internal.h"
+#include "../../pbnjson_c/validation/error_code.h"
+
 using namespace std;
 
 unique_ptr<jvalue, function<void(jvalue_ref &)>> mk_ptr(jvalue_ref v)
@@ -37,8 +40,23 @@ protected:
 	JSchemaInfo schema_info;
 	JSchemaInfo schema_info_all;
 
+	JErrorCallbacks errors;
+	unsigned int errorCounter;
+	int errorCode;
+
+	TestUniqueItems()
+	{
+		errors.m_parser = &OnError;
+		errors.m_schema = &OnValidationError;
+		errors.m_unknown = &OnError;
+		errors.m_ctxt = this;
+	}
+
 	virtual void SetUp()
 	{
+		errorCounter = 0;
+		errorCode = VEC_OK;
+
 		schema = jschema_parse(j_cstr_to_buffer(
 			"{"
 				"\"type\": \"array\","
@@ -47,7 +65,7 @@ protected:
 			), 0, NULL);
 
 		ASSERT_TRUE(schema != NULL);
-		jschema_info_init(&schema_info, schema, NULL, NULL);
+		jschema_info_init(&schema_info, schema, NULL, &errors);
 		jschema_info_init(&schema_info_all, jschema_all(), NULL, NULL);
 	}
 
@@ -55,6 +73,21 @@ protected:
 	{
 		jschema_release(&schema);
 	}
+
+	static bool OnError(void *ctxt, JSAXContextRef parseCtxt)
+	{
+		return false;
+	}
+
+	static bool OnValidationError(void *ctxt, JSAXContextRef parseCtxt)
+	{
+		TestUniqueItems *t = reinterpret_cast<TestUniqueItems *>(ctxt);
+		assert(t);
+		t->errorCounter++;
+		t->errorCode = parseCtxt->m_error_code;
+		return false;
+	}
+
 };
 
 TEST_F(TestUniqueItems, Valid0)
@@ -96,7 +129,10 @@ TEST_F(TestUniqueItems, Invalid1)
 	EXPECT_TRUE(jis_null(res.get()));
 	res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info_all));
 	ASSERT_TRUE(jis_array(res.get()));
+	errorCounter = 0;
 	EXPECT_FALSE(jvalue_check_schema(res.get(), &schema_info));
+	EXPECT_EQ(1, errorCounter);
+	EXPECT_EQ(VEC_ARRAY_HAS_DUPLICATES, errorCode);
 }
 
 TEST_F(TestUniqueItems, Invalid2)
@@ -106,7 +142,10 @@ TEST_F(TestUniqueItems, Invalid2)
 	EXPECT_TRUE(jis_null(res.get()));
 	res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info_all));
 	ASSERT_TRUE(jis_array(res.get()));
+	errorCounter = 0;
 	EXPECT_FALSE(jvalue_check_schema(res.get(), &schema_info));
+	EXPECT_EQ(1, errorCounter);
+	EXPECT_EQ(VEC_ARRAY_HAS_DUPLICATES, errorCode);
 }
 
 TEST_F(TestUniqueItems, Invalid3)
@@ -116,5 +155,8 @@ TEST_F(TestUniqueItems, Invalid3)
 	EXPECT_TRUE(jis_null(res.get()));
 	res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info_all));
 	ASSERT_TRUE(jis_array(res.get()));
+	errorCounter = 0;
 	EXPECT_FALSE(jvalue_check_schema(res.get(), &schema_info));
+	EXPECT_EQ(1, errorCounter);
+	EXPECT_EQ(VEC_ARRAY_HAS_DUPLICATES, errorCode);
 }

@@ -35,6 +35,7 @@ public:
 		ERR_SYNTAX_GENERIC = 20,
 	};
 
+	// TODO: Expand error codes to cover all C-level validation error codes
 	enum SchemaError {
 		ERR_SCHEMA_GENERIC = 40,
 		ERR_SCHEMA_MISSING_REQUIRED_KEY,

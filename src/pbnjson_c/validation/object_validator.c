@@ -85,7 +85,7 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 		if (vobj->required &&
 		    my_ctxt->required_count != object_required_size(vobj->required))
 		{
-			validation_state_notify_error(s, VEC_NOT_ENOUGH_KEYS, ctxt);
+			validation_state_notify_error(s, VEC_MISSING_REQUIRED_KEY, ctxt);
 			validation_state_pop_validator(s);
 			return false;
 		}

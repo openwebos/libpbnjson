@@ -18,7 +18,7 @@
 
 #include "error_code.h"
 
-char const *ValidationGetErrorMessage(ValidationErrorCode code)
+char const *ValidationGetErrorMessage(int code)
 {
 	switch (code)
 	{
@@ -32,6 +32,8 @@ char const *ValidationGetErrorMessage(ValidationErrorCode code)
 		return "Array too long";
 	case VEC_ARRAY_TOO_SHORT:
 		return "Array too short";
+	case VEC_ARRAY_HAS_DUPLICATES:
+		return "Array has duplicates";
 	case VEC_NOT_BOOLEAN:
 		return "Not boolean";
 	case VEC_NOT_NUMBER:
@@ -50,6 +52,8 @@ char const *ValidationGetErrorMessage(ValidationErrorCode code)
 		return "String too long";
 	case VEC_NOT_OBJECT:
 		return "Not object";
+	case VEC_MISSING_REQUIRED_KEY:
+		return "Missing required key";
 	case VEC_NOT_ENOUGH_KEYS:
 		return "Not enought keys";
 	case VEC_TOO_MANY_KEYS:
