@@ -86,7 +86,6 @@ JValue::JValue(const std::string &value)
 	: m_input(value)
 {
 	PJ_DBG_CXX_STR(std::cerr << "Have handle to string at " << (void*)m_input.c_str() << std::endl);
-	assert(m_input.c_str() == value.c_str());
 #if PBNJSON_ZERO_COPY_STL_STR
 	m_jval = jstring_create_nocopy(strToRawBuffer(m_input));
 	assert(jstring_get_fast(m_jval).m_str == m_input.c_str());
