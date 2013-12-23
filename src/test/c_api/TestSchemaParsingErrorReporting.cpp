@@ -101,8 +101,9 @@ TEST_F(TestSchemaParsingErrorReporting, InvalidSchemaType1)
 	EXPECT_TRUE(TestError("{ \"type\" : [\"array\", {} ] }", NULL));
 	EXPECT_TRUE(TestError("{ \"type\" : [\"array\", [] ] }", NULL));
 	EXPECT_TRUE(TestError("{ \"type\" : [\"array\", \"invalid_type\"] }", NULL));
-	// FIXME: elements of the "type" array should be unique
-	//EXPECT_TRUE(TestError("{ \"type\" : [\"array\", \"array\"] }", NULL));
+	EXPECT_TRUE(TestError("{ \"type\" : [\"array\", \"array\"] }", NULL));
+	EXPECT_TRUE(TestError("{ \"type\" : [\"integer\", \"number\", \"integer\"] }", NULL));
+	EXPECT_TRUE(TestError("{ \"type\" : [\"number\", \"integer\", \"number\"] }", NULL));
 }
 
 // TODO: Implement "multipleOf" property

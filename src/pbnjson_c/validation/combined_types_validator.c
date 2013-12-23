@@ -41,7 +41,8 @@ static Validator* _get_current_validator(CombinedTypesValidator *c, ValidationEv
 	case EV_NULL:
 		return c->types[V_NULL];
 	case EV_NUM:
-		return c->types[V_NUM];
+		// Integer is more strict so use it for numbers only if number type is disallowed
+		return c->types[V_NUM] ? c->types[V_NUM] : c->types[V_INT];
 	case EV_STR:
 		return c->types[V_STR];
 	case EV_BOOL:
@@ -102,32 +103,36 @@ static void unref(Validator *validator)
 static Validator* set_maximum(Validator *v, Number *n)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (c->types[V_NUM])
-		c->types[V_NUM] = validator_set_number_maximum(c->types[V_NUM], n);
+	int type = c->types[V_NUM] ? V_NUM : V_INT;
+	if (c->types[type])
+		c->types[type] = validator_set_number_maximum(c->types[type], n);
 	return v;
 }
 
 static Validator* set_maximum_exclusive(Validator *v, bool exclusive)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (c->types[V_NUM])
-		c->types[V_NUM] = validator_set_number_maximum_exclusive(c->types[V_NUM], exclusive);
+	int type = c->types[V_NUM] ? V_NUM : V_INT;
+	if (c->types[type])
+		c->types[type] = validator_set_number_maximum_exclusive(c->types[type], exclusive);
 	return v;
 }
 
 static Validator* set_minimum(Validator *v, Number *n)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (c->types[V_NUM])
-		c->types[V_NUM] = validator_set_number_minimum(c->types[V_NUM], n);
+	int type = c->types[V_NUM] ? V_NUM : V_INT;
+	if (c->types[type])
+		c->types[type] = validator_set_number_minimum(c->types[type], n);
 	return v;
 }
 
 static Validator* set_minimum_exclusive(Validator *v, bool exclusive)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
-	if (c->types[V_NUM])
-		c->types[V_NUM] = validator_set_number_minimum_exclusive(c->types[V_NUM], exclusive);
+	int type = c->types[V_NUM] ? V_NUM : V_INT;
+	if (c->types[type])
+		c->types[type] = validator_set_number_minimum_exclusive(c->types[type], exclusive);
 	return v;
 }
 
@@ -255,27 +260,19 @@ void combined_types_validator_release(CombinedTypesValidator *v)
 	g_free(v);
 }
 
-void combined_types_validator_set_type(CombinedTypesValidator *c, const char *type_str, size_t len)
+bool combined_types_validator_set_type(CombinedTypesValidator *c, const char *type_str, size_t len)
 {
 	StringSpan str = { .str = type_str, .str_len = len };
 	ValidatorType type = type_parser_parse_to_type(&str, NULL);
 
-	if (type == V_INT)
-	{
-		// Integer is more strict so don't overwrite existing number validator with it
-		if (c->types[V_NUM])
-			return;
-		else
-			type = V_NUM;
-	}
+	if (type >= V_TYPES_NUM)
+		return false;
 
-	assert(type < V_TYPES_NUM);
-
-	Validator *old = c->types[type];
-	if (old)
-		validator_unref(old);
+	if (c->types[type])
+		return false;
 
 	c->types[type] = type_parser_parse_simple(&str, NULL);
+	return true;
 }
 
 void combined_types_validator_fill_all_types(CombinedTypesValidator *c)
@@ -295,6 +292,9 @@ void combined_types_validator_fill_all_types(CombinedTypesValidator *c)
 				break;
 			case V_NUM:
 				c->types[i] = number_validator_instance();
+				break;
+			case V_INT:
+				// Do not need to fill integer validator, because numbers validator is present
 				break;
 			case V_STR:
 				c->types[i] = string_validator_instance();
