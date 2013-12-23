@@ -45,6 +45,7 @@ typedef struct _CombinedValidator
 	 * @return false if validation failed
 	 */
 	bool (*check_all)(ValidationEvent const *e, ValidationState *s, void *ctxt, bool *all_finished);
+
 } CombinedValidator;
 
 //_Static_assert(offsetof(ArrayValidator, base) == 0, "");
@@ -67,6 +68,7 @@ CombinedValidator* one_of_validator_new();
 /** @brief Construct validator for {"enum": [...]}
  *
  * NOTE: Basically same as anyOf but will return UNEXPECTED_VALUE error in case of failed validation
+ *       and do not support duplicate values
  */
 CombinedValidator* enum_validator_new();
 
@@ -84,6 +86,9 @@ void combined_validator_convert_to_enum(CombinedValidator *v);
 
 /** @brief Add validator for subschema */
 void combined_validator_add_value(CombinedValidator *a, Validator *v);
+
+/** @brief Add validator for enum subschema if accetable */
+bool combined_validator_add_enum_value(CombinedValidator *a, Validator *v);
 
 /** @brief Changes error notification of combined validator to notify about each inner error
  *

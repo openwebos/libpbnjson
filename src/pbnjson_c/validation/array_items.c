@@ -134,3 +134,34 @@ void array_items_visit(ArrayItems *a,
 		it = g_list_next(it);
 	}
 }
+
+static bool validator_lists_equals(GList *vals, GList *vals2)
+{
+	if (vals == vals2)
+		return true;
+
+	while (vals && vals2)
+	{
+		if (!validator_equals(vals->data, vals2->data))
+			return false;
+		vals = g_list_next(vals);
+		vals2 = g_list_next(vals2);
+	}
+
+	return !vals && !vals2;
+}
+
+bool array_items_equals(ArrayItems *a, ArrayItems *other)
+{
+	if (a == other)
+		return true;
+	if (!a || !other)
+		return false;
+
+	if (a->validator_count == other->validator_count &&
+	    validator_equals(a->generic_validator, other->generic_validator) &&
+	    validator_lists_equals(a->validators, other->validators))
+		return true;
+
+	return false;
+}

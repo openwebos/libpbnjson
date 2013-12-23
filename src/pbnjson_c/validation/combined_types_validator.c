@@ -72,6 +72,18 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 	return validator_check(vcur, e, s, c);
 }
 
+static bool equals(Validator *v, Validator *other)
+{
+	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
+	CombinedTypesValidator *c2 = (CombinedTypesValidator *) other;
+	int i = 0;
+	for (; i < V_TYPES_NUM; ++i)
+		if (!validator_equals(c->types[i], c2->types[i]))
+			return false;
+
+	return true;
+}
+
 static Validator* ref(Validator *validator)
 {
 	CombinedTypesValidator *v = (CombinedTypesValidator *) validator;
@@ -207,6 +219,7 @@ static void _visit(Validator *v,
 ValidatorVtable combined_types_vtable =
 {
 	.check = _check,
+	.equals = equals,
 	.ref = ref,
 	.unref = unref,
 	.visit = _visit,

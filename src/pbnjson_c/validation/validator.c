@@ -47,6 +47,21 @@ void validator_unref(Validator *v)
 		v->vtable->unref(v);
 }
 
+bool validator_equals(Validator *v, Validator *other)
+{
+	if (v == other)
+		return true;
+	if (!v || !other)
+		return false;
+	if (v->vtable != other->vtable)
+		return false;
+	if (v->vtable->equals)
+		return v->vtable->equals(v, other);
+
+	// if method 'equals' is not defined and vtables are the same validators are equal
+	return true;
+}
+
 bool validator_check(Validator *v, ValidationEvent const *e, ValidationState *s, void *ctxt)
 {
 	assert(v && v->vtable && v->vtable->check);

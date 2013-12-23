@@ -52,6 +52,9 @@ typedef struct _ValidatorVtable
 	 */
 	void (*unref)(Validator *v);
 
+	/** @brief Check if two validators are equal */
+	bool (*equals)(Validator *v, Validator *other);
+
 	/** @name Functions used during validation
 	 *  @{
 	 */
@@ -189,6 +192,9 @@ Validator* validator_ref(Validator *v);
 
 /** @brief Decrement reference count of the validator */
 void validator_unref(Validator *v);
+
+/** @brief Check if two validators are equal */
+bool validator_equals(Validator *v, Validator *other);
 
 /** @} */
 

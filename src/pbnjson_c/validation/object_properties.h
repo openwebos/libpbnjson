@@ -88,6 +88,9 @@ void object_properties_visit(ObjectProperties *o,
  */
 GHashTable *object_properties_gather_default(ObjectProperties *o, ValidationState *s);
 
+/** @brief Check if two ObjectProperties structures are equal. */
+bool object_properties_equals(ObjectProperties *o, ObjectProperties *other);
+
 #ifdef __cplusplus
 }
 #endif

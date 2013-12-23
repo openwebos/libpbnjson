@@ -228,7 +228,7 @@ bool jvalue_check_schema(jvalue_ref jref, const JSchemaInfoRef schema_info)
 	validation_state_init(&validation_state,
 	                      validator,
 	                      uri_resolver,
-	                      &jvalue_check_notification);    // TODO: report errors
+	                      &jvalue_check_notification);
 
 	InnerContext ctxt = {
 		.callbacks = schema_info->m_errHandler,

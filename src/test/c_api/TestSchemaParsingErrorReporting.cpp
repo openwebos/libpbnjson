@@ -368,8 +368,12 @@ TEST_F(TestSchemaParsingErrorReporting, InvalidEnum)
 	EXPECT_TRUE(TestError("{ \"enum\" : \"e\" }", NULL));
 	EXPECT_TRUE(TestError("{ \"enum\" : {} }", NULL));
 	EXPECT_TRUE(TestError("{ \"enum\" : [] }", NULL));
-	// FIXME: "enum" values should be unique
-	//EXPECT_TRUE(TestError("{ \"enum\" : [null, null] }", NULL));
+	EXPECT_TRUE(TestError("{ \"enum\" : [null, null] }", NULL));
+	EXPECT_TRUE(TestError("{ \"enum\" : [\"hello\", null, \"hello\"] }", NULL));
+	EXPECT_TRUE(TestError("{ \"enum\" : [[], []] }", NULL));
+	EXPECT_TRUE(TestError("{ \"enum\" : [[null, 12], 12, [null, 12]] }", NULL));
+	EXPECT_TRUE(TestError("{ \"enum\" : [{}, {}] }", NULL));
+	EXPECT_TRUE(TestError("{ \"enum\" : [ {\"a\":null, \"b\":\"str\"}, null, {\"b\":\"str\", \"a\":null } ] }", NULL));
 }
 
 TEST_F(TestSchemaParsingErrorReporting, InvalidAllOf)

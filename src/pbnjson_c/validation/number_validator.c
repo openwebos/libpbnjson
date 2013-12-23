@@ -225,6 +225,25 @@ static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
 	return set_default(&number_validator_new()->base, def_value);
 }
 
+static bool equals(Validator *v, Validator *other)
+{
+	NumberValidator *n = (NumberValidator *) v;
+	NumberValidator *n2 = (NumberValidator *) other;
+
+	if (n->integer == n2->integer &&
+	    n->expected_set == n2->expected_set &&
+	    number_compare(&n->expected_value, &n2->expected_value) == 0 &&
+	    n->max_set == n2->max_set &&
+	    number_compare(&n->max, &n2->max) == 0 &&
+	    n->max_exclusive == n2->max_exclusive &&
+	    n->min_set == n2->min_set &&
+	    number_compare(&n->min, &n2->min) == 0 &&
+	    n->min_exclusive == n2->min_exclusive)
+		return true;
+
+	return false;
+}
+
 static ValidatorVtable generic_number_vtable =
 {
 	.check = check_generic,
@@ -250,6 +269,7 @@ static ValidatorVtable number_vtable =
 	.ref = ref,
 	.unref = unref,
 	.check = _check,
+	.equals = equals,
 	.set_number_maximum = set_maximum,
 	.set_number_maximum_exclusive = set_maximum_exclusive,
 	.set_number_minimum = set_minimum,

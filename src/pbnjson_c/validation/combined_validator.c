@@ -211,7 +211,6 @@ static void init_states_with_notify(Validator *v, ValidationState *s, MyContext 
 	GSList *it = vcomb->validators;
 	while (it)
 	{
-		// TODO: aggregate error notifications
 		ValidationState *substate = validation_state_new(it->data, s->uri_resolver, notify);
 		my_ctxt->states = g_list_append(my_ctxt->states, substate);
 		it = g_slist_next(it);
@@ -382,6 +381,18 @@ void combined_validator_convert_to_one_of(CombinedValidator *v)
 	v->check_all = _one_of_check;
 }
 
+static bool enum_check_add_value(CombinedValidator *c, Validator *v)
+{
+	GSList *it = c->validators;
+	while (it)
+	{
+		if (validator_equals(v, it->data))
+			return false;
+		it = g_slist_next(it);
+	}
+	return true;
+}
+
 void combined_validator_convert_to_enum(CombinedValidator *v)
 {
 	v->check_all = enum_check;
@@ -413,4 +424,16 @@ void combined_validator_release(CombinedValidator *v)
 void combined_validator_add_value(CombinedValidator *a, Validator *v)
 {
 	a->validators = g_slist_prepend(a->validators, v);
+}
+
+bool combined_validator_add_enum_value(CombinedValidator *a, Validator *v)
+{
+	if (!enum_check_add_value(a, v))
+	{
+		validator_unref(v);
+		return false;
+	}
+
+	combined_validator_add_value(a, v);
+	return true;
 }

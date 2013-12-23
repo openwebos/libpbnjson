@@ -352,6 +352,21 @@ static void dump_exit(char const *key, Validator *v, void *ctxt, Validator **new
 	fprintf((FILE *) ctxt, "}");
 }
 
+static bool equals(Validator *v, Validator *other)
+{
+	ObjectValidator *o = (ObjectValidator *) v;
+	ObjectValidator *o2 = (ObjectValidator *) other;
+
+	if (o->max_properties == o2->max_properties &&
+	    o->min_properties == o2->min_properties &&
+	    object_properties_equals(o->properties, o2->properties) &&
+	    validator_equals(o->additional_properties, o2->additional_properties) &&
+	    object_required_equals(o->required, o2->required))
+		return true;
+
+	return false;
+}
+
 static ValidatorVtable generic_object_vtable =
 {
 	.check = check_generic,
@@ -370,6 +385,7 @@ static ValidatorVtable generic_object_vtable =
 ValidatorVtable object_vtable =
 {
 	.check = _check,
+	.equals = equals,
 	.init_state = _init_state,
 	.cleanup_state = _cleanup_state,
 	.ref = ref,

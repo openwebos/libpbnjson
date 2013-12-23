@@ -880,7 +880,7 @@ static bool jsax_parse_internal(PJSAXCallbacks *parser,
 	validation_state_init(&validation_state,
 	                      validator,
 	                      uri_resolver,
-	                      &jparse_notification); // TODO: Error callback
+	                      &jparse_notification);
 
 	PJSAXContext internalCtxt =
 	{

@@ -99,3 +99,26 @@ char const *object_required_lookup_key_n(ObjectRequired *o, char const *key, siz
 	buffer[key_len] = 0;
 	return object_required_lookup_key(o, buffer);
 }
+
+bool object_required_equals(ObjectRequired *o, ObjectRequired *other)
+{
+	if (o == other)
+		return true;
+	if (!o || !other)
+		return false;
+
+	if (g_hash_table_size(o->keys) != g_hash_table_size(other->keys))
+		return false;
+
+	GHashTableIter it;
+	g_hash_table_iter_init(&it, o->keys);
+	gpointer key = NULL;
+	gpointer v = NULL;
+	while (g_hash_table_iter_next(&it, &key, &v))
+	{
+		if (!g_hash_table_lookup(other->keys, key))
+			return false;
+	}
+
+	return true;
+}

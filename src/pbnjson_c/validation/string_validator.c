@@ -143,6 +143,19 @@ static void dump_enter(char const *key, Validator *v, void *ctxt)
 	fprintf((FILE *) ctxt, "(s)");
 }
 
+static bool equals(Validator *v, Validator *other)
+{
+	StringValidator *s = (StringValidator *) v;
+	StringValidator *s2 = (StringValidator *) other;
+
+	if (s->max_length == s2->max_length &&
+	    s->min_length == s2->min_length &&
+	    g_strcmp0(s->expected_value, s2->expected_value) == 0)
+		return true;
+
+	return false;
+}
+
 static ValidatorVtable generic_string_vtable =
 {
 	.check = check_generic,
@@ -155,6 +168,7 @@ static ValidatorVtable generic_string_vtable =
 static ValidatorVtable string_vtable =
 {
 	.check = _check,
+	.equals = equals,
 	.ref = ref,
 	.unref = unref,
 	.set_string_max_length = set_max_length,

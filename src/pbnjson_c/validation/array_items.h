@@ -66,6 +66,9 @@ void array_items_visit(ArrayItems *a,
                        VisitorEnterFunc enter_func, VisitorExitFunc exit_func,
                        void *ctxt);
 
+/** @brief Checks if two ArrayItems structures are equal. */
+bool array_items_equals(ArrayItems *a, ArrayItems *other);
+
 #ifdef __cplusplus
 }
 #endif

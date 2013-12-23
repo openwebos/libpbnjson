@@ -24,6 +24,7 @@ include_directories(${WITH_GTEST_SRC}/include)
 
 SET(UnitTests
 	TestValidator
+	TestValidatorEquals
 	TestGenericValidator
 	TestNullValidator
 	TestBooleanValidator

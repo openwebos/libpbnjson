@@ -302,6 +302,21 @@ static void dump_exit(char const *key, Validator *v, void *ctxt, Validator **new
 	fprintf((FILE *) ctxt, "]");
 }
 
+static bool equals(Validator *v, Validator *other)
+{
+	ArrayValidator *a = (ArrayValidator *) v;
+	ArrayValidator *a2 = (ArrayValidator *) other;
+
+	if (a->max_items == a2->max_items &&
+	    a->min_items == a2->min_items &&
+	    a->unique_items == a2->unique_items &&
+	    array_items_equals(a->items, a2->items) &&
+	    validator_equals(a->additional_items, a2->additional_items))
+		return true;
+
+	return false;
+}
+
 static ValidatorVtable generic_array_vtable =
 {
 	.check = check_generic,
@@ -320,6 +335,7 @@ static ValidatorVtable generic_array_vtable =
 ValidatorVtable array_vtable =
 {
 	.check = check,
+	.equals = equals,
 	.init_state = _init_state,
 	.cleanup_state = _cleanup_state,
 	.ref = ref,

@@ -141,3 +141,27 @@ GHashTable *object_properties_gather_default(ObjectProperties *o, ValidationStat
 	}
 	return result;
 }
+
+bool object_properties_equals(ObjectProperties *o, ObjectProperties *other)
+{
+	if (o == other)
+		return true;
+	if (!o || !other)
+		return false;
+
+	if (g_hash_table_size(o->keys) != g_hash_table_size(other->keys))
+		return false;
+
+	GHashTableIter it;
+	g_hash_table_iter_init(&it, o->keys);
+	gpointer key = NULL;
+	Validator *v = NULL;
+	while (g_hash_table_iter_next(&it, &key, (gpointer *) &v))
+	{
+		Validator *v2 = g_hash_table_lookup(other->keys, key);
+		if (!v2 || !validator_equals(v, v2))
+			return false;
+	}
+
+	return true;
+}

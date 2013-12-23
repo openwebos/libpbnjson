@@ -68,6 +68,9 @@ char const *object_required_lookup_key(ObjectRequired *o, char const *key);
  */
 char const *object_required_lookup_key_n(ObjectRequired *o, char const *key, size_t key_len);
 
+/** @brief Check if two ObjectRequired structures are equal. */
+bool object_required_equals(ObjectRequired *o, ObjectRequired *other);
+
 #ifdef __cplusplus
 }
 #endif

@@ -648,16 +648,16 @@ schema_enum(A) ::= KEY_ENUM ARR_START enum_list(B) ARR_END.
 
 enum_list(A) ::= value_validator(V).
 {
-	// TODO: Enum consistency checks
-	// must be carried out during schema compilation.
 	A = enum_validator_new();
-	combined_validator_add_value(A, V);
+	if (!combined_validator_add_enum_value(A, V))
+		parser_context_set_error(context, "Invalid enum format");
 }
 
 enum_list(A) ::= enum_list(B) value_validator(V).
 {
 	A = B;
-	combined_validator_add_value(A, V);
+	if (!combined_validator_add_enum_value(A, V))
+		parser_context_set_error(context, "Invalid enum format");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
