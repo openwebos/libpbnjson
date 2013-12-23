@@ -102,6 +102,18 @@ TEST_F(Json, Integer)
 	EXPECT_FALSE(validate_json_plain("1.2", v));
 }
 
+TEST_F(Json, IntegerWithRestrictions)
+{
+	v = parse_schema_bare("{\"type\": \"integer\", \"maximum\": 10, \"minimum\": 2 }");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_FALSE(validate_json_plain("null", v));
+	EXPECT_TRUE(validate_json_plain("3", v));
+	EXPECT_FALSE(validate_json_plain("1.2", v));
+	EXPECT_FALSE(validate_json_plain("1", v));
+	EXPECT_FALSE(validate_json_plain("11", v));
+	EXPECT_TRUE(validate_json_plain("9", v));
+}
+
 TEST_F(Json, CombinedTypesOnlyNull)
 {
 	v = parse_schema_bare("{\"type\": [\"null\"] }");
@@ -126,6 +138,23 @@ TEST_F(Json, CombinedTypesStringAndInteger)
 	EXPECT_TRUE(validate_json_plain("1", v));
 	EXPECT_FALSE(validate_json_plain("1.2", v));
 	EXPECT_TRUE(validate_json_plain("\"a\"", v));
+	EXPECT_FALSE(validate_json_plain("{}", v));
+	EXPECT_FALSE(validate_json_plain("{\"a\":null}", v));
+	EXPECT_FALSE(validate_json_plain("[]", v));
+	EXPECT_FALSE(validate_json_plain("[null]", v));
+}
+
+TEST_F(Json, CombinedTypesStringAndIntegerWithRestrictions)
+{
+	v = parse_schema_bare("{\"type\": [\"string\", \"integer\"], \"maximum\": 10, \"maxLength\": 3 }");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_FALSE(validate_json_plain("null", v));
+	EXPECT_FALSE(validate_json_plain("true", v));
+	EXPECT_TRUE(validate_json_plain("1", v));
+	EXPECT_FALSE(validate_json_plain("11", v));
+	EXPECT_FALSE(validate_json_plain("1.2", v));
+	EXPECT_TRUE(validate_json_plain("\"a\"", v));
+	EXPECT_FALSE(validate_json_plain("\"hello\"", v));
 	EXPECT_FALSE(validate_json_plain("{}", v));
 	EXPECT_FALSE(validate_json_plain("{\"a\":null}", v));
 	EXPECT_FALSE(validate_json_plain("[]", v));

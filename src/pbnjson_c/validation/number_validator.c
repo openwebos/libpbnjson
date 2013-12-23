@@ -225,6 +225,31 @@ static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
 	return set_default(&number_validator_new()->base, def_value);
 }
 
+static Validator* set_maximum_integer_generic(Validator *v, Number *num)
+{
+	return set_maximum(&integer_validator_new()->base, num);
+}
+
+static Validator* set_minimum_integer_generic(Validator *v, Number *num)
+{
+	return set_minimum(&integer_validator_new()->base, num);
+}
+
+static Validator* set_maximum_exclusive_integer_generic(Validator *v, bool exclusive)
+{
+	return set_maximum_exclusive(&integer_validator_new()->base, exclusive);
+}
+
+static Validator* set_minimum_exclusive_integer_generic(Validator *v, bool exclusive)
+{
+	return set_minimum_exclusive(&integer_validator_new()->base, exclusive);
+}
+
+static Validator* set_default_integer_generic(Validator *v, jvalue_ref def_value)
+{
+	return set_default(&integer_validator_new()->base, def_value);
+}
+
 static bool equals(Validator *v, Validator *other)
 {
 	NumberValidator *n = (NumberValidator *) v;
@@ -257,11 +282,11 @@ static ValidatorVtable generic_number_vtable =
 static ValidatorVtable generic_integer_vtable =
 {
 	.check = check_integer_generic,
-	.set_number_maximum = set_maximum_generic,
-	.set_number_maximum_exclusive = set_maximum_exclusive_generic,
-	.set_number_minimum = set_minimum_generic,
-	.set_number_minimum_exclusive = set_minimum_exclusive_generic,
-	.set_default = set_default_generic,
+	.set_number_maximum = set_maximum_integer_generic,
+	.set_number_maximum_exclusive = set_maximum_exclusive_integer_generic,
+	.set_number_minimum = set_minimum_integer_generic,
+	.set_number_minimum_exclusive = set_minimum_exclusive_integer_generic,
+	.set_default = set_default_integer_generic,
 };
 
 static ValidatorVtable number_vtable =
