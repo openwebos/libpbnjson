@@ -530,8 +530,8 @@ schema_feature(A) ::= KEY_ADDITIONAL_PROPERTIES error.
 // Object required
 schema_feature(A) ::= KEY_REQUIRED ARR_START required(B) ARR_END.
 {
-	// TODO: Warn or issue an error if empty array is collected.
-	// We allow its emptiness because of the legacy code.
+	if (!B)
+		parser_context_set_error(context, SEC_REQUIRED_ARRAY_EMPTY);
 	A = &B->base;
 }
 
@@ -554,7 +554,8 @@ required(A) ::= .
 required(A) ::= required(B) STRING(K).
 {
 	A = B ? B : object_required_new();
-	object_required_add_key_n(A, K.string.str, K.string.str_len);
+	if (!object_required_add_key_n(A, K.string.str, K.string.str_len))
+		parser_context_set_error(context, SEC_REQUIRED_ARRAY_DUPLICATES);
 }
 
 required(A) ::= required(B) error.

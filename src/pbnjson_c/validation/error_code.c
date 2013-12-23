@@ -151,8 +151,12 @@ char const *SchemaGetErrorMessage(int code)
 		return "'minProperties' value should be integer not less than 0";
 	case SEC_REQUIRED_FORMAT:
 		return "'required' should be array";
+	case SEC_REQUIRED_ARRAY_EMPTY:
+		return "'required' array should contain at least one value";
 	case SEC_REQUIRED_ARRAY_FORMAT:
 		return "'required' array values should be strings";
+	case SEC_REQUIRED_ARRAY_DUPLICATES:
+		return "'required' array can't contain duplicate values";
 	case SEC_ENUM_FORMAT:
 		return "'enum' should be array";
 	case SEC_ENUM_ARRAY_EMPTY:

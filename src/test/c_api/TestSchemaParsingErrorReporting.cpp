@@ -281,8 +281,7 @@ TEST_F(TestSchemaParsingErrorReporting, InvalidRequired)
 	EXPECT_TRUE(TestError("{ \"required\" : 0 }", SEC_REQUIRED_FORMAT));
 	EXPECT_TRUE(TestError("{ \"required\" : \"req\" }", SEC_REQUIRED_FORMAT));
 	EXPECT_TRUE(TestError("{ \"required\" : {} }", SEC_REQUIRED_FORMAT));
-	// FIXME: "required" property should have at least one element
-	//EXPECT_TRUE(TestError("{ \"required\" : [] }", SEC_SYNTAX));
+	EXPECT_TRUE(TestError("{ \"required\" : [] }", SEC_REQUIRED_ARRAY_EMPTY));
 	EXPECT_TRUE(TestError("{ \"required\" : [null] }", SEC_REQUIRED_ARRAY_FORMAT));
 	EXPECT_TRUE(TestError("{ \"required\" : [false] }", SEC_REQUIRED_ARRAY_FORMAT));
 	EXPECT_TRUE(TestError("{ \"required\" : [0] }", SEC_REQUIRED_ARRAY_FORMAT));
@@ -293,8 +292,7 @@ TEST_F(TestSchemaParsingErrorReporting, InvalidRequired)
 	EXPECT_TRUE(TestError("{ \"required\" : [\"a\", 0] }", SEC_REQUIRED_ARRAY_FORMAT));
 	EXPECT_TRUE(TestError("{ \"required\" : [\"a\", {}] }", SEC_REQUIRED_ARRAY_FORMAT));
 	EXPECT_TRUE(TestError("{ \"required\" : [\"a\", []] }", SEC_REQUIRED_ARRAY_FORMAT));
-	// FIXME: "required" values must be unique
-	//EXPECT_TRUE(TestError("{ \"required\" : [\"a\", \"a\"] }", SEC_SYNTAX));
+	EXPECT_TRUE(TestError("{ \"required\" : [\"a\", \"a\"] }", SEC_REQUIRED_ARRAY_DUPLICATES));
 }
 
 TEST_F(TestSchemaParsingErrorReporting, InvalidAdditionalProperties)

@@ -84,7 +84,7 @@ bool object_required_add_key_n(ObjectRequired *o, char const *key, size_t key_le
 		return false;
 	char *skey = g_strndup(key, key_len);
 	g_hash_table_insert(o->keys, skey, skey);
-	return o->keys;
+	return true;
 }
 
 char const *object_required_lookup_key(ObjectRequired *o, char const *key)
