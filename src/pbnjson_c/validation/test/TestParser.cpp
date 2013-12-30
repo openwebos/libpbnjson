@@ -29,6 +29,7 @@ protected:
 	Validator *v;
 	// Error info
 	size_t offset;
+	SchemaErrorCode error;
 	string message;
 
 	virtual void SetUp()
@@ -43,10 +44,11 @@ protected:
 		validator_unref(v), v = NULL;
 	}
 
-	static void OnError(size_t offset, char const *message, void *ctxt)
+	static void OnError(size_t offset, SchemaErrorCode error, char const *message, void *ctxt)
 	{
 		Parser *args = reinterpret_cast<Parser *>(ctxt);
 		args->offset = offset;
+		args->error = error;
 		args->message = message;
 	}
 
@@ -56,7 +58,7 @@ TEST_F(Parser, Empty)
 {
 	v = parse_schema_bare("{}");
 	ASSERT_TRUE(v != NULL);
-	EXPECT_TRUE(GENERIC_VALIDATOR == v);
+	EXPECT_TRUE(validator_equals(GENERIC_VALIDATOR, v));
 }
 
 TEST_F(Parser, Empty2)
@@ -76,7 +78,7 @@ TEST_F(Parser, Null)
 	char const *const SCHEMA = "{\"type\": \"null\"}";
 	v = parse_schema_bare(SCHEMA);
 	ASSERT_TRUE(v != NULL);
-	EXPECT_TRUE(NULL_VALIDATOR == v);
+	EXPECT_TRUE(validator_equals(NULL_VALIDATOR, v));
 }
 
 TEST_F(Parser, SyntaxError)
@@ -85,6 +87,7 @@ TEST_F(Parser, SyntaxError)
 	EXPECT_TRUE(v == NULL);
 
 	EXPECT_EQ(17, offset);
+	EXPECT_EQ(SEC_SYNTAX, error);
 	EXPECT_EQ("parse error: invalid object key (must be a string)\n", message);
 }
 
@@ -94,7 +97,8 @@ TEST_F(Parser, TypeError)
 	EXPECT_TRUE(v == NULL);
 
 	EXPECT_EQ(16, offset);
-	EXPECT_EQ("Invalid type", message);
+	EXPECT_EQ(SEC_TYPE_VALUE, error);
+	EXPECT_EQ(SchemaGetErrorMessage(SEC_TYPE_VALUE), message);
 }
 
 TEST_F(Parser, MaxLengthNegative)
@@ -103,7 +107,8 @@ TEST_F(Parser, MaxLengthNegative)
 	EXPECT_TRUE(v == NULL);
 
 	EXPECT_EQ(17, offset);
-	EXPECT_EQ("Invalid maxLength format", message);
+	EXPECT_EQ(SEC_MAX_LENGTH_VALUE_FORMAT, error);
+	EXPECT_EQ(SchemaGetErrorMessage(SEC_MAX_LENGTH_VALUE_FORMAT), message);
 }
 
 TEST_F(Parser, MaxLengthFloat)
@@ -112,7 +117,8 @@ TEST_F(Parser, MaxLengthFloat)
 	EXPECT_TRUE(v == NULL);
 
 	EXPECT_EQ(18, offset);
-	EXPECT_EQ("Invalid maxLength format", message);
+	EXPECT_EQ(SEC_MAX_LENGTH_VALUE_FORMAT, error);
+	EXPECT_EQ(SchemaGetErrorMessage(SEC_MAX_LENGTH_VALUE_FORMAT), message);
 }
 
 TEST_F(Parser, MinLengthNegative)
@@ -121,7 +127,8 @@ TEST_F(Parser, MinLengthNegative)
 	EXPECT_TRUE(v == NULL);
 
 	EXPECT_EQ(17, offset);
-	EXPECT_EQ("Invalid minLength format", message);
+	EXPECT_EQ(SEC_MIN_LENGTH_VALUE_FORMAT, error);
+	EXPECT_EQ(SchemaGetErrorMessage(SEC_MIN_LENGTH_VALUE_FORMAT), message);
 }
 
 TEST_F(Parser, MinLengthFloat)
@@ -130,5 +137,6 @@ TEST_F(Parser, MinLengthFloat)
 	EXPECT_TRUE(v == NULL);
 
 	EXPECT_EQ(18, offset);
-	EXPECT_EQ("Invalid minLength format", message);
+	EXPECT_EQ(SEC_MIN_LENGTH_VALUE_FORMAT, error);
+	EXPECT_EQ(SchemaGetErrorMessage(SEC_MIN_LENGTH_VALUE_FORMAT), message);
 }

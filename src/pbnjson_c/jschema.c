@@ -83,7 +83,7 @@ void jschema_release(jschema_ref *schema)
 	SANITY_KILL_POINTER(*schema);
 }
 
-static void _OnError(size_t offset, char const *message, void *ctxt)
+static void OnError(size_t offset, SchemaErrorCode error, char const *message, void *ctxt)
 {
 	JErrorCallbacksRef callbacks = (JErrorCallbacksRef) ctxt;
 	if (!callbacks)
@@ -93,6 +93,7 @@ static void _OnError(size_t offset, char const *message, void *ctxt)
 		struct __JSAXContext fake_sax_ctxt =
 		{
 			.m_errors = callbacks,
+			.m_error_code = error,
 			.errorDescription = (char *) message,
 		};
 		callbacks->m_parser(callbacks->m_ctxt, &fake_sax_ctxt);
@@ -131,7 +132,7 @@ static jschema_ref jschema_parse_internal(raw_buffer input,
 
 	schema->validator = parse_schema_n(input.m_str, input.m_len,
 	                                   schema->uri_resolver, root_scope,
-	                                   &_OnError, errorHandler);
+	                                   &OnError, errorHandler);
 	if (!schema->validator)
 	{
 		jschema_release(&schema);

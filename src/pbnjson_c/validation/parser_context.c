@@ -19,10 +19,9 @@
 #include "parser_context.h"
 
 
-void parser_context_set_error(ParserContext *c, char const *error_message)
+void parser_context_set_error(ParserContext *c, SchemaErrorCode error)
 {
 	if (!c)
 		return;
-	c->success = false;
-	c->error_message = error_message;
+	c->error = error;
 }

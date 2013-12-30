@@ -31,7 +31,7 @@ namespace {
 
 typedef pair<char const *, size_t> RegionT;
 
-void OnError(size_t offset, char const *message, void *ctxt)
+void OnError(size_t offset, SchemaErrorCode error, char const *message, void *ctxt)
 {
 	RegionT const *region = reinterpret_cast<RegionT const *>(ctxt);
 	char const *error_point = region->first + offset;

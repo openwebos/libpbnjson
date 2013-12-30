@@ -72,7 +72,7 @@ static int on_null(void *ctx)
 	YajlContext *yajl_context = (YajlContext *) ctx;
 	TokenParam token_param = { };
 	JsonSchemaParser(yajl_context->parser, TOKEN_NULL, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.success;
+	return yajl_context->parser_ctxt.error == SEC_OK;
 }
 
 static int on_boolean(void *ctx, int boolean)
@@ -83,7 +83,7 @@ static int on_boolean(void *ctx, int boolean)
 		.boolean = boolean,
 	};
 	JsonSchemaParser(yajl_context->parser, TOKEN_BOOLEAN, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.success;
+	return yajl_context->parser_ctxt.error == SEC_OK;
 }
 
 static int on_number(void *ctx, const char *str, yajl_size_t len)
@@ -97,7 +97,7 @@ static int on_number(void *ctx, const char *str, yajl_size_t len)
 		},
 	};
 	JsonSchemaParser(yajl_context->parser, TOKEN_NUMBER, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.success;
+	return yajl_context->parser_ctxt.error == SEC_OK;
 }
 
 static int on_string(void *ctx, const unsigned char *str, yajl_size_t len)
@@ -111,7 +111,7 @@ static int on_string(void *ctx, const unsigned char *str, yajl_size_t len)
 		},
 	};
 	JsonSchemaParser(yajl_context->parser, TOKEN_STRING, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.success;
+	return yajl_context->parser_ctxt.error == SEC_OK;
 }
 
 static int on_map_key(void *ctx, const unsigned char *str, yajl_size_t len)
@@ -130,7 +130,7 @@ static int on_map_key(void *ctx, const unsigned char *str, yajl_size_t len)
 	JsonSchemaParser(yajl_context->parser,
 	                 k ? k->token : TOKEN_KEY_NOT_KEYWORD, token_param,
 	                 &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.success;
+	return yajl_context->parser_ctxt.error == SEC_OK;
 }
 
 static int on_start_map(void *ctx)
@@ -138,7 +138,7 @@ static int on_start_map(void *ctx)
 	YajlContext *yajl_context = (YajlContext *) ctx;
 	TokenParam token_param;
 	JsonSchemaParser(yajl_context->parser, TOKEN_OBJ_START, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.success;
+	return yajl_context->parser_ctxt.error == SEC_OK;
 }
 
 static int on_end_map(void *ctx)
@@ -146,7 +146,7 @@ static int on_end_map(void *ctx)
 	YajlContext *yajl_context = (YajlContext *) ctx;
 	TokenParam token_param;
 	JsonSchemaParser(yajl_context->parser, TOKEN_OBJ_END, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.success;
+	return yajl_context->parser_ctxt.error == SEC_OK;
 }
 
 static int on_start_array(void *ctx)
@@ -154,7 +154,7 @@ static int on_start_array(void *ctx)
 	YajlContext *yajl_context = (YajlContext *) ctx;
 	TokenParam token_param;
 	JsonSchemaParser(yajl_context->parser, TOKEN_ARR_START, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.success;
+	return yajl_context->parser_ctxt.error == SEC_OK;
 }
 
 static int on_end_array(void *ctx)
@@ -162,7 +162,7 @@ static int on_end_array(void *ctx)
 	YajlContext *yajl_context = (YajlContext *) ctx;
 	TokenParam token_param;
 	JsonSchemaParser(yajl_context->parser, TOKEN_ARR_END, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.success;
+	return yajl_context->parser_ctxt.error == SEC_OK;
 }
 
 static yajl_callbacks callbacks =
@@ -191,8 +191,7 @@ Validator* parse_schema_n(char const *str, size_t len,
 		.parser = parser,
 		.parser_ctxt = {
 			.validator = NULL,
-			.success = true,
-			.error_message = NULL,
+			.error = SEC_OK,
 		},
 	};
 
@@ -218,18 +217,18 @@ Validator* parse_schema_n(char const *str, size_t len,
 
 	if (yajl_status_ok != yajl_parse(yh, (const unsigned char *)str, len))
 	{
-		if (yajl_context.parser_ctxt.success)
+		if (yajl_context.parser_ctxt.error == SEC_OK)
 		{
 			unsigned char *err = yajl_get_error(yh, 0/*verbose*/, (const unsigned char *)str, len);
 			if (error_func)
-				error_func(yajl_get_bytes_consumed(yh), (const char *) err, error_ctxt);
+				error_func(yajl_get_bytes_consumed(yh), SEC_SYNTAX, (const char *) err, error_ctxt);
 			yajl_free_error(yh, err);
 		}
 		else
 		{
 			if (error_func)
-				error_func(yajl_get_bytes_consumed(yh),
-				           yajl_context.parser_ctxt.error_message, error_ctxt);
+				error_func(yajl_get_bytes_consumed(yh), yajl_context.parser_ctxt.error,
+				           SchemaGetErrorMessage(yajl_context.parser_ctxt.error), error_ctxt);
 		}
 		yajl_free(yh);
 		JsonSchemaParserFree(parser, free);
@@ -242,18 +241,18 @@ Validator* parse_schema_n(char const *str, size_t len,
 	if (yajl_status_ok != yajl_complete_parse(yh))
 #endif
 	{
-		if (yajl_context.parser_ctxt.success)
+		if (yajl_context.parser_ctxt.error == SEC_OK)
 		{
 			unsigned char *err = yajl_get_error(yh, 0, (const unsigned char *)str, len);
 			if (error_func)
-				error_func(yajl_get_bytes_consumed(yh), (const char *) err, error_ctxt);
+				error_func(yajl_get_bytes_consumed(yh), SEC_SYNTAX, (const char *) err, error_ctxt);
 			yajl_free_error(yh, err);
 		}
 		else
 		{
 			if (error_func)
-				error_func(yajl_get_bytes_consumed(yh),
-				           yajl_context.parser_ctxt.error_message, error_ctxt);
+				error_func(yajl_get_bytes_consumed(yh), yajl_context.parser_ctxt.error,
+				           SchemaGetErrorMessage(yajl_context.parser_ctxt.error), error_ctxt);
 		}
 		yajl_free(yh);
 		JsonSchemaParserFree(parser, free);
@@ -265,11 +264,11 @@ Validator* parse_schema_n(char const *str, size_t len,
 	JsonSchemaParser(parser, 0, token_param, &yajl_context.parser_ctxt);
 
 	// Even if parsing was completed there can be an error
-	if (!yajl_context.parser_ctxt.success)
+	if (!yajl_context.parser_ctxt.error == SEC_OK)
 	{
 		if (error_func)
-			error_func(yajl_get_bytes_consumed(yh),
-			           yajl_context.parser_ctxt.error_message, error_ctxt);
+			error_func(yajl_get_bytes_consumed(yh), yajl_context.parser_ctxt.error,
+			           SchemaGetErrorMessage(yajl_context.parser_ctxt.error), error_ctxt);
 		validator_unref(yajl_context.parser_ctxt.validator);
 		yajl_free(yh);
 		JsonSchemaParserFree(parser, free);

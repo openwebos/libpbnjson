@@ -74,3 +74,104 @@ char const *ValidationGetErrorMessage(int code)
 		return "Unknown";
 	}
 }
+
+char const *SchemaGetErrorMessage(int code)
+{
+	switch (code)
+	{
+	case SEC_SYNTAX:
+		return "Syntax error";
+	case SEC_TYPE_FORMAT:
+		return "'type' should be string or array";
+	case SEC_TYPE_VALUE:
+		return "'type' value should be one of the following: 'null', 'boolean', 'number', 'integer', 'string', 'array', 'object'";
+	case SEC_TYPE_ARRAY_EMPTY:
+		return "'type' array should contain at least one value";
+	case SEC_TYPE_ARRAY_DUPLICATES:
+		return "'type' array can't constain duplicate values";
+	case SEC_MAXIMUM_FORMAT:
+		return "'maximum' should be number";
+	case SEC_MINIMUM_FORMAT:
+		return "'minimum' should be number";
+	case SEC_EXCLUSIVE_MAXIMUM_FORMAT:
+		return "'exclusiveMaximum' should be boolean";
+	case SEC_EXCLUSIVE_MINIMUM_FORMAT:
+		return "'exclusiveMinimum' should be boolean";
+	case SEC_MAX_LENGTH_FORMAT:
+		return "'maxLength' should be number";
+	case SEC_MIN_LENGTH_FORMAT:
+		return "'minLength' should be number";
+	case SEC_MAX_LENGTH_VALUE_FORMAT:
+		return "'maxLength' value should be integer not less than 0";
+	case SEC_MIN_LENGTH_VALUE_FORMAT:
+		return "'minLength' value should be integer not less than 0";
+	case SEC_ITEMS_FORMAT:
+		return "'items' should be object or array";
+	case SEC_ITEMS_ARRAY_FORMAT:
+		return "'items' array should contain only objects";
+	case SEC_ADDITIONAL_ITEMS_FORMAT:
+		return "'additionalItems' should be boolean or object";
+	case SEC_MAX_ITEMS_FORMAT:
+		return "'maxItems' should be number";
+	case SEC_MIN_ITEMS_FORMAT:
+		return "'minItems' should be number";
+	case SEC_MAX_ITEMS_VALUE_FORMAT:
+		return "'maxItems' value should be integer not less than 0";
+	case SEC_MIN_ITEMS_VALUE_FORMAT:
+		return "'minItems' value should be integer not less than 0";
+	case SEC_UNIQUE_FORMAT:
+		return "'unique' should be boolean";
+	case SEC_PROPERTIES_FORMAT:
+		return "'properties' should be object";
+	case SEC_PROPERTIES_OBJECT_FORMAT:
+		return "'properties' object values should be objects";
+	case SEC_ADDITIONAL_PROPERTIES_FORMAT:
+		return "'additionalProperties' should be boolean or object";
+	case SEC_MAX_PROPERTIES_FORMAT:
+		return "'maxProperties' should be number";
+	case SEC_MIN_PROPERTIES_FORMAT:
+		return "'minProperties' should be number";
+	case SEC_MAX_PROPERTIES_VALUE_FORMAT:
+		return "'maxProperties' value should be integer not less than 0";
+	case SEC_MIN_PROPERTIES_VALUE_FORMAT:
+		return "'minProperties' value should be integer not less than 0";
+	case SEC_REQUIRED_FORMAT:
+		return "'required' should be array";
+	case SEC_REQUIRED_ARRAY_FORMAT:
+		return "'required' array values should be strings";
+	case SEC_ENUM_FORMAT:
+		return "'enum' should be array";
+	case SEC_ENUM_ARRAY_EMPTY:
+		return "'enum' array should contain at least one value";
+	case SEC_ENUM_ARRAY_DUPLICATES:
+		return "'enum' array can't contain duplicate values";
+	case SEC_COMBINATOR_ARRAY_FORMAT:
+		return "'allOf', 'anyOf' and 'oneOf' arrays should contain only objects";
+	case SEC_ALL_OF_FORMAT:
+		return "'allOf' should be array";
+	case SEC_ALL_OF_ARRAY_EMPTY:
+		return "'allOf' array should contain at least one value";
+	case SEC_ANY_OF_FORMAT:
+		return "'anyOf' should be array";
+	case SEC_ANY_OF_ARRAY_EMPTY:
+		return "'anyOf' array should contain at least one value";
+	case SEC_ONE_OF_FORMAT:
+		return "'oneOf' should be array";
+	case SEC_ONE_OF_ARRAY_EMPTY:
+		return "'oneOf' array should contain at least one value";
+	case SEC_DEFINITIONS_FORMAT:
+		return "'definitions' should be object";
+	case SEC_DEFINITIONS_OBJECT_FORMAT:
+		return "'properties' object values should be objects";
+	case SEC_DSCHEMA_FORMAT:
+		return "'$schema' should be string";
+	case SEC_TITLE_FORMAT:
+		return "'title' should be string";
+	case SEC_DESCRIPTION_FORMAT:
+		return "'description' should be string";
+	case SEC_NAME_FORMAT:
+		return "'name' should be string";
+	default:
+		return "Unknown";
+	}
+}

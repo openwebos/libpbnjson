@@ -20,6 +20,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include "error_code.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,8 +32,7 @@ typedef struct _Validator Validator;
 typedef struct _ParserContext
 {
 	Validator *validator;       /**< @brief Root validator to be set. */
-	bool success;               /**< @brief Has parsing succeeded so far? */
-	char const *error_message;  /**< @brief Error message if parse failed. */
+	SchemaErrorCode error;      /**< @brief Error code if parse failed. */
 } ParserContext;
 
 /** @brief Piece of the original text. */
@@ -50,7 +50,7 @@ typedef union _TokenParam
 } TokenParam;
 
 /** @brief Remember parse error */
-void parser_context_set_error(ParserContext *c, char const *error_message);
+void parser_context_set_error(ParserContext *c, SchemaErrorCode error);
 
 #ifdef __cplusplus
 }

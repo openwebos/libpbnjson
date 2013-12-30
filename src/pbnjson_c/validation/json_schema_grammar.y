@@ -51,7 +51,7 @@
 
 
 #define PARSE_FAILED_IF(c) \
-	if (c) parser_context_set_error(context, "JSON schema parsing failed");
+	if (c) parser_context_set_error(context, SEC_SYNTAX);
 #define PARSE_FAILED PARSE_FAILED_IF(1);
 }
 
@@ -72,6 +72,11 @@ PARSE_FAILED;
 top_schema ::= schema(A).
 {
 	context->validator = A ? A : GENERIC_VALIDATOR;
+}
+
+top_schema ::= error.
+{
+	context->validator = NULL;
 }
 
 
@@ -171,6 +176,7 @@ skip ::= STRING.
 skip ::= NUMBER.
 skip ::= NULL.
 
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Schema features
 %type schema_feature { Feature * }
@@ -181,6 +187,14 @@ schema_feature(A) ::= KEY_TITLE STRING.           { A = NULL; }
 schema_feature(A) ::= KEY_DESCRIPTION STRING.     { A = NULL; }
 schema_feature(A) ::= KEY_NAME STRING.            { A = NULL; }
 
+schema_feature(A) ::= KEY_DSCHEMA error.
+{ A = NULL; parser_context_set_error(context, SEC_DSCHEMA_FORMAT); }
+schema_feature(A) ::= KEY_TITLE error.
+{ A = NULL; parser_context_set_error(context, SEC_TITLE_FORMAT); }
+schema_feature(A) ::= KEY_DESCRIPTION error.
+{ A = NULL; parser_context_set_error(context, SEC_DESCRIPTION_FORMAT); }
+schema_feature(A) ::= KEY_NAME error.
+{ A = NULL; parser_context_set_error(context, SEC_NAME_FORMAT); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // URI scope
@@ -209,6 +223,12 @@ schema_definitions(A) ::= KEY_DEFINITIONS(B) OBJ_START definitions_list(C) OBJ_E
 		definitions_set_name(C, &B.string);
 }
 
+schema_definitions(A) ::= KEY_DEFINITIONS error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_DEFINITIONS_FORMAT);
+}
+
 %type definitions_list { Definitions * }
 %destructor definitions_list { definitions_unref($$); }
 
@@ -218,6 +238,12 @@ definitions_list(A) ::= definitions_list(B) any_object_key(K) schema(V).
 {
 	A = B ? B : definitions_new();
 	definitions_add(A, &K.string, V);
+}
+
+definitions_list(A) ::= definitions_list(B) any_object_key error.
+{
+	A = B;
+	parser_context_set_error(context, SEC_DEFINITIONS_OBJECT_FORMAT);
 }
 
 
@@ -237,17 +263,35 @@ schema_combinator(A) ::= KEY_ANY_OF any_of_body(B).
 	A = B;
 }
 
+schema_combinator(A) ::= KEY_ANY_OF error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_ANY_OF_FORMAT);
+}
+
 schema_combinator(A) ::= KEY_ONE_OF ARR_START combined_validator(B) ARR_END.
 {
 	if (B)
 		combined_validator_convert_to_one_of(B);
-	else parser_context_set_error(context, "oneOf array is empty");
+	else parser_context_set_error(context, SEC_ONE_OF_ARRAY_EMPTY);
 	A = &B->base;
+}
+
+schema_combinator(A) ::= KEY_ONE_OF error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_ONE_OF_FORMAT);
 }
 
 schema_combinator(A) ::= KEY_ALL_OF all_of_body(B).
 {
 	A = B;
+}
+
+schema_combinator(A) ::= KEY_ALL_OF error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_ALL_OF_FORMAT);
 }
 
 
@@ -258,7 +302,7 @@ any_of_body(A) ::= ARR_START combined_validator(B) ARR_END.
 {
 	if (B)
 		combined_validator_convert_to_any_of(B);
-	else parser_context_set_error(context, "anyOf array is empty");
+	else parser_context_set_error(context, SEC_ANY_OF_ARRAY_EMPTY);
 	A = &B->base;
 }
 
@@ -269,7 +313,7 @@ all_of_body(A) ::= ARR_START combined_validator(B) ARR_END.
 {
 	if (B)
 		combined_validator_convert_to_all_of(B);
-	else parser_context_set_error(context, "allOf array is empty");
+	else parser_context_set_error(context, SEC_ALL_OF_ARRAY_EMPTY);
 	A = &B->base;
 }
 
@@ -282,6 +326,12 @@ combined_validator(A) ::= combined_validator(B) schema(V).
 {
 	A = B ? B : combined_validator_new();
 	combined_validator_add_value(A, V);
+}
+
+combined_validator(A) ::= combined_validator(B) error.
+{
+	A = B;
+	parser_context_set_error(context, SEC_COMBINATOR_ARRAY_FORMAT);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -312,49 +362,49 @@ schema_type(A) ::= KEY_TYPE STRING(B).
 	switch (error)
 	{
 	case TPE_OK: break;
-	case TPE_UNKNOWN_TYPE: parser_context_set_error(context, "Invalid type"); break;
+	case TPE_UNKNOWN_TYPE: parser_context_set_error(context, SEC_TYPE_VALUE); break;
 	default: PARSE_FAILED;
 	}
 }
 
 schema_type(A) ::= KEY_TYPE ARR_START type_list(B) ARR_END.
 {
-	A = B;
+	if (!B) parser_context_set_error(context, SEC_TYPE_ARRAY_EMPTY);
+	A = &B->base;
 }
 
-%type type_list { Validator * }
-%destructor type_list { validator_unref($$), $$ = NULL; }
-
-type_list(A) ::= STRING(B).
+schema_type(A) ::= KEY_TYPE error.
 {
-	enum TypeParserError error = TPE_OK;
-	type_parser_parse_to_type(&B.string, &error);
-	switch (error)
-	{
-	case TPE_OK:
-		A = (Validator *) combined_types_validator_new();
-		if (!combined_types_validator_set_type((CombinedTypesValidator *) A, B.string.str, B.string.str_len))
-		    parser_context_set_error(context, "Invalid type");
-		break;
-	case TPE_UNKNOWN_TYPE: parser_context_set_error(context, "Invalid type"); break;
-	default: PARSE_FAILED;
-	}
+	parser_context_set_error(context, SEC_TYPE_FORMAT);
+	A = NULL;
 }
+
+%type type_list { CombinedTypesValidator * }
+%destructor type_list { validator_unref(&$$->base), $$ = NULL; }
+
+type_list(A) ::= .
+{ A = NULL; }
 
 type_list(A) ::= type_list(B) STRING(C).
 {
+	A = B ? B : combined_types_validator_new();
 	enum TypeParserError error = TPE_OK;
 	type_parser_parse_to_type(&C.string, &error);
-	A = B;
 	switch (error)
 	{
 	case TPE_OK:
-		if (!combined_types_validator_set_type((CombinedTypesValidator *) A, C.string.str, C.string.str_len))
-		    parser_context_set_error(context, "Invalid type");
+		if (!combined_types_validator_set_type(A, C.string.str, C.string.str_len))
+		    parser_context_set_error(context, SEC_TYPE_ARRAY_DUPLICATES);
 		break;
-	case TPE_UNKNOWN_TYPE: parser_context_set_error(context, "Invalid type"); break;
+	case TPE_UNKNOWN_TYPE: parser_context_set_error(context, SEC_TYPE_VALUE); break;
 	default: PARSE_FAILED;
 	}
+}
+
+type_list(A) ::= type_list(B) error.
+{
+	A = B;
+	parser_context_set_error(context, SEC_TYPE_FORMAT);
 }
 
 
@@ -363,6 +413,12 @@ type_list(A) ::= type_list(B) STRING(C).
 schema_feature(A) ::= KEY_PROPERTIES OBJ_START properties(B) OBJ_END.
 {
 	A = B ? &B->base : NULL;
+}
+
+schema_feature(A) ::= KEY_PROPERTIES error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_PROPERTIES_FORMAT);
 }
 
 %type properties { ObjectProperties * }
@@ -378,6 +434,13 @@ properties(A) ::= properties(B)
 {
 	A = B ? B : object_properties_new();
 	object_properties_add_key_n(A, K.string.str, K.string.str_len, V);
+}
+
+properties(A) ::= properties(B)
+                  any_object_key error.
+{
+	A = B;
+	parser_context_set_error(context, SEC_PROPERTIES_OBJECT_FORMAT);
 }
 
 
@@ -438,6 +501,12 @@ schema_feature(A) ::= KEY_ADDITIONAL_PROPERTIES BOOLEAN(B).
 	A = &f->base;
 }
 
+schema_feature(A) ::= KEY_ADDITIONAL_PROPERTIES error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_ADDITIONAL_PROPERTIES_FORMAT);
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Object required
@@ -446,6 +515,12 @@ schema_feature(A) ::= KEY_REQUIRED ARR_START required(B) ARR_END.
 	// TODO: Warn or issue an error if empty array is collected.
 	// We allow its emptiness because of the legacy code.
 	A = &B->base;
+}
+
+schema_feature(A) ::= KEY_REQUIRED error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_REQUIRED_FORMAT);
 }
 
 %type required { ObjectRequired * }
@@ -464,14 +539,26 @@ required(A) ::= required(B) STRING(K).
 	object_required_add_key_n(A, K.string.str, K.string.str_len);
 }
 
+required(A) ::= required(B) error.
+{
+	A = B;
+	parser_context_set_error(context, SEC_REQUIRED_ARRAY_FORMAT);
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Object maxProperties
 schema_feature(A) ::= KEY_MAX_PROPERTIES NUMBER(N).
 {
 	CountFeature *f = count_feature_new(validator_set_object_max_properties);
 	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
-		parser_context_set_error(context, "Invalid maxProperties format");
+		parser_context_set_error(context, SEC_MAX_PROPERTIES_VALUE_FORMAT);
 	A = &f->base;
+}
+
+schema_feature(A) ::= KEY_MAX_PROPERTIES error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_MAX_PROPERTIES_FORMAT);
 }
 
 
@@ -481,8 +568,14 @@ schema_feature(A) ::= KEY_MIN_PROPERTIES NUMBER(N).
 {
 	CountFeature *f = count_feature_new(validator_set_object_min_properties);
 	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
-		parser_context_set_error(context, "Invalid minProperties format");
+		parser_context_set_error(context, SEC_MIN_PROPERTIES_VALUE_FORMAT);
 	A = &f->base;
+}
+
+schema_feature(A) ::= KEY_MIN_PROPERTIES error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_MIN_PROPERTIES_FORMAT);
 }
 
 
@@ -507,6 +600,12 @@ schema_feature(A) ::= KEY_ITEMS ARR_START items(B) ARR_END.
 	}
 }
 
+schema_feature(A) ::= KEY_ITEMS error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_ITEMS_FORMAT);
+}
+
 %type items { ArrayItems * }
 %destructor items {
 	if ($$) array_items_unref($$), $$ = NULL;
@@ -519,6 +618,12 @@ items(A) ::= items(B) schema(V).
 {
 	A = B ? B : array_items_new();
 	array_items_add_item(A, V);
+}
+
+items(A) ::= items(B) error.
+{
+	A = B;
+	parser_context_set_error(context, SEC_ITEMS_ARRAY_FORMAT);
 }
 
 
@@ -540,6 +645,12 @@ schema_feature(A) ::= KEY_ADDITIONAL_ITEMS BOOLEAN(B).
 	A = &f->base;
 }
 
+schema_feature(A) ::= KEY_ADDITIONAL_ITEMS error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_ADDITIONAL_ITEMS_FORMAT);
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Array maxItems
@@ -547,8 +658,14 @@ schema_feature(A) ::= KEY_MAX_ITEMS NUMBER(N).
 {
 	CountFeature *f = count_feature_new(validator_set_array_max_items);
 	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
-		parser_context_set_error(context, "Invalid maxItems format");
+		parser_context_set_error(context, SEC_MAX_ITEMS_VALUE_FORMAT);
 	A = &f->base;
+}
+
+schema_feature(A) ::= KEY_MAX_ITEMS error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_MAX_ITEMS_FORMAT);
 }
 
 
@@ -558,8 +675,14 @@ schema_feature(A) ::= KEY_MIN_ITEMS NUMBER(N).
 {
 	CountFeature *f = count_feature_new(validator_set_array_min_items);
 	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
-		parser_context_set_error(context, "Invalid minItems format");
+		parser_context_set_error(context, SEC_MIN_ITEMS_VALUE_FORMAT);
 	A = &f->base;
+}
+
+schema_feature(A) ::= KEY_MIN_ITEMS error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_MIN_ITEMS_FORMAT);
 }
 
 
@@ -572,6 +695,12 @@ schema_feature(A) ::= KEY_UNIQUE_ITEMS BOOLEAN(B).
 	A = &f->base;
 }
 
+schema_feature(A) ::= KEY_UNIQUE_ITEMS error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_UNIQUE_FORMAT);
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Number maximum
@@ -580,6 +709,12 @@ schema_feature(A) ::= KEY_MAXIMUM NUMBER(N).
 	NumberFeature *f = number_feature_new(N.string.str, N.string.str_len,
 	                                      validator_set_number_maximum);
 	A = &f->base;
+}
+
+schema_feature(A) ::= KEY_MAXIMUM error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_MAXIMUM_FORMAT);
 }
 
 
@@ -592,6 +727,12 @@ schema_feature(A) ::= KEY_EXCLUSIVE_MAXIMUM BOOLEAN(B).
 	A = &f->base;
 }
 
+schema_feature(A) ::= KEY_EXCLUSIVE_MAXIMUM error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_EXCLUSIVE_MAXIMUM_FORMAT);
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Number minimum
@@ -600,6 +741,12 @@ schema_feature(A) ::= KEY_MINIMUM NUMBER(N).
 	NumberFeature *f = number_feature_new(N.string.str, N.string.str_len,
 	                                      validator_set_number_minimum);
 	A = &f->base;
+}
+
+schema_feature(A) ::= KEY_MINIMUM error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_MINIMUM_FORMAT);
 }
 
 
@@ -612,6 +759,12 @@ schema_feature(A) ::= KEY_EXCLUSIVE_MINIMUM BOOLEAN(B).
 	A = &f->base;
 }
 
+schema_feature(A) ::= KEY_EXCLUSIVE_MINIMUM error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_EXCLUSIVE_MINIMUM_FORMAT);
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // String maxLength
@@ -619,8 +772,14 @@ schema_feature(A) ::= KEY_MAX_LENGTH NUMBER(N).
 {
 	CountFeature *f = count_feature_new(validator_set_string_max_length);
 	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
-		parser_context_set_error(context, "Invalid maxLength format");
+		parser_context_set_error(context, SEC_MAX_LENGTH_VALUE_FORMAT);
 	A = &f->base;
+}
+
+schema_feature(A) ::= KEY_MAX_LENGTH error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_MAX_LENGTH_FORMAT);
 }
 
 
@@ -630,8 +789,14 @@ schema_feature(A) ::= KEY_MIN_LENGTH NUMBER(N).
 {
 	CountFeature *f = count_feature_new(validator_set_string_min_length);
 	if (!count_feature_set_value(f, N.string.str, N.string.str_len))
-		parser_context_set_error(context, "Invalid minLength format");
+		parser_context_set_error(context, SEC_MIN_LENGTH_VALUE_FORMAT);
 	A = &f->base;
+}
+
+schema_feature(A) ::= KEY_MIN_LENGTH error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_MIN_LENGTH_FORMAT);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -642,24 +807,28 @@ schema_feature(A) ::= KEY_MIN_LENGTH NUMBER(N).
 
 schema_enum(A) ::= KEY_ENUM ARR_START enum_list(B) ARR_END.
 {
+	if (!B)
+		parser_context_set_error(context, SEC_ENUM_ARRAY_EMPTY);
 	A = &B->base;
+}
+
+schema_enum(A) ::= KEY_ENUM error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_ENUM_FORMAT);
 }
 
 %type enum_list { CombinedValidator * }
 %destructor enum_list { combined_validator_release($$); }
 
-enum_list(A) ::= value_validator(V).
-{
-	A = enum_validator_new();
-	if (!combined_validator_add_enum_value(A, V))
-		parser_context_set_error(context, "Invalid enum format");
-}
+enum_list(A) ::= .
+{ A = NULL; }
 
 enum_list(A) ::= enum_list(B) value_validator(V).
 {
-	A = B;
+	A = B ? B : enum_validator_new();
 	if (!combined_validator_add_enum_value(A, V))
-		parser_context_set_error(context, "Invalid enum format");
+		parser_context_set_error(context, SEC_ENUM_ARRAY_DUPLICATES);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

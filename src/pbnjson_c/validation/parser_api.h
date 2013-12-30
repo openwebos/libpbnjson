@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "error_code.h"
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -34,7 +35,7 @@ typedef struct _UriResolver UriResolver;
  * @param[in] message Error description either from YAJL or from the schema analyzer.
  * @param[in] ctxt The pointer user passed to the parser.
  */
-typedef void (*JschemaErrorFunc)(size_t offset, char const *message, void *ctxt);
+typedef void (*JschemaErrorFunc)(size_t offset, SchemaErrorCode error, char const *message, void *ctxt);
 
 
 /** @brief Parse JSON schema, and create corresponding validator for it.
