@@ -264,6 +264,18 @@ Validator* parse_schema_n(char const *str, size_t len,
 	TokenParam token_param;
 	JsonSchemaParser(parser, 0, token_param, &yajl_context.parser_ctxt);
 
+	// Even if parsing was completed there can be an error
+	if (!yajl_context.parser_ctxt.success)
+	{
+		if (error_func)
+			error_func(yajl_get_bytes_consumed(yh),
+			           yajl_context.parser_ctxt.error_message, error_ctxt);
+		validator_unref(yajl_context.parser_ctxt.validator);
+		yajl_free(yh);
+		JsonSchemaParserFree(parser, free);
+		return NULL;
+	}
+
 	yajl_free(yh);
 	JsonSchemaParserFree(parser, free);
 
