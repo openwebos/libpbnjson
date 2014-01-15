@@ -162,6 +162,7 @@ typedef struct _ValidatorVtable
 	Validator* (*set_number_maximum_exclusive)(Validator *v, bool exclusive);
 	Validator* (*set_number_minimum)(Validator *v, Number *n);
 	Validator* (*set_number_minimum_exclusive)(Validator *v, bool exclusive);
+	Validator* (*set_number_multiple_of)(Validator *v, Number *n);
 	Validator* (*set_string_max_length)(Validator *v, size_t maxLength);
 	Validator* (*set_string_min_length)(Validator *v, size_t minLength);
 	Validator* (*set_default)(Validator *v, jvalue_ref def_value);
@@ -268,6 +269,7 @@ Validator* validator_set_number_maximum(Validator *v, Number *n);
 Validator* validator_set_number_maximum_exclusive(Validator *v, bool exclusive);
 Validator* validator_set_number_minimum(Validator *v, Number *n);
 Validator* validator_set_number_minimum_exclusive(Validator *v, bool exclusive);
+Validator* validator_set_number_multiple_of(Validator *v, Number *n);
 Validator* validator_set_string_max_length(Validator *v, size_t maxLength);
 Validator* validator_set_string_min_length(Validator *v, size_t minLength);
 Validator* validator_set_default(Validator *v, jvalue_ref def_value);

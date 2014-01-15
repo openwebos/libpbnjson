@@ -62,6 +62,9 @@ void number_copy(Number *dest, Number *src);
 /** @brief Check if number value is integer. */
 bool number_is_integer(Number const *n);
 
+/** @brief Check if number value is positive (n > 0) */
+bool number_is_positive(Number const *n);
+
 /** @brief Compare two numbers.
  *
  * @return -1 if a < b, 0 if a == b, and 1 if a > b
@@ -73,6 +76,9 @@ bool number_fits_long(Number const *n);
 
 /** @brief Get long from a number */
 long number_get_long(Number const *n);
+
+/** @brief Calculates division of two numbers (res = a / b) */
+void number_div(Number const *a, Number const *b, Number *res);
 
 
 #ifdef __cplusplus

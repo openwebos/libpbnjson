@@ -49,6 +49,9 @@ typedef struct _NumberValidator
 	bool min_set;            /**< @brief Is the minimal value set? */
 	Number min;              /**< @brief The minimal value to expect */
 	bool min_exclusive;      /**< @brief Is the inequality strict (val > min)? */
+
+	bool multiple_of_set;    /**< @brief Is the multipleOf value set? */
+	Number multiple_of;      /**< @brief The multiplication of this value to expect */
 } NumberValidator;
 
 //_Static_assert(offsetof(NumberValidator, base) == 0, "Addresses of NumberValidator and NumberValidator.base should be equal");

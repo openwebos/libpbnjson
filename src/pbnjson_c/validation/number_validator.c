@@ -62,6 +62,20 @@ static bool _check_conditions(NumberValidator *v, Number const *n,
 		}
 	}
 
+	if (v->multiple_of_set)
+	{
+		Number div;
+		number_init(&div);
+		number_div(n, &v->multiple_of, &div);
+		bool res = number_is_integer(&div);
+		number_clear(&div);
+		if (!res)
+		{
+			validation_state_notify_error(s, VEC_NUMBER_NOT_MULTIPLE_OF, ctxt);
+			return false;
+		}
+	}
+
 	return true;
 }
 
@@ -186,6 +200,15 @@ static Validator* set_minimum_exclusive(Validator *v, bool exclusive)
 	return v;
 }
 
+static Validator* set_multiple_of(Validator *v, Number *num)
+{
+	NumberValidator *n = (NumberValidator *) v;
+	n->multiple_of_set = true;
+	number_init(&n->multiple_of);
+	number_copy(&n->multiple_of, num);
+	return v;
+}
+
 static Validator* set_default(Validator *validator, jvalue_ref def_value)
 {
 	NumberValidator *v = (NumberValidator *) validator;
@@ -220,6 +243,11 @@ static Validator* set_minimum_exclusive_generic(Validator *v, bool exclusive)
 	return set_minimum_exclusive(&number_validator_new()->base, exclusive);
 }
 
+static Validator* set_multiple_of_generic(Validator *v, Number *num)
+{
+	return set_multiple_of(&number_validator_new()->base, num);
+}
+
 static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
 {
 	return set_default(&number_validator_new()->base, def_value);
@@ -243,6 +271,11 @@ static Validator* set_maximum_exclusive_integer_generic(Validator *v, bool exclu
 static Validator* set_minimum_exclusive_integer_generic(Validator *v, bool exclusive)
 {
 	return set_minimum_exclusive(&integer_validator_new()->base, exclusive);
+}
+
+static Validator* set_multiple_of_integer_generic(Validator *v, Number *num)
+{
+	return set_multiple_of(&integer_validator_new()->base, num);
 }
 
 static Validator* set_default_integer_generic(Validator *v, jvalue_ref def_value)
@@ -276,6 +309,7 @@ static ValidatorVtable generic_number_vtable =
 	.set_number_maximum_exclusive = set_maximum_exclusive_generic,
 	.set_number_minimum = set_minimum_generic,
 	.set_number_minimum_exclusive = set_minimum_exclusive_generic,
+	.set_number_multiple_of = set_multiple_of_generic,
 	.set_default = set_default_generic,
 };
 
@@ -286,6 +320,7 @@ static ValidatorVtable generic_integer_vtable =
 	.set_number_maximum_exclusive = set_maximum_exclusive_integer_generic,
 	.set_number_minimum = set_minimum_integer_generic,
 	.set_number_minimum_exclusive = set_minimum_exclusive_integer_generic,
+	.set_number_multiple_of = set_multiple_of_integer_generic,
 	.set_default = set_default_integer_generic,
 };
 
@@ -299,6 +334,7 @@ static ValidatorVtable number_vtable =
 	.set_number_maximum_exclusive = set_maximum_exclusive,
 	.set_number_minimum = set_minimum,
 	.set_number_minimum_exclusive = set_minimum_exclusive,
+	.set_number_multiple_of = set_multiple_of,
 	.set_default = set_default,
 	.get_default = get_default,
 };
@@ -326,6 +362,8 @@ void number_validator_release(NumberValidator *v)
 		number_clear(&v->min);
 	if (v->max_set)
 		number_clear(&v->max);
+	if (v->multiple_of_set)
+		number_clear(&v->multiple_of);
 	j_release(&v->def_value);
 	g_free(v);
 }

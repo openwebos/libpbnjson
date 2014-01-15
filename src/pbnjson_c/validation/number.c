@@ -53,6 +53,11 @@ bool number_is_integer(Number const *n)
 	return mpf_integer_p(n->f) != 0;
 }
 
+bool number_is_positive(Number const *n)
+{
+	return mpf_sgn(n->f) == 1;
+}
+
 int number_compare(Number const *a, Number const *b)
 {
 	return mpf_cmp(a->f, b->f);
@@ -66,4 +71,9 @@ bool number_fits_long(Number const *n)
 long number_get_long(Number const *n)
 {
 	return mpf_get_si(n->f);
+}
+
+void number_div(Number const *a, Number const *b, Number *res)
+{
+	mpf_div(res->f, a->f, b->f);
 }

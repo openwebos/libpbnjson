@@ -44,6 +44,8 @@ char const *ValidationGetErrorMessage(int code)
 		return "Number too small";
 	case VEC_NUMBER_TOO_BIG:
 		return "Number too big";
+	case VEC_NUMBER_NOT_MULTIPLE_OF:
+		return "Number not multiple of";
 	case VEC_NOT_STRING:
 		return "Not string";
 	case VEC_STRING_TOO_SHORT:
@@ -55,7 +57,7 @@ char const *ValidationGetErrorMessage(int code)
 	case VEC_MISSING_REQUIRED_KEY:
 		return "Missing required key";
 	case VEC_NOT_ENOUGH_KEYS:
-		return "Not enought keys";
+		return "Not enough keys";
 	case VEC_TOO_MANY_KEYS:
 		return "Too many keys";
 	case VEC_OBJECT_PROPERTY_NOT_ALLOWED:
@@ -90,7 +92,7 @@ char const *SchemaGetErrorMessage(int code)
 	case SEC_TYPE_ARRAY_EMPTY:
 		return "'type' array should contain at least one value";
 	case SEC_TYPE_ARRAY_DUPLICATES:
-		return "'type' array can't constain duplicate values";
+		return "'type' array can't contain duplicate values";
 	case SEC_MAXIMUM_FORMAT:
 		return "'maximum' should be number";
 	case SEC_MINIMUM_FORMAT:
@@ -99,6 +101,10 @@ char const *SchemaGetErrorMessage(int code)
 		return "'exclusiveMaximum' should be boolean";
 	case SEC_EXCLUSIVE_MINIMUM_FORMAT:
 		return "'exclusiveMinimum' should be boolean";
+	case SEC_MULTIPLE_OF_FORMAT:
+		return "'multipleOf' should be number";
+	case SEC_MULTIPLE_OF_VALUE_FORMAT:
+		return "'multipleOf' value should be greater than 0";
 	case SEC_MAX_LENGTH_FORMAT:
 		return "'maxLength' should be number";
 	case SEC_MIN_LENGTH_FORMAT:

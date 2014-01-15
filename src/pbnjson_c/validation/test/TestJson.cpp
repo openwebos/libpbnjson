@@ -338,6 +338,89 @@ TEST_F(Json, NumberExclusiveMinimum)
 	EXPECT_FALSE(validate_json_plain("-123.0001", v));
 }
 
+TEST_F(Json, NumberMultipleOfInteger)
+{
+	v = parse_schema_bare(
+		"{\"type\": \"number\","
+			"\"multipleOf\": 2"
+		"}");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_FALSE(validate_json_plain("null", v));
+	EXPECT_FALSE(validate_json_plain("1", v));
+	EXPECT_TRUE(validate_json_plain("2", v));
+	EXPECT_FALSE(validate_json_plain("2.1", v));
+	EXPECT_TRUE(validate_json_plain("4", v));
+	EXPECT_FALSE(validate_json_plain("5", v));
+	EXPECT_TRUE(validate_json_plain("-2", v));
+	EXPECT_TRUE(validate_json_plain("-4", v));
+	EXPECT_FALSE(validate_json_plain("-5", v));
+}
+
+TEST_F(Json, NumberMultipleOf)
+{
+	v = parse_schema_bare(
+		"{\"type\": \"number\","
+			"\"multipleOf\": 2.5"
+		"}");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_FALSE(validate_json_plain("null", v));
+	EXPECT_FALSE(validate_json_plain("1", v));
+	EXPECT_TRUE(validate_json_plain("2.5", v));
+	EXPECT_FALSE(validate_json_plain("4", v));
+	EXPECT_TRUE(validate_json_plain("5", v));
+	EXPECT_FALSE(validate_json_plain("5.1", v));
+	EXPECT_TRUE(validate_json_plain("-2.5", v));
+	EXPECT_FALSE(validate_json_plain("-4", v));
+	EXPECT_TRUE(validate_json_plain("-5", v));
+}
+
+TEST_F(Json, IntegerMultipleOf)
+{
+	v = parse_schema_bare(
+		"{\"type\": \"integer\","
+			"\"multipleOf\": 2.5"
+		"}");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_FALSE(validate_json_plain("null", v));
+	EXPECT_FALSE(validate_json_plain("1", v));
+	EXPECT_FALSE(validate_json_plain("2.5", v));
+	EXPECT_FALSE(validate_json_plain("4", v));
+	EXPECT_TRUE(validate_json_plain("5", v));
+	EXPECT_FALSE(validate_json_plain("-2.5", v));
+	EXPECT_FALSE(validate_json_plain("-4", v));
+	EXPECT_TRUE(validate_json_plain("-5", v));
+}
+
+TEST_F(Json, NullAndNumberMultipleOf)
+{
+	v = parse_schema_bare(
+		"{\"type\": [\"null\", \"number\"],"
+			"\"multipleOf\": 2"
+		"}");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_TRUE(validate_json_plain("null", v));
+	EXPECT_FALSE(validate_json_plain("true", v));
+	EXPECT_FALSE(validate_json_plain("1", v));
+	EXPECT_TRUE(validate_json_plain("2", v));
+	EXPECT_FALSE(validate_json_plain("3", v));
+	EXPECT_TRUE(validate_json_plain("4", v));
+}
+
+TEST_F(Json, NullAndIntegerMultipleOf)
+{
+	v = parse_schema_bare(
+		"{\"type\": [\"null\", \"integer\"],"
+			"\"multipleOf\": 2.5"
+		"}");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_TRUE(validate_json_plain("null", v));
+	EXPECT_FALSE(validate_json_plain("true", v));
+	EXPECT_FALSE(validate_json_plain("1", v));
+	EXPECT_TRUE(validate_json_plain("5", v));
+	EXPECT_FALSE(validate_json_plain("2.5", v));
+	EXPECT_TRUE(validate_json_plain("10", v));
+}
+
 TEST_F(Json, String)
 {
 	v = parse_schema_bare("{\"type\": \"string\" }");

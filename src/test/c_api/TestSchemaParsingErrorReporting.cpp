@@ -114,18 +114,16 @@ TEST_F(TestSchemaParsingErrorReporting, InvalidSchemaType1)
 	EXPECT_TRUE(TestError("{ \"type\" : [\"number\", \"integer\", \"number\"] }", SEC_TYPE_ARRAY_DUPLICATES));
 }
 
-// TODO: Implement "multipleOf" property
-//
-//TEST_F(TestSchemaParsingErrorReporting, InvalidMultipleOf)
-//{
-//	EXPECT_TRUE(TestError("{ \"multipleOf\" : null }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"multipleOf\" : false }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"multipleOf\" : \"mul\" }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"multipleOf\" : {} }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"multipleOf\" : [] }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"multipleOf\" : -1.2 }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"multipleOf\" : 0 }", SEC_SYNTAX));
-//}
+TEST_F(TestSchemaParsingErrorReporting, InvalidMultipleOf)
+{
+	EXPECT_TRUE(TestError("{ \"multipleOf\" : null }", SEC_MULTIPLE_OF_FORMAT));
+	EXPECT_TRUE(TestError("{ \"multipleOf\" : false }", SEC_MULTIPLE_OF_FORMAT));
+	EXPECT_TRUE(TestError("{ \"multipleOf\" : \"mul\" }", SEC_MULTIPLE_OF_FORMAT));
+	EXPECT_TRUE(TestError("{ \"multipleOf\" : {} }", SEC_MULTIPLE_OF_FORMAT));
+	EXPECT_TRUE(TestError("{ \"multipleOf\" : [] }", SEC_MULTIPLE_OF_FORMAT));
+	EXPECT_TRUE(TestError("{ \"multipleOf\" : -1.2 }", SEC_MULTIPLE_OF_VALUE_FORMAT));
+	EXPECT_TRUE(TestError("{ \"multipleOf\" : 0 }", SEC_MULTIPLE_OF_VALUE_FORMAT));
+}
 
 TEST_F(TestSchemaParsingErrorReporting, InvalidMaximum)
 {

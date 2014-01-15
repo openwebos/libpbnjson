@@ -136,6 +136,15 @@ static Validator* set_minimum_exclusive(Validator *v, bool exclusive)
 	return v;
 }
 
+static Validator* set_multiple_of(Validator *v, Number *n)
+{
+	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
+	int type = c->types[V_NUM] ? V_NUM : V_INT;
+	if (c->types[type])
+		c->types[type] = validator_set_number_multiple_of(c->types[type], n);
+	return v;
+}
+
 static Validator* set_max_length(Validator *v, size_t maxLength)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
@@ -232,6 +241,7 @@ ValidatorVtable combined_types_vtable =
 	.set_number_maximum_exclusive = set_maximum_exclusive,
 	.set_number_minimum = set_minimum,
 	.set_number_minimum_exclusive = set_minimum_exclusive,
+	.set_number_multiple_of = set_multiple_of,
 	.set_string_max_length = set_max_length,
 	.set_string_min_length = set_min_length,
 	.set_array_items = set_items,

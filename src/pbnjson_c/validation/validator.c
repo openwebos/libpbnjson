@@ -339,6 +339,14 @@ Validator* validator_set_number_minimum_exclusive(Validator *v, bool exclusive)
 	return v;
 }
 
+Validator* validator_set_number_multiple_of(Validator *v, Number *n)
+{
+	assert(v && v->vtable);
+	if (v->vtable->set_number_multiple_of)
+		return v->vtable->set_number_multiple_of(v, n);
+	return v;
+}
+
 Validator* validator_set_string_max_length(Validator *v, size_t maxLength)
 {
 	assert(v && v->vtable);

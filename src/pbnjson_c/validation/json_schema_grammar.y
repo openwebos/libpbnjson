@@ -487,6 +487,7 @@ any_object_key(A) ::= KEY_MINIMUM(B). { A = B; }
 any_object_key(A) ::= KEY_MIN_ITEMS(B). { A = B; }
 any_object_key(A) ::= KEY_MIN_LENGTH(B). { A = B; }
 any_object_key(A) ::= KEY_MIN_PROPERTIES(B). { A = B; }
+any_object_key(A) ::= KEY_MULTIPLE_OF(B). { A = B; }
 any_object_key(A) ::= KEY_NAME(B). { A = B; }
 any_object_key(A) ::= KEY_NOT(B). { A = B; }
 any_object_key(A) ::= KEY_NOT_KEYWORD(B). { A = B; }
@@ -778,6 +779,24 @@ schema_feature(A) ::= KEY_EXCLUSIVE_MINIMUM error.
 {
 	A = NULL;
 	parser_context_set_error(context, SEC_EXCLUSIVE_MINIMUM_FORMAT);
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Number multipleOf
+schema_feature(A) ::= KEY_MULTIPLE_OF NUMBER(N).
+{
+	NumberFeature *f = number_feature_new(N.string.str, N.string.str_len,
+	                                      validator_set_number_multiple_of);
+	if (!number_is_positive(&f->value))
+		parser_context_set_error(context, SEC_MULTIPLE_OF_VALUE_FORMAT);
+	A = &f->base;
+}
+
+schema_feature(A) ::= KEY_MULTIPLE_OF error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_MULTIPLE_OF_FORMAT);
 }
 
 
