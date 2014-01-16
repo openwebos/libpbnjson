@@ -42,6 +42,9 @@ extern Validator *GENERIC_VALIDATOR;
 /** @brief Getter of static instance */
 Validator *generic_validator_instance(void);
 
+/** @brief Same as generic validator, but always return false on validation */
+Validator *inverse_generic_validator_instance(void);
+
 /** @brief Constructor: allocate and initialize a new generic validator. */
 GenericValidator *generic_validator_new(void);
 

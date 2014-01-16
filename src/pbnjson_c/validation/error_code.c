@@ -68,6 +68,8 @@ char const *ValidationGetErrorMessage(int code)
 		return "Neither of any";
 	case VEC_NOT_EVERY_ALL_OF:
 		return "Not every all of";
+	case VEC_SOME_OF_NOT:
+		return "Some of not";
 	case VEC_UNEXPECTED_VALUE:
 		return "Unexpected value";
 	default:
@@ -159,6 +161,10 @@ char const *SchemaGetErrorMessage(int code)
 		return "'oneOf' should be array";
 	case SEC_ONE_OF_ARRAY_EMPTY:
 		return "'oneOf' array should contain at least one value";
+	case SEC_NOT_FORMAT:
+		return "'not' should be array";
+	case SEC_NOT_ARRAY_EMPTY:
+		return "'not' array should contain at least one value";
 	case SEC_DEFINITIONS_FORMAT:
 		return "'definitions' should be object";
 	case SEC_DEFINITIONS_OBJECT_FORMAT:

@@ -38,6 +38,7 @@ SET(UnitTests
 	TestAllOfValidator
 	TestAnyOfValidator
 	TestOneOfValidator
+	TestNotValidator
 	TestParser
 	TestJson
 	TestUriScope

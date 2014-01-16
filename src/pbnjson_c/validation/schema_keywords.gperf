@@ -59,6 +59,7 @@ minLength,            TOKEN_KEY_MIN_LENGTH
 minProperties,        TOKEN_KEY_MIN_PROPERTIES
 minimum,              TOKEN_KEY_MINIMUM
 name,                 TOKEN_KEY_NAME
+not,                  TOKEN_KEY_NOT
 oneOf,                TOKEN_KEY_ONE_OF
 properties,           TOKEN_KEY_PROPERTIES
 required,             TOKEN_KEY_REQUIRED

@@ -65,6 +65,9 @@ CombinedValidator* any_of_validator_new();
 /** @brief Construct validator for {"oneOf": [...]} */
 CombinedValidator* one_of_validator_new();
 
+/** @brief Construct validator for {"not": [...]} */
+CombinedValidator* not_validator_new();
+
 /** @brief Construct validator for {"enum": [...]}
  *
  * NOTE: Basically same as anyOf but will return UNEXPECTED_VALUE error in case of failed validation
@@ -80,6 +83,9 @@ void combined_validator_convert_to_any_of(CombinedValidator *v);
 
 /** @brief Let this validator turn into {"oneOf": [...]} */
 void combined_validator_convert_to_one_of(CombinedValidator *v);
+
+/** @brief Let this validator turn into {"not": [...]} */
+void combined_validator_convert_to_not(CombinedValidator *v);
 
 /** @brief Let this validator turn into {"enum": [...]} */
 void combined_validator_convert_to_enum(CombinedValidator *v);

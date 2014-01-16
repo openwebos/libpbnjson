@@ -17,6 +17,7 @@
 // LICENSE@@@
 
 #include "combined_validator.h"
+#include "generic_validator.h"
 #include "validation_state.h"
 #include "validation_event.h"
 #include "validation_api.h"
@@ -191,6 +192,46 @@ static bool _one_of_check(ValidationEvent const *e,
 	return true;
 }
 
+static bool not_check(ValidationEvent const *e,
+                      ValidationState *real_state,
+                      void *ctxt,
+                      bool *all_finished)
+{
+	MyContext *my_ctxt = (MyContext *) validation_state_get_context(real_state);
+
+	*all_finished = true;
+	GList *it = my_ctxt->states;
+	while (it)
+	{
+		ValidationState *s = it->data;
+		// if all validations of inner validator passed
+		if (validation_check(e, s, ctxt) && !s->validator_stack)
+		{
+			// context notifications used only if inner errors are suppressed
+			if (my_ctxt->notify)
+				validation_state_notify_error(real_state, VEC_SOME_OF_NOT, ctxt);
+			return false;
+		}
+
+		if (s->validator_stack)
+		{
+			*all_finished = false;
+			it = g_list_next(it);
+			continue;
+		}
+
+		// If there wasn't a match, no need to keep the validator
+		// in the list of active ones.
+		GList *next = g_list_next(it);
+		my_ctxt->states = g_list_remove_link(my_ctxt->states, it);
+		validation_state_free(s);
+		g_list_free_1(it);
+		it = next;
+	}
+
+	return true;
+}
+
 static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
 {
 	CombinedValidator *vcomb = (CombinedValidator *) v;
@@ -359,6 +400,13 @@ CombinedValidator* one_of_validator_new(void)
 	return self;
 }
 
+CombinedValidator* not_validator_new(void)
+{
+	CombinedValidator *self = combined_validator_new();
+	combined_validator_convert_to_not(self);
+	return self;
+}
+
 CombinedValidator* enum_validator_new(void)
 {
 	CombinedValidator *self = combined_validator_new();
@@ -379,6 +427,13 @@ void combined_validator_convert_to_any_of(CombinedValidator *v)
 void combined_validator_convert_to_one_of(CombinedValidator *v)
 {
 	v->check_all = _one_of_check;
+}
+
+void combined_validator_convert_to_not(CombinedValidator *v)
+{
+	v->check_all = not_check;
+	// Add inverse generic validator to track JSON objects/arrays depth
+	combined_validator_add_value(v, inverse_generic_validator_instance());
 }
 
 static bool enum_check_add_value(CombinedValidator *c, Validator *v)

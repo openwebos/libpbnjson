@@ -294,6 +294,20 @@ schema_combinator(A) ::= KEY_ALL_OF error.
 	parser_context_set_error(context, SEC_ALL_OF_FORMAT);
 }
 
+schema_combinator(A) ::= KEY_NOT ARR_START combined_validator(B) ARR_END.
+{
+	if (B)
+		combined_validator_convert_to_not(B);
+	else parser_context_set_error(context, SEC_NOT_ARRAY_EMPTY);
+	A = &B->base;
+}
+
+schema_combinator(A) ::= KEY_NOT error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_NOT_FORMAT);
+}
+
 
 %type any_of_body { Validator * }
 %destructor any_of_body { validator_unref($$), $$ = NULL; }
@@ -474,6 +488,7 @@ any_object_key(A) ::= KEY_MIN_ITEMS(B). { A = B; }
 any_object_key(A) ::= KEY_MIN_LENGTH(B). { A = B; }
 any_object_key(A) ::= KEY_MIN_PROPERTIES(B). { A = B; }
 any_object_key(A) ::= KEY_NAME(B). { A = B; }
+any_object_key(A) ::= KEY_NOT(B). { A = B; }
 any_object_key(A) ::= KEY_NOT_KEYWORD(B). { A = B; }
 any_object_key(A) ::= KEY_ONE_OF(B). { A = B; }
 any_object_key(A) ::= KEY_PROPERTIES(B). { A = B; }

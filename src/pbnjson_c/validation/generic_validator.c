@@ -57,7 +57,7 @@ static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
 	return set_default(&generic_validator_new()->base, def_value);
 }
 
-static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
+static bool check(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
 {
 	// The generic validator has tricky logic. It should validate a single JSON value.
 	// If the value is of simple type, implementaion is trivial. But array and
@@ -101,7 +101,12 @@ static bool _check(Validator *v, ValidationEvent const *e, ValidationState *s, v
 	return true;
 }
 
-static bool _init_state(Validator *v, ValidationState *s)
+static bool check_inverse(Validator *v, ValidationEvent const *e, ValidationState *s, void *c)
+{
+	return !check(v, e, s, c);
+}
+
+static bool init_state(Validator *v, ValidationState *s)
 {
 	// We'll store sum of object and array depths of incomming events.
 	// We assume, YAJL does basic check of event order, and when
@@ -111,7 +116,7 @@ static bool _init_state(Validator *v, ValidationState *s)
 	return true;
 }
 
-static void _cleanup_state(Validator *v, ValidationState *s)
+static void cleanup_state(Validator *v, ValidationState *s)
 {
 	validation_state_pop_context(s);
 }
@@ -127,9 +132,9 @@ static ValidatorVtable generic_vtable =
 {
 	.ref = ref,
 	.unref = unref,
-	.check = _check,
-	.init_state = _init_state,
-	.cleanup_state = _cleanup_state,
+	.check = check,
+	.init_state = init_state,
+	.cleanup_state = cleanup_state,
 	.set_default = set_default,
 	.get_default = get_default,
 	.dump_enter = dump_enter,
@@ -137,10 +142,18 @@ static ValidatorVtable generic_vtable =
 
 static ValidatorVtable generic_static_vtable =
 {
-	.check = _check,
-	.init_state = _init_state,
-	.cleanup_state = _cleanup_state,
+	.check = check,
+	.init_state = init_state,
+	.cleanup_state = cleanup_state,
 	.set_default = set_default_generic,
+	.dump_enter = dump_enter,
+};
+
+static ValidatorVtable inverse_generic_static_vtable =
+{
+	.check = check_inverse,
+	.init_state = init_state,
+	.cleanup_state = cleanup_state,
 	.dump_enter = dump_enter,
 };
 
@@ -159,9 +172,19 @@ static Validator GENERIC_VALIDATOR_IMPL =
 	.vtable = &generic_static_vtable,
 };
 
+static Validator INVERSE_GENERIC_VALIDATOR_IMPL =
+{
+	.vtable = &inverse_generic_static_vtable,
+};
+
 Validator *GENERIC_VALIDATOR = &GENERIC_VALIDATOR_IMPL;
 
 Validator *generic_validator_instance(void)
 {
 	return GENERIC_VALIDATOR;
+}
+
+Validator *inverse_generic_validator_instance(void)
+{
+	return &INVERSE_GENERIC_VALIDATOR_IMPL;
 }

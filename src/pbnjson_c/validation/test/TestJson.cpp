@@ -807,6 +807,54 @@ TEST_F(Json, OneOfSchemaMultiple)
 	EXPECT_FALSE(validate_json_plain("[]", v));
 }
 
+TEST_F(Json, NotSchemaSimple)
+{
+	v = parse_schema_bare("{\"not\": [{\"type\":\"null\"}]}");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_FALSE(validate_json_plain("null", v));
+	EXPECT_TRUE(validate_json_plain("true", v));
+	EXPECT_TRUE(validate_json_plain("12", v));
+	EXPECT_TRUE(validate_json_plain("\"hello\"", v));
+	EXPECT_TRUE(validate_json_plain("{}", v));
+	EXPECT_TRUE(validate_json_plain("{\"a\":null}", v));
+	EXPECT_TRUE(validate_json_plain("[]", v));
+	EXPECT_TRUE(validate_json_plain("[null]", v));
+}
+
+TEST_F(Json, NotSchemaMultiple)
+{
+	v = parse_schema_bare(
+		"{"
+			"\"not\": ["
+				"{\"type\":\"null\"},"
+				"{\"type\":\"object\"}"
+			"]"
+		"}");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_FALSE(validate_json_plain("null", v));
+	EXPECT_TRUE(validate_json_plain("true", v));
+	EXPECT_TRUE(validate_json_plain("12", v));
+	EXPECT_TRUE(validate_json_plain("\"hello\"", v));
+	EXPECT_FALSE(validate_json_plain("{}", v));
+	EXPECT_FALSE(validate_json_plain("{\"a\":null}", v));
+	EXPECT_TRUE(validate_json_plain("[]", v));
+	EXPECT_TRUE(validate_json_plain("[null]", v));
+}
+
+TEST_F(Json, NotSchemaAllFailed)
+{
+	v = parse_schema_bare("{\"not\": [{}]}");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_FALSE(validate_json_plain("null", v));
+	EXPECT_FALSE(validate_json_plain("true", v));
+	EXPECT_FALSE(validate_json_plain("12", v));
+	EXPECT_FALSE(validate_json_plain("\"hello\"", v));
+	EXPECT_FALSE(validate_json_plain("{}", v));
+	EXPECT_FALSE(validate_json_plain("{\"a\":null}", v));
+	EXPECT_FALSE(validate_json_plain("[]", v));
+	EXPECT_FALSE(validate_json_plain("[null]", v));
+}
+
 TEST_F(Json, TypeAndAllOfSchema)
 {
 	v = parse_schema_bare(

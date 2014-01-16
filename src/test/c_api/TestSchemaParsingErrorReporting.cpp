@@ -445,16 +445,24 @@ TEST_F(TestSchemaParsingErrorReporting, InvalidOneOf)
 	EXPECT_TRUE(TestError("{ \"oneOf\" : [{}, []] }", SEC_COMBINATOR_ARRAY_FORMAT));
 }
 
-// TODO: Implement "not" property
-//
-//TEST_F(TestSchemaParsingErrorReporting, InvalidNot)
-//{
-//	EXPECT_TRUE(TestError("{ \"not\" : null }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"not\" : false }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"not\" : 0 }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"not\" : \"a\" }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"not\" : [] }", SEC_SYNTAX));
-//}
+TEST_F(TestSchemaParsingErrorReporting, InvalidNot)
+{
+	EXPECT_TRUE(TestError("{ \"not\" : null }", SEC_NOT_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : false }", SEC_NOT_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : 0 }", SEC_NOT_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : \"a\" }", SEC_NOT_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : [] }", SEC_NOT_ARRAY_EMPTY));
+	EXPECT_TRUE(TestError("{ \"not\" : [null] }", SEC_COMBINATOR_ARRAY_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : [false] }", SEC_COMBINATOR_ARRAY_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : [0] }", SEC_COMBINATOR_ARRAY_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : [\"a\"] }", SEC_COMBINATOR_ARRAY_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : [[]] }", SEC_COMBINATOR_ARRAY_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : [{}, null] }", SEC_COMBINATOR_ARRAY_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : [{}, false] }", SEC_COMBINATOR_ARRAY_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : [{}, 0] }", SEC_COMBINATOR_ARRAY_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : [{}, \"a\"] }", SEC_COMBINATOR_ARRAY_FORMAT));
+	EXPECT_TRUE(TestError("{ \"not\" : [{}, []] }", SEC_COMBINATOR_ARRAY_FORMAT));
+}
 
 TEST_F(TestSchemaParsingErrorReporting, InvalidDefinitions)
 {
