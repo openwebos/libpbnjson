@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,12 +40,6 @@
 #define PJ_LOG_MEM(...) PJ_LOG_INFO(__VA_ARGS__)
 #else
 #define PJ_LOG_MEM(...) do { } while (0)
-#endif
-
-#ifdef DBG_C_REFCNT
-#define PJ_LOG_REFCNT(...) PJ_LOG_INFO(__VA_ARGS__)
-#else
-#define PJ_LOG_REFCNT(...) do { } while (0)
 #endif
 
 #ifndef PJSON_EXPORT
@@ -115,15 +109,6 @@ static void jvalue_init (jvalue_ref val, JValueType type)
 	val->m_type = type;
 }
 
-#if PJSON_LOG_INFO && !PJSON_NO_LOGGING && DBG_C_REFCNT
-#define COUNT_EMPTY_NULL 1
-#endif
-
-#if COUNT_EMPTY_NULL
-static int jnull_cnt = 0;
-static int jempty_cnt = 0;
-#endif
-
 jvalue_ref jvalue_copy (jvalue_ref val)
 {
 	SANITY_CHECK_POINTER(val);
@@ -131,14 +116,8 @@ jvalue_ref jvalue_copy (jvalue_ref val)
 	assert(s_inGdb || val->m_refCnt > 0);
 
 	if (val == &JNULL) {
-#if COUNT_EMPTY_NULL
-		PJ_LOG_REFCNT("attempt to grab ownership of JSON Null object: %d", ATOMIC_INC(&jnull_cnt));
-#endif
 		return val;
 	} else if (val == &JEMPTY_STR.m_value) {
-#if COUNT_EMPTY_NULL
-		PJ_LOG_REFCNT("attempt to grab ownership of empty string constant: %d", ATOMIC_INC(&jempty_cnt));
-#endif
 		return val;
 	}
 
@@ -247,19 +226,9 @@ void j_release (jvalue_ref *val)
 		return;
 	}
 	if (UNLIKELY(*val == &JNULL)) {
-#if COUNT_EMPTY_NULL
-		int newVal = ATOMIC_DEC(&jnull_cnt);
-		PJ_LOG_REFCNT("attempt to release ownership of global JSON null object: %d", newVal);
-		assert(newVal >= 0);
-#endif
 		SANITY_KILL_POINTER(*val);
 		return;
 	} else if (UNLIKELY(*val == &JEMPTY_STR.m_value)) {
-#if COUNT_EMPTY_NULL
-		int newVal = ATOMIC_DEC(&jempty_cnt);
-		PJ_LOG_REFCNT("attempt to release ownership of global empty JSON string: %d", newVal);
-		assert(newVal >= 0);
-#endif
 		SANITY_KILL_POINTER(*val);
 		return;
 	}
