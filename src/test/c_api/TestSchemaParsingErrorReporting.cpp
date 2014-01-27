@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -181,16 +181,16 @@ TEST_F(TestSchemaParsingErrorReporting, InvalidMinLength)
 	EXPECT_TRUE(TestError("{ \"minLength\" : -1 }", SEC_MIN_LENGTH_VALUE_FORMAT));
 }
 
-// TODO: Implement "pattern" property
-//TEST_F(TestSchemaParsingErrorReporting, InvalidPattern)
-//{
-//	EXPECT_TRUE(TestError("{ \"pattern\" : null }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"pattern\" : false }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"pattern\" : 0 }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"pattern\" : {} }", SEC_SYNTAX));
-//	EXPECT_TRUE(TestError("{ \"pattern\" : [] }", SEC_SYNTAX));
-//  // TODO: Add test to check regex syntax
-//}
+TEST_F(TestSchemaParsingErrorReporting, InvalidPattern)
+{
+	EXPECT_TRUE(TestError("{ \"pattern\" : null }", SEC_PATTERN_FORMAT));
+	EXPECT_TRUE(TestError("{ \"pattern\" : false }", SEC_PATTERN_FORMAT));
+	EXPECT_TRUE(TestError("{ \"pattern\" : 0 }", SEC_PATTERN_FORMAT));
+	EXPECT_TRUE(TestError("{ \"pattern\" : {} }", SEC_PATTERN_FORMAT));
+	EXPECT_TRUE(TestError("{ \"pattern\" : [] }", SEC_PATTERN_FORMAT));
+	EXPECT_TRUE(TestError("{ \"pattern\" : \"*\" }", SEC_PATTERN_VALUE_FORMAT));
+	EXPECT_TRUE(TestError("{ \"pattern\" : \"[\" }", SEC_PATTERN_VALUE_FORMAT));
+}
 
 TEST_F(TestSchemaParsingErrorReporting, InvalidItems)
 {

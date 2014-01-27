@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -360,6 +360,14 @@ Validator* validator_set_string_min_length(Validator *v, size_t minLength)
 	assert(v && v->vtable);
 	if (v->vtable->set_string_min_length)
 		return v->vtable->set_string_min_length(v, minLength);
+	return v;
+}
+
+Validator* validator_set_string_pattern(Validator *v, Pattern *pattern)
+{
+	assert(v && v->vtable);
+	if (v->vtable->set_string_pattern)
+		return v->vtable->set_string_pattern(v, pattern);
 	return v;
 }
 

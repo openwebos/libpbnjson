@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ typedef enum _ValidationErrorCode
 	VEC_NOT_STRING,
 	VEC_STRING_TOO_SHORT,
 	VEC_STRING_TOO_LONG,
+	VEC_STRING_NOT_PATTERN,
 	VEC_NOT_OBJECT,
 	VEC_NOT_ENOUGH_KEYS,
 	VEC_MISSING_REQUIRED_KEY,
@@ -75,6 +76,8 @@ typedef enum _SchemaErrorCode
 	SEC_MIN_LENGTH_FORMAT,
 	SEC_MAX_LENGTH_VALUE_FORMAT,
 	SEC_MIN_LENGTH_VALUE_FORMAT,
+	SEC_PATTERN_FORMAT,
+	SEC_PATTERN_VALUE_FORMAT,
 	SEC_ITEMS_FORMAT,
 	SEC_ITEMS_ARRAY_FORMAT,
 	SEC_ADDITIONAL_ITEMS_FORMAT,

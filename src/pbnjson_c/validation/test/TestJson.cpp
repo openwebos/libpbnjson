@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -454,6 +454,56 @@ TEST_F(Json, StringMinLength)
 	EXPECT_FALSE(validate_json_plain("\"hello\"", v));
 	EXPECT_TRUE(validate_json_plain("\"hello!\"", v));
 	EXPECT_TRUE(validate_json_plain("\"hello!!!\"", v));
+}
+
+TEST_F(Json, StringPattern)
+{
+	v = parse_schema_bare(
+		"{\"type\": \"string\","
+			"\"pattern\": \"^a[bcd]?$\""
+		"}");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_FALSE(validate_json_plain("\"\"", v));
+	EXPECT_TRUE(validate_json_plain("\"a\"", v));
+	EXPECT_TRUE(validate_json_plain("\"ab\"", v));
+	EXPECT_TRUE(validate_json_plain("\"ac\"", v));
+	EXPECT_TRUE(validate_json_plain("\"ad\"", v));
+	EXPECT_FALSE(validate_json_plain("\"ae\"", v));
+	EXPECT_FALSE(validate_json_plain("\"abc\"", v));
+}
+
+TEST_F(Json, StringPatternDigits)
+{
+	v = parse_schema_bare(
+		"{\"type\": \"string\","
+			"\"pattern\": \"^\\\\d+$\""
+		"}");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_FALSE(validate_json_plain("\"a\"", v));
+	EXPECT_FALSE(validate_json_plain("\"abc\"", v));
+	EXPECT_FALSE(validate_json_plain("\"123b123\"", v));
+	EXPECT_FALSE(validate_json_plain("\"\"", v));
+	EXPECT_TRUE(validate_json_plain("\"1\"", v));
+	EXPECT_TRUE(validate_json_plain("\"123123\"", v));
+}
+
+TEST_F(Json, StringAndNumberPattern)
+{
+	v = parse_schema_bare(
+		"{\"type\": [\"string\", \"number\"],"
+			"\"pattern\": \"^[-+]?[0-9]*\\\\.?[0-9]+([eE][-+]?[0-9]+)?$\""
+		"}");
+	ASSERT_TRUE(v != NULL);
+	EXPECT_FALSE(validate_json_plain("null", v));
+	EXPECT_FALSE(validate_json_plain("\"\"", v));
+	EXPECT_TRUE(validate_json_plain("\"1\"", v));
+	EXPECT_TRUE(validate_json_plain("\"-2.5\"", v));
+	EXPECT_TRUE(validate_json_plain("\"+3.34563e-12\"", v));
+	EXPECT_TRUE(validate_json_plain("\"-3.34563E+12\"", v));
+	EXPECT_FALSE(validate_json_plain("\"3.234a\"", v));
+	EXPECT_FALSE(validate_json_plain("\"abc\"", v));
+	EXPECT_TRUE(validate_json_plain("2.5", v));
+	EXPECT_TRUE(validate_json_plain("3.34563e-12", v));
 }
 
 TEST_F(Json, Array)

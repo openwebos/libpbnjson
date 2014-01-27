@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ typedef struct _ObjectAdditionalProperties ObjectAdditionalProperties;
 typedef struct _ObjectRequired ObjectRequired;
 typedef struct _ArrayItems ArrayItems;
 typedef struct _UriResolver UriResolver;
+typedef struct _Pattern Pattern;
 typedef struct _Number Number;
 typedef struct jvalue* jvalue_ref;
 
@@ -165,6 +166,7 @@ typedef struct _ValidatorVtable
 	Validator* (*set_number_multiple_of)(Validator *v, Number *n);
 	Validator* (*set_string_max_length)(Validator *v, size_t maxLength);
 	Validator* (*set_string_min_length)(Validator *v, size_t minLength);
+	Validator* (*set_string_pattern)(Validator *v, Pattern *pattern);
 	Validator* (*set_default)(Validator *v, jvalue_ref def_value);
 	jvalue_ref (*get_default)(Validator *v, ValidationState *s);
 
@@ -272,6 +274,7 @@ Validator* validator_set_number_minimum_exclusive(Validator *v, bool exclusive);
 Validator* validator_set_number_multiple_of(Validator *v, Number *n);
 Validator* validator_set_string_max_length(Validator *v, size_t maxLength);
 Validator* validator_set_string_min_length(Validator *v, size_t minLength);
+Validator* validator_set_string_pattern(Validator *v, Pattern *pattern);
 Validator* validator_set_default(Validator *v, jvalue_ref def_value);
 jvalue_ref validator_get_default(Validator *v, ValidationState *s);
 

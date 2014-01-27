@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,6 +62,7 @@ multipleOf,           TOKEN_KEY_MULTIPLE_OF
 name,                 TOKEN_KEY_NAME
 not,                  TOKEN_KEY_NOT
 oneOf,                TOKEN_KEY_ONE_OF
+pattern,              TOKEN_KEY_PATTERN
 properties,           TOKEN_KEY_PROPERTIES
 required,             TOKEN_KEY_REQUIRED
 title,                TOKEN_KEY_TITLE

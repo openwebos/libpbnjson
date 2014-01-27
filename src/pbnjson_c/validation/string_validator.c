@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 // LICENSE@@@
 
 #include "string_validator.h"
+#include "pattern.h"
 #include "validation_state.h"
 #include "validation_event.h"
 #include "parser_context.h"
@@ -54,6 +55,20 @@ static bool _check_conditions(StringValidator *v, ValidationEvent const *e,
 	{
 		validation_state_notify_error(s, VEC_STRING_TOO_LONG, c);
 		return false;
+	}
+
+	if (v->pattern)
+	{
+		size_t len = e->value.string.len;
+		char buf[len + 1];
+		memcpy(buf, e->value.string.ptr, len);
+		buf[len] = 0;
+		bool res = g_regex_match(v->pattern, buf, 0, NULL);
+		if (!res)
+		{
+			validation_state_notify_error(s, VEC_STRING_NOT_PATTERN, c);
+			return false;
+		}
 	}
 
 	return true;
@@ -107,6 +122,13 @@ static Validator* set_min_length(Validator *v, size_t min_length)
 	return v;
 }
 
+static Validator* set_pattern(Validator *v, Pattern *p)
+{
+	StringValidator *s = (StringValidator *) v;
+	string_validator_set_pattern(s, p->regex);
+	return v;
+}
+
 static Validator* set_default(Validator *validator, jvalue_ref def_value)
 {
 	StringValidator *v = (StringValidator *) validator;
@@ -129,6 +151,11 @@ static Validator* set_max_length_generic(Validator *v, size_t max_length)
 static Validator* set_min_length_generic(Validator *v, size_t min_length)
 {
 	return set_min_length(&string_validator_new()->base, min_length);
+}
+
+static Validator* set_pattern_generic(Validator *v, Pattern *pattern)
+{
+	return set_pattern(&string_validator_new()->base, pattern);
 }
 
 static Validator* set_default_generic(Validator *v, jvalue_ref def_value)
@@ -161,6 +188,7 @@ static ValidatorVtable generic_string_vtable =
 	.check = check_generic,
 	.set_string_max_length = set_max_length_generic,
 	.set_string_min_length = set_min_length_generic,
+	.set_string_pattern = set_pattern_generic,
 	.set_default = set_default_generic,
 	.dump_enter = dump_enter,
 };
@@ -173,6 +201,7 @@ static ValidatorVtable string_vtable =
 	.unref = unref,
 	.set_string_max_length = set_max_length,
 	.set_string_min_length = set_min_length,
+	.set_string_pattern = set_pattern,
 	.set_default = set_default,
 	.get_default = get_default,
 	.dump_enter = dump_enter,
@@ -192,6 +221,8 @@ void string_validator_release(StringValidator *v)
 {
 	g_free(v->expected_value);
 	j_release(&v->def_value);
+	if (v->pattern)
+		g_regex_unref(v->pattern);
 	g_free(v);
 }
 
@@ -203,6 +234,13 @@ void string_validator_add_min_length_constraint(StringValidator *v, size_t min_l
 void string_validator_add_max_length_constraint(StringValidator *v, size_t max_length)
 {
 	v->max_length = max_length;
+}
+
+void string_validator_set_pattern(StringValidator *v, GRegex *pattern)
+{
+	if (v->pattern)
+		g_regex_unref(v->pattern);
+	v->pattern = g_regex_ref(pattern);
 }
 
 void string_validator_add_expected_value(StringValidator *v, StringSpan *span)

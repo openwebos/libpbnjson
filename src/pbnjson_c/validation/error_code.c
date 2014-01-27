@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,6 +52,8 @@ char const *ValidationGetErrorMessage(int code)
 		return "String too short";
 	case VEC_STRING_TOO_LONG:
 		return "String too long";
+	case VEC_STRING_NOT_PATTERN:
+		return "String doesn't match pattern";
 	case VEC_NOT_OBJECT:
 		return "Not object";
 	case VEC_MISSING_REQUIRED_KEY:
@@ -113,6 +115,10 @@ char const *SchemaGetErrorMessage(int code)
 		return "'maxLength' value should be integer not less than 0";
 	case SEC_MIN_LENGTH_VALUE_FORMAT:
 		return "'minLength' value should be integer not less than 0";
+	case SEC_PATTERN_FORMAT:
+		return "'pattern' should be string";
+	case SEC_PATTERN_VALUE_FORMAT:
+		return "'pattern' value should be valid regular expression";
 	case SEC_ITEMS_FORMAT:
 		return "'items' should be object or array";
 	case SEC_ITEMS_ARRAY_FORMAT:

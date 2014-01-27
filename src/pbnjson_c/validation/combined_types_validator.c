@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -161,6 +161,14 @@ static Validator* set_min_length(Validator *v, size_t minLength)
 	return v;
 }
 
+static Validator* set_pattern(Validator *v, Pattern *pattern)
+{
+	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
+	if (c->types[V_STR])
+		c->types[V_STR] = validator_set_string_pattern(c->types[V_STR], pattern);
+	return v;
+}
+
 static Validator* set_items(Validator *v, ArrayItems *items)
 {
 	CombinedTypesValidator *c = (CombinedTypesValidator *) v;
@@ -244,6 +252,7 @@ ValidatorVtable combined_types_vtable =
 	.set_number_multiple_of = set_multiple_of,
 	.set_string_max_length = set_max_length,
 	.set_string_min_length = set_min_length,
+	.set_string_pattern = set_pattern,
 	.set_array_items = set_items,
 	.set_array_additional_items = set_additional_items,
 	.set_object_properties = set_properties,

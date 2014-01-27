@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@
 #include "additional_feature.h"
 #include "object_required.h"
 #include "array_items.h"
+#include "pattern.h"
 #include "count_feature.h"
 #include "number_feature.h"
 #include "boolean_feature.h"
@@ -492,6 +493,7 @@ any_object_key(A) ::= KEY_NAME(B). { A = B; }
 any_object_key(A) ::= KEY_NOT(B). { A = B; }
 any_object_key(A) ::= KEY_NOT_KEYWORD(B). { A = B; }
 any_object_key(A) ::= KEY_ONE_OF(B). { A = B; }
+any_object_key(A) ::= KEY_PATTERN(B). { A = B; }
 any_object_key(A) ::= KEY_PROPERTIES(B). { A = B; }
 any_object_key(A) ::= KEY_REQUIRED(B). { A = B; }
 any_object_key(A) ::= KEY_TITLE(B). { A = B; }
@@ -832,6 +834,24 @@ schema_feature(A) ::= KEY_MIN_LENGTH error.
 	A = NULL;
 	parser_context_set_error(context, SEC_MIN_LENGTH_FORMAT);
 }
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// String pattern
+schema_feature(A) ::= KEY_PATTERN STRING(S).
+{
+	Pattern *p = pattern_new();
+	if (!pattern_set_regex_n(p, S.string.str, S.string.str_len))
+		parser_context_set_error(context, SEC_PATTERN_VALUE_FORMAT);
+	A = &p->base;
+}
+
+schema_feature(A) ::= KEY_PATTERN error.
+{
+	A = NULL;
+	parser_context_set_error(context, SEC_PATTERN_FORMAT);
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Enum

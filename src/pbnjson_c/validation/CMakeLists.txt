@@ -95,6 +95,7 @@ add_library(
 	combined_validator.c
 	parser_api.c
 	parser_context.c
+	pattern.c
 	reference.c
 	schema_parsing.c
 	type_parser.c

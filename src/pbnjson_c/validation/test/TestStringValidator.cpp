@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,8 +17,10 @@
 // LICENSE@@@
 
 #include "../string_validator.h"
+#include "../pattern.h"
 #include "../validation_api.h"
 #include "../parser_context.h"
+#include "Util.hpp"
 #include <gtest/gtest.h>
 
 using namespace std;
@@ -138,6 +140,25 @@ TEST_F(TestStringValidator, StringWithMinMaxLengthNegativeGreater)
 	string_validator_add_min_length_constraint(v, 3);
 	EXPECT_FALSE(validation_check(&(e = validation_event_string("hello world", 11)), s, this));
 	EXPECT_EQ(VEC_STRING_TOO_LONG, error);
+	EXPECT_EQ(0, g_slist_length(s->validator_stack));
+}
+
+TEST_F(TestStringValidator, PatternPositive)
+{
+	auto p = mk_ptr(&pattern_new()->base, feature_unref);
+	ASSERT_TRUE(pattern_set_regex((Pattern *)p.get(), "^a[bcd]$"));
+	string_validator_set_pattern(v, ((Pattern *)p.get())->regex);
+	EXPECT_TRUE(validation_check(&(e = validation_event_string("ac", 2)), s, this));
+	EXPECT_EQ(0, g_slist_length(s->validator_stack));
+}
+
+TEST_F(TestStringValidator, PatternNegative)
+{
+	auto p = mk_ptr(&pattern_new()->base, feature_unref);
+	ASSERT_TRUE(pattern_set_regex((Pattern *)p.get(), "^a[bcd]$"));
+	string_validator_set_pattern(v, ((Pattern *)p.get())->regex);
+	EXPECT_FALSE(validation_check(&(e = validation_event_string("ae", 2)), s, this));
+	EXPECT_EQ(VEC_STRING_NOT_PATTERN, error);
 	EXPECT_EQ(0, g_slist_length(s->validator_stack));
 }
 

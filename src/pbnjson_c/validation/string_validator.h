@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 #pragma once
 
 #include "validator.h"
+#include <glib.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -37,6 +38,8 @@ typedef struct _StringValidator
 	char *expected_value;  /**< @brief Expected value if not NULL (for enums) */
 	int min_length;        /**< @brief Minimal string length from {"minLength": ...} */
 	int max_length;        /**< @brief Maximal string length from {"maxLength": ...} */
+
+	GRegex *pattern;       /**< @brief Regex pattern to match string against from {"pattern": ...} */
 } StringValidator;
 
 //_Static_assert(offsetof(StringValidator, base) == 0, "Addresses of StringValidator and StringValidator.base should be equal");
@@ -55,6 +58,9 @@ void string_validator_add_min_length_constraint(StringValidator *v, size_t min_l
 
 /** @brief Remember maximal length */
 void string_validator_add_max_length_constraint(StringValidator *v, size_t max_length);
+
+/** @brief Remember string validation pattern */
+void string_validator_set_pattern(StringValidator *v, GRegex *pattern);
 
 /** @brief Remember expected value (for enums) */
 void string_validator_add_expected_value(StringValidator *v, StringSpan *span);
