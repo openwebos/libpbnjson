@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,6 +28,9 @@ extern "C" {
 #endif
 
 typedef struct jvalue* jvalue_ref;
+
+typedef struct jsaxparser *jsaxparser_ref;
+typedef struct jdomparser *jdomparser_ref;
 
 typedef struct {
 	GHashTableIter m_iter;

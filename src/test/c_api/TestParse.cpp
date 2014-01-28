@@ -24,6 +24,8 @@
 #include <pbnjson.h>
 #include <memory>
 #include <algorithm>
+#include <fstream>
+#include <cxx/JSchemaFile.h>
 
 void j_release_ref(jvalue * val) {
 	j_release(&val);
@@ -216,4 +218,219 @@ TEST(TestParse, testParseFile)
 {
 	std::vector<std::string> tasks = {"file_parse_test"};
 	for (const auto &task : tasks) TestParse_testParseFile(task);
+}
+
+struct test_sax_context {
+	int null_counter;
+	int boolean_counter;
+	int number_counter;
+	int string_counter;
+	int object_start_counter;
+	int object_key_counter;
+	int object_end_counter;
+	int array_start_counter;
+	int array_end_counter;
+	PJSAXCallbacks callbacks;
+
+	test_sax_context()
+		: null_counter(0)
+		, boolean_counter(0)
+		, number_counter(0)
+		, string_counter(0)
+		, object_start_counter(0)
+		, object_key_counter(0)
+		, object_end_counter(0)
+		, array_start_counter(0)
+		, array_end_counter(0)
+	{
+		callbacks.m_objStart = jsax_object_start;
+		callbacks.m_objKey = jsax_object_key;
+		callbacks.m_objEnd = jsax_object_end;
+		callbacks.m_arrStart = jsax_array_start;
+		callbacks.m_arrEnd = jsax_array_end;
+		callbacks.m_string = jsax_string;
+		callbacks.m_number = jsax_number;
+		callbacks.m_boolean = jsax_boolean;
+		callbacks.m_null = jsax_null;
+	}
+
+	static int jsax_null(JSAXContextRef ctxt) {
+		reinterpret_cast<test_sax_context*>(jsax_getContext(ctxt))->null_counter++;
+		return 1;
+	}
+
+	static int jsax_boolean(JSAXContextRef ctxt, bool value) {
+		reinterpret_cast<test_sax_context*>(jsax_getContext(ctxt))->boolean_counter++;
+		return 1;
+	}
+
+	static int jsax_number(JSAXContextRef ctxt, const char *number, size_t numberLen) {
+		reinterpret_cast<test_sax_context*>(jsax_getContext(ctxt))->number_counter++;
+		return 1;
+	}
+
+	static int jsax_string(JSAXContextRef ctxt, const char *string, size_t stringLen) {
+		reinterpret_cast<test_sax_context*>(jsax_getContext(ctxt))->string_counter++;
+		return 1;
+	}
+
+	static int jsax_object_start(JSAXContextRef ctxt) {
+		reinterpret_cast<test_sax_context*>(jsax_getContext(ctxt))->object_start_counter++;
+		return 1;
+	}
+
+	static int jsax_object_key(JSAXContextRef ctxt, const char *key, size_t keyLen) {
+		reinterpret_cast<test_sax_context*>(jsax_getContext(ctxt))->object_key_counter++;
+		return 1;
+	}
+
+	static int jsax_object_end(JSAXContextRef ctxt) {
+		reinterpret_cast<test_sax_context*>(jsax_getContext(ctxt))->object_end_counter++;
+		return 1;
+	}
+
+	static int jsax_array_start(JSAXContextRef ctxt) {
+		reinterpret_cast<test_sax_context*>(jsax_getContext(ctxt))->array_start_counter++;
+		return 1;
+	}
+
+	static int jsax_array_end(JSAXContextRef ctxt) {
+		reinterpret_cast<test_sax_context*>(jsax_getContext(ctxt))->array_end_counter++;
+		return 1;
+	}
+
+};
+
+void ReadFileToString(const std::string& fileName, std::string& dst)
+{
+	std::ifstream file(fileName);
+	if (!file.is_open())
+		throw std::runtime_error("Failed to open file: " + fileName);
+
+	file.seekg(0, std::ios::end);
+	size_t size = file.tellg();
+	dst.resize(size);
+	file.seekg(0);
+	file.read(&dst[0], size);
+}
+
+TEST(TestParse, saxparser)
+{
+	test_sax_context context;
+
+	std::string json_str;
+	ReadFileToString("../schemas/parse/test_stream_parser.json", json_str);
+
+	jschema_ref schema = jschema_parse_file("../schemas/parse/test_stream_parser.schema", NULL);
+	ASSERT_FALSE(NULL == schema);
+
+	JSchemaInfo schemaInfo;
+	jschema_info_init(&schemaInfo, schema, NULL, NULL);
+
+	jsaxparser_ref parser = jsaxparser_create(&schemaInfo, &context.callbacks, &context);
+
+	ASSERT_FALSE(parser == NULL);
+
+	const char* start = json_str.c_str();
+	const char* end = json_str.c_str() + json_str.length();
+	for (const char* i = start ; i !=  end ; ++i) {
+		if (!jsaxparser_feed(parser, i, 1)) {
+			const char* error = jsaxparser_get_error(parser);
+			while(!error) {break;}
+			break;
+		}
+	}
+
+	if (!jsaxparser_end(parser)) {
+		const char* error = jsaxparser_get_error(parser);
+		while(!error) {break;}
+	}
+
+	jsaxparser_release(&parser);
+
+	jschema_release(&schema);
+
+	EXPECT_EQ(1, context.null_counter);
+	EXPECT_EQ(1, context.boolean_counter);
+	EXPECT_EQ(2, context.string_counter);
+	EXPECT_EQ(2, context.number_counter);
+	EXPECT_EQ(1, context.array_start_counter);
+	EXPECT_EQ(1, context.array_end_counter);
+	EXPECT_EQ(1, context.object_start_counter);
+	EXPECT_EQ(5, context.object_key_counter);
+	EXPECT_EQ(1, context.object_end_counter);
+}
+
+raw_buffer from_str_to_buffer(const char* str)
+{
+	raw_buffer ret;
+	ret.m_str = str;
+	ret.m_len = strlen(str);
+
+	return ret;
+}
+
+TEST(TestParse, domparser)
+{
+
+	std::string json_str;
+	ReadFileToString("../schemas/parse/test_stream_parser.json", json_str);
+
+	jschema_ref schema = jschema_parse_file("../schemas/parse/test_stream_parser.schema", NULL);
+	ASSERT_FALSE(NULL == schema);
+
+	JSchemaInfo schemaInfo;
+	jschema_info_init(&schemaInfo, schema, NULL, NULL);
+
+	jdomparser_ref parser = jdomparser_create(&schemaInfo, 0);
+	ASSERT_FALSE(parser == NULL);
+
+	const char* start = json_str.c_str();
+	const char* end = json_str.c_str() + json_str.length();
+	for (const char* i = start ; i !=  end ; ++i) {
+		if (!jdomparser_feed(parser, i, 1)) {
+			const char* error = jdomparser_get_error(parser);
+			while(!error) {break;}
+			break;
+		}
+	}
+
+	if (!jdomparser_end(parser)) {
+		const char* error = jdomparser_get_error(parser);
+		while(!error) {break;}
+	}
+
+	jvalue_ref jval = jdomparser_get_result(parser);
+
+	jdomparser_release(&parser);
+
+	ASSERT_TRUE(jobject_get_exists(jval, from_str_to_buffer("null"), NULL));
+	ASSERT_TRUE(jobject_get_exists(jval, from_str_to_buffer("bool"), NULL));
+	ASSERT_TRUE(jobject_get_exists(jval, from_str_to_buffer("number"), NULL));
+	ASSERT_TRUE(jobject_get_exists(jval, from_str_to_buffer("string"), NULL));
+	ASSERT_TRUE(jobject_get_exists(jval, from_str_to_buffer("array"), NULL));
+
+	bool boolValue = false;
+	jboolean_get(jobject_get(jval, from_str_to_buffer("bool")), &boolValue);
+	EXPECT_EQ(true, boolValue);
+
+	double numValue = 0;
+	jnumber_get_f64(jobject_get(jval, from_str_to_buffer("number")), &numValue);
+	EXPECT_EQ(1.1, numValue);
+
+	raw_buffer str = jstring_get_fast(jobject_get(jval, from_str_to_buffer("string")));
+	EXPECT_EQ(std::string("asd"), std::string(str.m_str, str.m_len));
+
+	jvalue_ref array = jobject_get(jval, from_str_to_buffer("array"));
+	ASSERT_EQ(2, jarray_size(array));
+
+	int array_elem_int = 0;
+	jnumber_get_i32(jarray_get(array, 0), &array_elem_int);
+	EXPECT_EQ(2, array_elem_int);
+
+	str = jstring_get_fast(jarray_get(array, 1));
+	EXPECT_EQ(std::string("qwerty"), std::string(str.m_str, str.m_len));
+
+	j_release(&jval);
+	jschema_release(&schema);
 }

@@ -70,13 +70,12 @@ PJSON_API jvalue_ref jdom_parse(raw_buffer input, JDOMOptimizationFlags optimiza
  *              error handler).
  * @param data The ctxt parameter during parsing.
  *             After a successful parse, set to whatever the ctxt parameter was changed to during the parse.
- * @param logError If true, then the reason for the parse failure is logged, otherwise it isn't
  * @return True if parsing succeeded with no unrecoverable errors, false otherwise.
  *
  * @see jsax_getContext
  * @see jsax_changeContext
  */
-PJSON_API bool jsax_parse_ex(PJSAXCallbacks *parser, raw_buffer input, JSchemaInfoRef schemaInfo, void **data, bool logError) NON_NULL(3);
+PJSON_API bool jsax_parse_ex(PJSAXCallbacks *parser, raw_buffer input, JSchemaInfoRef schemaInfo, void **data) NON_NULL(3);
 
 /**
  * Convenience method for the more extended version.  No error message generated.
@@ -94,6 +93,91 @@ PJSON_API void jsax_changeContext(JSAXContextRef saxCtxt, void *userCtxt);
  * @see jparse_stream.c for an example of how the library uses it to implement the dom_parse functionality.
  */
 PJSON_API void* jsax_getContext(JSAXContextRef saxCtxt);
+
+/**
+ * @brief jsaxparser_init Create and initialize SAX stream parser
+ * @param schemaInfo The schema to use for validation of the input, along with any other callbacks necessary (such as schema resolver,
+ *                   error handler).
+ * @param callback A pointer to a SAXCallbacks structure with pointers to functions that handle the appropriate
+ *                 parsing events.
+ * @param callback_ctxt Context that will be returned in callbacks
+ * @return pointer to SAX parser
+ */
+jsaxparser_ref jsaxparser_create(JSchemaInfoRef schemaInfo, PJSAXCallbacks *callback, void *callback_ctxt);
+
+/**
+ * @brief jsaxparser_feed Parse part of json from input buffer
+ * @param parser Pointer to SAX parser
+ * @param buf Input buffer
+ * @param buf_len Input buffer length
+ * @return false on error
+ */
+PJSON_API bool jsaxparser_feed(jsaxparser_ref parser, const char *buf, int buf_len);
+
+/**
+ * @brief jsaxparser_end Finalize stream parsing
+ * @param parser Pointer to SAX parser
+ * @return false on error
+ */
+PJSON_API bool jsaxparser_end(jsaxparser_ref parser);
+
+/**
+ * @brief jsaxparser_release Release SAX parser created by jsaxparser_create
+ * @param parser Pointer to SAX parser
+  */
+PJSON_API void jsaxparser_release(jsaxparser_ref *parser);
+
+/**
+ * @brief jsaxparser_get_error Return error description. It can be called when jsaxparser_feed/jsaxparser_end has returned false
+ * @param parser Pointer to SAX parser
+ * @return Pointer to string with error description. The pointer should not be released manually. It will be released in jsaxparser_release.
+ */
+PJSON_API const char* jsaxparser_get_error(jsaxparser_ref parser);
+
+/**
+ * @brief jdomparser_create Create and initialize DOM stream parser
+ * @param schemaInfo The schema to use for validation of the input, along with any other callbacks necessary (such as schema resolver,
+ *                   error handler).
+ * @param optimizationMode Optimization flags
+ * @return Pointer to DOM parser
+ */
+jdomparser_ref jdomparser_create(JSchemaInfoRef schemaInfo, JDOMOptimizationFlags optimizationMode);
+
+/**
+ * @brief jdomparser_feed Parse part of json from input buffer
+ * @param parser Pointer to DOM parser
+ * @param buf Input buffer
+ * @param buf_len Input buffer length
+ * @return false on error
+ */
+PJSON_API bool jdomparser_feed(jdomparser_ref parser, const char *buf, int buf_len);
+
+/**
+ * @brief jdomparser_end Finalyze stream parsing
+ * @param parser Pointer to DOM parser
+ * @return false on error
+ */
+PJSON_API bool jdomparser_end(jdomparser_ref parser);
+
+/**
+ * @brief jdomparser_release Release DOM parser created by jdomparser_create
+ * @param parser Pointer to DOM parser
+  */
+PJSON_API void jdomparser_release(jdomparser_ref *parser);
+
+/**
+ * @brief jdomparser_get_error Return error description. It can be called when jdomparser_feed/jdomparser_feed has returned false
+ * @param parser Pointer to DOM parser
+ * @return Pointer to string with error description. The pointer should not be released manually. It will be released in jdomparser_deinit
+ */
+PJSON_API const char* jdomparser_get_error(jdomparser_ref parser);
+
+/**
+ * @brief jdomparser_get_result Return root jvalue for parsed json
+ * @param parser Pointer to DOM parser
+ * @return Root jvalue for parsed json or jinvalid if any error occured
+ */
+PJSON_API jvalue_ref jdomparser_get_result(jdomparser_ref parser);
 
 #ifdef __cplusplus
 }

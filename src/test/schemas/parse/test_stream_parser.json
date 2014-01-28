@@ -1,0 +1,7 @@
+{
+  "null"  : null,
+  "bool"  : true,
+  "number": 1.1,
+  "string": "asd",
+  "array" : [ 2,"qwerty" ]
+}

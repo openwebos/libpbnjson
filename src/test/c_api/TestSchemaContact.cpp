@@ -90,7 +90,7 @@ TEST_F(TestSchemaContact, Invalid1)
 	ASSERT_TRUE(schema != NULL);
 	const raw_buffer INPUT = j_cstr_to_buffer("");
 
-	EXPECT_FALSE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	EXPECT_FALSE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL));
 	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
 	EXPECT_TRUE(jis_null(parsed));
 	EXPECT_FALSE(jis_valid(parsed));
@@ -105,7 +105,7 @@ TEST_F(TestSchemaContact, Valid1)
 			"\"displayIndex\": \"first name\""
 		"}"
 		);
-	EXPECT_TRUE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	EXPECT_TRUE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL));
 	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
 	EXPECT_TRUE(jis_object(parsed));
 	EXPECT_TRUE(jvalue_check_schema(parsed, &schema_info));
@@ -115,7 +115,7 @@ TEST_F(TestSchemaContact, Valid2)
 {
 	ASSERT_TRUE(schema != NULL);
 	const raw_buffer INPUT = j_cstr_to_buffer("{}");
-	EXPECT_TRUE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	EXPECT_TRUE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL));
 	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
 	EXPECT_TRUE(jis_object(parsed));
 	EXPECT_TRUE(jvalue_check_schema(parsed, &schema_info));
@@ -133,7 +133,7 @@ TEST_F(TestSchemaContact, Valid3)
 			"\"gender\": \"undisclosed\""
 		"}"
 		);
-	EXPECT_TRUE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
+	EXPECT_TRUE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL));
 	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
 	EXPECT_TRUE(jis_object(parsed));
 	EXPECT_TRUE(jvalue_check_schema(parsed, &schema_info));

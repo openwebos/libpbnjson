@@ -218,7 +218,7 @@ PJSON_API jvalue_ref jobject_create();
  * @param item A key value pair
  * @param ... The remaining jobject_key_value items.
  *
- * @return A JSON Object with the specified key-value pairs or a value for which jis_invalid returns true.
+ * @return A JSON Object with the specified key-value pairs or a value for which jis_valid returns true.
  *
  * @see jobject_put
  * @see J_END_OBJ_DECL
@@ -472,7 +472,7 @@ PJSON_API ssize_t jarray_size(jvalue_ref arr) NON_NULL(1);
  *
  * @param arr The reference to the array
  * @param index The element number in the array to retrieve.
- * @return A reference to the value.  Ownership of this value remains with the parent array.  jis_invalid will return true on the
+ * @return A reference to the value.  Ownership of this value remains with the parent array. jis_valid will return false on the
  * result if the index'th element is null or invalid parameters are provided.
  */
 PJSON_API jvalue_ref jarray_get(jvalue_ref arr, ssize_t index) NON_NULL(1);

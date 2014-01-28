@@ -22,12 +22,8 @@
 #include <yajl/yajl_parse.h>
 #include "yajl_compat.h"
 #include "liblog.h"
-#include "jparse_stream_internal.h"
 #include "jobject_internal.h"
-#include "validation/validation_state.h"
-#include "validation/validation_event.h"
-#include "validation/validation_api.h"
-#include "validation/nothing_validator.h"
+#include "jparse_stream_internal.h"
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
@@ -38,7 +34,15 @@
 #include <fcntl.h>
 #include <inttypes.h>
 
-static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchemaInfoRef schemaInfo, void **ctxt, bool logError, bool comments);
+
+static PJSAXCallbacks no_callbacks = { 0 };
+#define DEREF_CALLBACK(callback, ...) \
+	do { \
+		if (callback != NULL) return callback(__VA_ARGS__); \
+		return 1; \
+	} while (0)
+
+static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchemaInfoRef schemaInfo, void **ctxt);
 
 static bool file_size(int fd, off_t *s)
 {
@@ -326,9 +330,10 @@ int dom_array_end(JSAXContextRef ctxt)
 	return 1;
 }
 
-static void dom_cleanup(DomInfo *dom_info)
+// Do not release original_ptr. It could be on a stack
+static void dom_cleanup(DomInfo *dom_info, DomInfo *original_ptr)
 {
-	while (dom_info)
+	while (dom_info && dom_info != original_ptr)
 	{
 		DomInfo *cur_dom_info = dom_info;
 		dom_info = dom_info->m_prev;
@@ -338,70 +343,24 @@ static void dom_cleanup(DomInfo *dom_info)
 	}
 }
 
-void dom_cleanup_from_jsax(JSAXContextRef ctxt)
+jvalue_ref jdom_parse(raw_buffer input, JDOMOptimizationFlags optimizationMode, JSchemaInfoRef schemaInfo)
 {
-	if (!ctxt)
-		return;
-
-	dom_cleanup(getDOMContext(ctxt));
-}
-
-jvalue_ref jdom_parse_ex(raw_buffer input, JDOMOptimizationFlags optimizationMode, JSchemaInfoRef schemaInfo, bool allowComments)
-{
-	jvalue_ref result;
-	PJSAXCallbacks callbacks = {
-		dom_object_start, // m_objStart
-		dom_object_key, // m_objKey
-		dom_object_end, // m_objEnd
-
-		dom_array_start, // m_arrStart
-		dom_array_end, // m_arrEnd
-
-		dom_string, // m_string
-		dom_number, // m_number
-		dom_boolean, // m_boolean
-		dom_null, // m_null
-	};
-	DomInfo *topLevelContext = calloc(1, sizeof(struct DomInfo));
-	CHECK_POINTER_RETURN_NULL(topLevelContext);
-	void *domCtxt = topLevelContext;
-	bool parsedOK = jsax_parse_internal(&callbacks, input, schemaInfo, &domCtxt, false /* don't log errors*/, allowComments);
-
-	result = topLevelContext->m_value;
-
-	if (domCtxt != topLevelContext) {
-		// unbalanced state machine (probably a result of parser failure)
-		// cleanup so there's no memory leak
-		PJ_LOG_ERR("state machine indicates invalid input");
-		parsedOK = false;
-		dom_cleanup(domCtxt);
-		topLevelContext = NULL;
-	}
-
-	free(topLevelContext);
-
-	if (!parsedOK) {
-		PJ_LOG_ERR("Parser failure");
+	// create parser
+	struct jdomparser parser;
+	if (!jdomparser_init(&parser, schemaInfo, optimizationMode)) {
 		return jinvalid();
 	}
 
-	if (result == NULL)
-		PJ_LOG_ERR("result was NULL - unexpected. input was '%.*s'", (int)input.m_len, input.m_str);
-	else if (!jis_valid(result))
-		PJ_LOG_WARN("result was NULL JSON - unexpected.  input was '%.*s'", (int)input.m_len, input.m_str);
-	else {
-		if ((optimizationMode & (DOMOPT_INPUT_NOCHANGE | DOMOPT_INPUT_OUTLIVES_DOM | DOMOPT_INPUT_NULL_TERMINATED)) && input.m_str[input.m_len] == '\0') {
-			result->m_toString = (char *)input.m_str;
-			result->m_toStringDealloc = NULL;
-		}
+	if (!jdomparser_feed(&parser, input.m_str, input.m_len) || !jdomparser_end((&parser))) {
+		jdomparser_deinit(&parser);
+		return jinvalid();
 	}
 
-	return result;
-}
+	jvalue_ref jval = jdomparser_get_result(&parser);
 
-jvalue_ref jdom_parse(raw_buffer input, JDOMOptimizationFlags optimizationMode, JSchemaInfoRef schemaInfo)
-{
-	return jdom_parse_ex(input, optimizationMode, schemaInfo, false);
+	jdomparser_deinit(&parser);
+
+	return jval;
 }
 
 jvalue_ref jdom_parse_file(const char *file, JSchemaInfoRef schemaInfo, JFileOptimizationFlags flags)
@@ -482,17 +441,6 @@ void* jsax_getContext(JSAXContextRef saxCtxt)
 {
 	return saxCtxt->ctxt;
 }
-
-typedef struct __JSAXContext PJSAXContext;
-
-static PJSAXCallbacks no_callbacks = { 0 };
-
-#define DEREF_CALLBACK(callback, ...) \
-	do { \
-		if (callback != NULL) return callback(__VA_ARGS__); \
-		return 1; \
-	} while (0)
-
 
 int my_bounce_start_map(void *ctxt)
 {
@@ -791,7 +739,7 @@ static Notification jparse_notification =
 
 static bool handle_yajl_error(yajl_status parseResult,
                               yajl_handle handle,
-                              raw_buffer input,
+                              const char *buf, int buf_len,
                               JSchemaInfoRef schemaInfo,
                               PJSAXContext *internalCtxt)
 {
@@ -805,7 +753,7 @@ static bool handle_yajl_error(yajl_status parseResult,
 		{
 			return false;
 		}
-		PJ_LOG_WARN("Client claims they handled an unknown error in '%.*s'", (int)input.m_len, input.m_str);
+		PJ_LOG_WARN("Client claims they handled an unknown error in '%.*s'", (int)buf_len, buf);
 		return true;
 #if YAJL_VERSION < 20000
 	case yajl_status_insufficient_data:
@@ -814,12 +762,12 @@ static bool handle_yajl_error(yajl_status parseResult,
 		{
 			return false;
 		}
-		PJ_LOG_WARN("Client claims they handled incomplete JSON input provided '%.*s'", (int)input.m_len, input.m_str);
+		PJ_LOG_WARN("Client claims they handled incomplete JSON input provided '%.*s'", (int)buf_len, buf);
 		return true;
 #endif
 	case yajl_status_error:
 	default:
-		internalCtxt->errorDescription = (char*)yajl_get_error(handle, 1, (unsigned char *)input.m_str, input.m_len);;
+		internalCtxt->errorDescription = (char*)yajl_get_error(handle, 1, (unsigned char *)buf, buf_len);
 		if (!schemaInfo || !schemaInfo->m_errHandler ||
 		    !schemaInfo->m_errHandler->m_unknown(schemaInfo->m_errHandler->m_ctxt, internalCtxt))
 		{
@@ -828,139 +776,325 @@ static bool handle_yajl_error(yajl_status parseResult,
 		}
 		yajl_free_error(handle, (unsigned char*)internalCtxt->errorDescription);
 
-		PJ_LOG_WARN("Client claims they handled an unknown error in '%.*s'", (int)input.m_len, input.m_str);
+		PJ_LOG_WARN("Client claims they handled an unknown error in '%.*s'", (int)buf_len, buf);
 		return true;
 	}
 }
 
-static bool jsax_parse_internal(PJSAXCallbacks *parser,
+static bool jsax_parse_internal(PJSAXCallbacks *callbacks,
                                 raw_buffer input,
                                 JSchemaInfoRef schemaInfo,
-                                void **ctxt,
-                                bool logError,
-                                bool comments)
+                                void **callback_ctxt)
 {
-	yajl_status parseResult;
+	struct jsaxparser parser;
+	if (!jsaxparser_init(&parser, schemaInfo, callbacks, callback_ctxt))
+		return false;
 
-	PJ_LOG_TRACE("Parsing '%.*s'", RB_PRINTF(input));
-
-	if (parser == NULL)
-		parser = &no_callbacks;
-
-	yajl_callbacks yajl_cb =
-	{
-		(pj_yajl_null)parser->m_null, // yajl_null
-		(pj_yajl_boolean)parser->m_boolean, // yajl_boolean
-		NULL, // yajl_integer
-		NULL, // yajl_double
-		(pj_yajl_number)parser->m_number, // yajl_number
-		(pj_yajl_string)parser->m_string, // yajl_stirng
-		(pj_yajl_start_map)parser->m_objStart, // yajl_start_map
-		(pj_yajl_map_key)parser->m_objKey, // yajl_map_key
-		(pj_yajl_end_map)parser->m_objEnd, // yajl_end_map
-		(pj_yajl_start_array)parser->m_arrStart, // yajl_start_array
-		(pj_yajl_end_array)parser->m_arrEnd, // yajl_end_array
-	};
-
-	Validator *validator = NOTHING_VALIDATOR;
-	UriResolver *uri_resolver = NULL;
-	if (schemaInfo->m_schema)
-	{
-		validator = schemaInfo->m_schema->validator;
-		uri_resolver = schemaInfo->m_schema->uri_resolver;
+	if (!jsaxparser_feed(&parser, input.m_str, input.m_len) || !jsaxparser_end(&parser)) {
+		jsaxparser_deinit(&parser);
+		return false;
 	}
 
-	if (uri_resolver)
-	{
-		if (!jschema_resolve(schemaInfo))
-			return false;
-	}
+	jsaxparser_deinit(&parser);
 
-	ValidationState validation_state = { 0 };
-	validation_state_init(&validation_state,
-	                      validator,
-	                      uri_resolver,
-	                      &jparse_notification);
-
-	PJSAXContext internalCtxt =
-	{
-		.ctxt = (ctxt != NULL ? *ctxt : NULL),
-		.m_handlers = &yajl_cb,
-		.m_errors = schemaInfo->m_errHandler,
-		.m_error_code = 0,
-		.errorDescription = NULL,
-		.validation_state = &validation_state,
-	};
-
-#if YAJL_VERSION < 20000
-	yajl_parser_config yajl_opts =
-	{
-		comments,
-		0, // currently only UTF-8 will be supported for input.
-	};
-
-	yajl_handle handle = yajl_alloc(&my_bounce, &yajl_opts, NULL, &internalCtxt);
-#else
-	yajl_handle handle = yajl_alloc(&my_bounce, NULL, &internalCtxt);
-
-	yajl_config(handle, yajl_allow_comments, comments ? 1 : 0);
-
-	// currently only UTF-8 will be supported for input.
-	yajl_config(handle, yajl_dont_validate_strings, 0);
-#endif // YAJL_VERSION
-	parseResult = yajl_parse(handle, (unsigned char *)input.m_str, input.m_len);
-	if (ctxt != NULL)
-	{
-		*ctxt = jsax_getContext(&internalCtxt);
-	}
-
-	if (
-#if YAJL_VERSION < 20000
-	    yajl_status_insufficient_data != parseResult &&
-#endif // YAJL_VERSION
-	    !handle_yajl_error(parseResult,
-	                       handle,
-	                       input,
-	                       schemaInfo,
-	                       &internalCtxt))
-		goto parse_failure;
-
-#if YAJL_VERSION < 20000
-	parseResult = yajl_parse_complete(handle);
-#else
-	parseResult = yajl_complete_parse(handle);
-#endif // YAJL_VERSION
-	if (!handle_yajl_error(parseResult,
-	                       handle,
-	                       input,
-	                       schemaInfo,
-	                       &internalCtxt))
-		goto parse_failure;
-
-
-	validation_state_clear(&validation_state);
-	yajl_free(handle);
 	return true;
-
-parse_failure:
-	if (UNLIKELY(logError))
-	{
-		unsigned char *errMsg = yajl_get_error(handle, 1, (unsigned char *)input.m_str, input.m_len);
-		PJ_LOG_WARN("Parser reason for failure:\n'%s'", errMsg);
-		yajl_free_error(handle, errMsg);
-	}
-	validation_state_clear(&validation_state);
-	yajl_free(handle);
-	return false;
 }
 
-bool jsax_parse_ex(PJSAXCallbacks *parser, raw_buffer input, JSchemaInfoRef schemaInfo, void **ctxt, bool logError)
+bool jsax_parse_ex(PJSAXCallbacks *parser, raw_buffer input, JSchemaInfoRef schemaInfo, void **ctxt)
 {
-	return jsax_parse_internal(parser, input, schemaInfo, ctxt, logError, false);
+	return jsax_parse_internal(parser, input, schemaInfo, ctxt);
 }
 
 bool jsax_parse(PJSAXCallbacks *parser, raw_buffer input, JSchemaInfoRef schema)
 {
-	assert(schema != NULL);
-	return jsax_parse_ex(parser, input, schema, NULL, false);
+	return jsax_parse_ex(parser, input, schema, NULL);
+}
+
+static bool err_parser(void *ctxt, JSAXContextRef parseCtxt)
+{
+	struct jsaxparser *parser = (struct jsaxparser*)ctxt;
+	if (parser && parser->schemaInfo && parser->schemaInfo->m_errHandler && parser->schemaInfo->m_errHandler->m_parser)
+		parser->schemaInfo->m_errHandler->m_parser(parser->schemaInfo->m_errHandler->m_ctxt, parseCtxt);
+	return false;
+}
+
+static bool err_schema(void *ctxt, JSAXContextRef parseCtxt)
+{
+	struct jsaxparser *parser = (struct jsaxparser *)ctxt;
+	if (parser && parser->schemaInfo && parser->schemaInfo->m_errHandler && parser->schemaInfo->m_errHandler->m_schema)
+		parser->schemaInfo->m_errHandler->m_schema(parser->schemaInfo->m_errHandler->m_ctxt, parseCtxt);
+
+	if (parser->schemaError) {
+		g_free(parser->schemaError);
+		parser->schemaError = NULL;
+	}
+
+	const char *errorDescription = ValidationGetErrorMessage(parseCtxt->m_error_code);
+	if (errorDescription) {
+		parser->schemaError = g_strdup_printf("Schema error: %s", errorDescription);
+	}
+
+	return false;
+}
+
+static bool err_unknown(void *ctxt, JSAXContextRef parseCtxt)
+{
+	struct jsaxparser *parser = (struct jsaxparser *)ctxt;
+	if (parser && parser->schemaInfo && parser->schemaInfo->m_errHandler && parser->schemaInfo->m_errHandler->m_unknown)
+		parser->schemaInfo->m_errHandler->m_unknown(parser->schemaInfo->m_errHandler->m_ctxt, parseCtxt);
+
+	return false;
+}
+
+jsaxparser_ref jsaxparser_alloc_memory()
+{
+	return malloc(sizeof(struct jsaxparser));
+}
+
+void jsaxparser_free_memory(jsaxparser_ref parser)
+{
+	free(parser);
+}
+
+jsaxparser_ref jsaxparser_create(JSchemaInfoRef schemaInfo, PJSAXCallbacks *callback, void *callback_ctxt)
+{
+	jsaxparser_ref parser = jsaxparser_alloc_memory();
+	if (parser) {
+		if (!jsaxparser_init(parser, schemaInfo, callback, callback_ctxt)) {
+			jsaxparser_free_memory(parser);
+			parser = NULL;
+		}
+	}
+
+	return parser;
+}
+
+void jsaxparser_release(jsaxparser_ref *parser)
+{
+	jsaxparser_deinit(*parser);
+	jsaxparser_free_memory(*parser);
+}
+
+bool jsaxparser_init(jsaxparser_ref parser, JSchemaInfoRef schemaInfo, PJSAXCallbacks *callback, void *callback_ctxt)
+{
+	memset(parser, 0, sizeof(struct jsaxparser));
+
+	if (callback == NULL)
+		callback = &no_callbacks;
+
+	parser->yajl_cb.yajl_null = (pj_yajl_null)callback->m_null;
+	parser->yajl_cb.yajl_boolean = (pj_yajl_boolean)callback->m_boolean;
+	parser->yajl_cb.yajl_integer = NULL;
+	parser->yajl_cb.yajl_double = NULL;
+	parser->yajl_cb.yajl_number = (pj_yajl_number)callback->m_number;
+	parser->yajl_cb.yajl_string = (pj_yajl_string)callback->m_string;
+	parser->yajl_cb.yajl_start_map = (pj_yajl_start_map)callback->m_objStart;
+	parser->yajl_cb.yajl_map_key = (pj_yajl_map_key)callback->m_objKey;
+	parser->yajl_cb.yajl_end_map = (pj_yajl_end_map)callback->m_objEnd;
+	parser->yajl_cb.yajl_start_array = (pj_yajl_start_array)callback->m_arrStart;
+	parser->yajl_cb.yajl_end_array = (pj_yajl_end_array)callback->m_arrEnd;
+
+	parser->schemaInfo = schemaInfo;
+	parser->validator = NOTHING_VALIDATOR;
+	parser->uri_resolver = NULL;
+	if (schemaInfo && schemaInfo->m_schema)
+	{
+		parser->validator = schemaInfo->m_schema->validator;
+		parser->uri_resolver = schemaInfo->m_schema->uri_resolver;
+	}
+
+	if (parser->uri_resolver && !jschema_resolve(schemaInfo)) {
+		return false;
+	}
+
+	parser->errorHandler.m_parser = err_parser;
+	parser->errorHandler.m_schema = err_schema;
+	parser->errorHandler.m_unknown = err_unknown;
+	parser->errorHandler.m_ctxt = parser;
+
+	validation_state_init(&(parser->validation_state),
+	                        parser->validator,
+	                        parser->uri_resolver,
+	                        &jparse_notification);
+
+	PJSAXContext __internalCtxt =
+	{
+		.ctxt = (callback_ctxt != NULL ? callback_ctxt : NULL),
+		.m_handlers = &parser->yajl_cb,
+		.m_errors = &parser->errorHandler,
+		.m_error_code = 0,
+		.errorDescription = NULL,
+		.validation_state = &parser->validation_state,
+	};
+	parser->internalCtxt = __internalCtxt;
+
+#if YAJL_VERSION < 20000
+	yajl_parser_config yajl_opts =
+	{
+		false,
+		0, // currently only UTF-8 will be supported for input.
+	};
+
+	parser->handle = yajl_alloc(&my_bounce, &yajl_opts, NULL, &parser->internalCtxt);
+#else
+	parser->handle = yajl_alloc(&my_bounce, NULL, &parser->internalCtxt);
+
+	// currently only UTF-8 will be supported for input.
+	yajl_config(parser->handle, yajl_dont_validate_strings, 0);
+#endif // YAJL_VERSION
+
+	return true;
+}
+
+static bool jsaxparser_process_error(jsaxparser_ref parser, const char *buf, int buf_len, bool final_stage)
+{
+	if (
+#if YAJL_VERSION < 20000
+		(final_stage || yajl_status_insufficient_data != parser->status) &&
+#endif
+		!handle_yajl_error(parser->status, parser->handle, buf, buf_len, parser->schemaInfo, &parser->internalCtxt) )
+	{
+		if (parser->yajlError) {
+			yajl_free_error(parser->handle, (unsigned char*)parser->yajlError);
+			parser->yajlError = NULL;
+		}
+		parser->yajlError = (char*)yajl_get_error(parser->handle, 1, (unsigned char*)buf, buf_len);
+		return false;
+	}
+
+	return true;
+}
+
+const char *jsaxparser_get_error(jsaxparser_ref parser)
+{
+	SANITY_CHECK_POINTER(parser);
+
+	if (parser->schemaError)
+		return parser->schemaError;
+
+	if (parser->yajlError)
+		return parser->yajlError;
+
+	return NULL;
+}
+
+bool jsaxparser_feed(jsaxparser_ref parser, const char *buf, int buf_len)
+{
+	parser->status = yajl_parse(parser->handle, (unsigned char *)buf, buf_len);
+
+	return jsaxparser_process_error(parser, buf, buf_len, false);
+}
+
+bool jsaxparser_end(jsaxparser_ref parser)
+{
+#if YAJL_VERSION < 20000
+	parser->status = yajl_parse_complete(parser->handle);
+#else
+	parser->status = yajl_complete_parse(parser->handle);
+#endif
+
+	return jsaxparser_process_error(parser, "", 0, true);
+}
+
+void jsaxparser_deinit(jsaxparser_ref parser)
+{
+	if (parser->yajlError) {
+		yajl_free_error(parser->handle, (unsigned char*)parser->yajlError);
+		parser->yajlError = NULL;
+	}
+
+	if (parser->schemaError) {
+		g_free(parser->schemaError);
+		parser->schemaError = NULL;
+	}
+
+	validation_state_clear(&parser->validation_state);
+
+	if (parser->handle) {
+		yajl_free(parser->handle);
+		parser->handle = NULL;
+	}
+}
+
+static void *jsaxparser_get_sax_context(jsaxparser_ref parser)
+{
+	SANITY_CHECK_POINTER(parser);
+	return jsax_getContext(&parser->internalCtxt);
+}
+
+jdomparser_ref jdomparser_alloc_memory()
+{
+	return malloc(sizeof(struct jdomparser));
+}
+
+void jdomparser_free_memory(jdomparser_ref parser)
+{
+	free(parser);
+}
+
+jdomparser_ref jdomparser_create(JSchemaInfoRef schemaInfo, JDOMOptimizationFlags optimizationMode)
+{
+	jdomparser_ref parser = jdomparser_alloc_memory();
+	if (parser) {
+		if (!jdomparser_init(parser, schemaInfo, optimizationMode)) {
+			jdomparser_free_memory(parser);
+			parser = NULL;
+		}
+	}
+
+	return parser;
+}
+
+void jdomparser_release(jdomparser_ref *parser)
+{
+	jdomparser_deinit(*parser);
+	jdomparser_free_memory(*parser);
+}
+
+bool jdomparser_init(jdomparser_ref parser, JSchemaInfoRef schemaInfo, JDOMOptimizationFlags optimizationMode)
+{
+	memset(parser, 0, sizeof(struct jdomparser));
+
+	parser->callbacks.m_objStart    = dom_object_start;
+	parser->callbacks.m_objKey      = dom_object_key;
+	parser->callbacks.m_objEnd      = dom_object_end;
+	parser->callbacks.m_arrStart    = dom_array_start;
+	parser->callbacks.m_arrEnd      = dom_array_end;
+	parser->callbacks.m_string      = dom_string;
+	parser->callbacks.m_number      = dom_number;
+	parser->callbacks.m_boolean     = dom_boolean;
+	parser->callbacks.m_null        = dom_null;
+
+	return jsaxparser_init(&parser->saxparser, schemaInfo, &parser->callbacks, &parser->topLevelContext);
+}
+
+bool jdomparser_feed(jdomparser_ref parser, const char *buf, int buf_len)
+{
+	return jsaxparser_feed(&parser->saxparser, buf, buf_len);
+}
+
+bool jdomparser_end(jdomparser_ref parser)
+{
+	return jsaxparser_end(&parser->saxparser);
+}
+
+void jdomparser_deinit(jdomparser_ref parser)
+{
+	if (jsaxparser_get_sax_context(&parser->saxparser) != &parser->topLevelContext) {
+		dom_cleanup(jsaxparser_get_sax_context(&parser->saxparser), &parser->topLevelContext);
+	}
+
+	j_release(&parser->topLevelContext.m_value);
+
+	jsaxparser_deinit(&parser->saxparser);
+}
+
+const char *jdomparser_get_error(jdomparser_ref parser)
+{
+	return jsaxparser_get_error(&parser->saxparser);
+}
+
+jvalue_ref jdomparser_get_result(jdomparser_ref parser)
+{
+	return jvalue_copy(parser->topLevelContext.m_value);
 }

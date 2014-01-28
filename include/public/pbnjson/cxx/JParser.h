@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -78,6 +78,41 @@ public:
 	JErrorHandler* getErrorHandler() const;
 	ParserPosition getPosition() const;
 
+	/**
+	 * @brief begin Prepare class to parse json from stream
+	 * @param schema Schema to validate
+	 * @param errors Custom error callbacks
+	 * @return false on error
+	 */
+	bool begin(const JSchema &schema, JErrorHandler *errors = NULL);
+
+	/**
+	 * @brief feed parse input json chunk by chunk
+	 * @param buf input buffer
+	 * @param length input buffer size
+	 * @return false on error
+	 */
+	bool feed(const char *buf, int length);
+
+	/**
+	 * @brief feed parse input json chunk by chunk
+	 * @param data input buffer
+	 * @return false on error
+	 */
+	bool feed(const std::string &data) { return feed(data.data(), data.size()); }
+
+	/**
+	 * @brief end Finalize stream parsing. Final schema checks
+	 * @return false on error
+	 */
+	bool end();
+
+	/**
+	 * @brief getError Rreturn error description if any of begin, feed or end has returned false
+	 * @return error description
+	 */
+	char const *getError();
+
 protected:
 	class DocumentState {
 	public:
@@ -87,16 +122,6 @@ protected:
 	protected:
 		DocumentState();
 	};
-
-	bool haveKeys() const { return m_keyStack.empty(); }
-	void pushKey(const std::string& key) { m_keyStack.push(key); }
-	const std::string& peekKey() const { return m_keyStack.top(); }
-	std::string popKey() { std::string top = peekKey(); m_keyStack.pop(); return top; }
-
-	bool haveState() const { return m_stateStack.empty(); }
-	void pushState(const DocumentState& state) { m_stateStack.push(state); }
-	const DocumentState& peekState() const { return m_stateStack.top(); }
-	DocumentState popState() { DocumentState top = peekState(); m_stateStack.pop(); return top; }
 
 	/*
 	 * By default, this parser will not parse any input.  You must override
@@ -190,12 +215,21 @@ protected:
 protected:
 	std::auto_ptr<JSchemaResolverWrapper> m_resolverWrapper;
 
+	JSchema schema;
+	JSchemaInfo schemaInfo;
+	JErrorCallbacks errorHandler;
+	JSchemaResolver externalRefResolver;
+
+	JSchemaInfo prepare(const JSchema &schema, JSchemaResolver &resolver, JErrorCallbacks &cErrCbs, JErrorHandler *errors);
+	JSchemaResolver prepareResolver() const;
+
 private:
-	std::stack<std::string> m_keyStack;
-	std::stack<DocumentState> m_stateStack;
 	JErrorHandler* m_errors;
 
 	friend class SaxBounce;
+	jsaxparser_ref parser;
+
+	JErrorCallbacks prepareCErrorCallbacks();
 };
 
 }

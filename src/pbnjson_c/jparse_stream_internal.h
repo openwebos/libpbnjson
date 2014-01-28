@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,9 +24,10 @@
 #include <jparse_stream.h>
 #include "yajl_compat.h"
 #include "jschema_types_internal.h"
-
-PJSON_LOCAL jvalue_ref jdom_parse_ex(raw_buffer input, JDOMOptimizationFlags optimizationMode, JSchemaInfoRef schemaInfo, bool allowComments);
-
+#include "validation/validation_state.h"
+#include "validation/validation_event.h"
+#include "validation/validation_api.h"
+#include "validation/nothing_validator.h"
 
 int dom_null(JSAXContextRef ctxt);
 int dom_boolean(JSAXContextRef ctxt, bool value);
@@ -37,7 +38,6 @@ int dom_object_key(JSAXContextRef ctxt, const char *key, size_t keyLen);
 int dom_object_end(JSAXContextRef ctxt);
 int dom_array_start(JSAXContextRef ctxt);
 int dom_array_end(JSAXContextRef ctxt);
-void dom_cleanup_from_jsax(JSAXContextRef ctxt);
 
 int my_bounce_start_map(void *ctxt);
 int my_bounce_map_key(void *ctxt, const unsigned char *str, yajl_size_t strLen);
@@ -76,5 +76,93 @@ typedef struct DomInfo {
 	 */
 	jvalue_ref m_value;
 } DomInfo;
+
+typedef struct __JSAXContext PJSAXContext;
+
+struct jsaxparser {
+	yajl_handle handle;
+	PJSAXContext internalCtxt;
+	yajl_callbacks yajl_cb;
+	Validator *validator;
+	UriResolver *uri_resolver;
+	ValidationState validation_state;
+	yajl_status status;
+	JSchemaInfoRef schemaInfo;
+	struct JErrorCallbacks errorHandler;
+	char *schemaError;
+	char *yajlError;
+};
+
+struct jdomparser {
+	struct jsaxparser saxparser;
+	PJSAXCallbacks callbacks;
+	DomInfo topLevelContext;
+};
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @brief jsaxparser_alloc_memory Create SAX parser
+ * @return pointer to SAX parser
+ */
+jsaxparser_ref jsaxparser_alloc_memory();
+
+/**
+ * @brief jsaxparser_init Initialize SAX stream parser
+ * @param parser Parser to intialize
+ * @param schemaInfo The schema to use for validation of the input, along with any other callbacks necessary (such as schema resolver,
+ *                   error handler).
+ * @param callback A pointer to a SAXCallbacks structure with pointers to functions that handle the appropriate
+ *                 parsing events.
+ * @param callback_ctxt Context that will be returned in callbacks
+ * @return false on error
+ */
+bool jsaxparser_init(jsaxparser_ref parser, JSchemaInfoRef schemaInfo, PJSAXCallbacks *callback, void *callback_ctxt);
+
+/**
+ * @brief jsaxparser_deinit Deinitialize SAX parser
+ * @param parser Pointer to SAX parser
+ */
+void jsaxparser_deinit(jsaxparser_ref parser);
+
+/**
+ * @brief jsaxparser_free_memory Release SAX parser created by jsaxparser_alloc_memory
+ * @param parser Pointer to SAX parser
+ */
+void jsaxparser_free_memory(jsaxparser_ref parser);
+
+/**
+ * @brief jdomparser_alloc_memory Create DOM parser
+ * @return pointer to DOM parser
+ */
+jdomparser_ref jdomparser_alloc_memory();
+
+/**
+ * @brief jdomparser_init Initialize DOM stream parser
+ * @param parser Parser to intialize
+ * @param schemaInfo The schema to use for validation of the input, along with any other callbacks necessary (such as schema resolver,
+ *                   error handler).
+ * @param optimizationMode Optimization flags
+ * @return false on error
+ */
+bool jdomparser_init(jdomparser_ref parser, JSchemaInfoRef schemaInfo, JDOMOptimizationFlags optimizationMode);
+
+/**
+ * @brief jdomparser_deinit Deinitialize DOM parser
+ * @param parser Pointer to DOM parser
+ */
+void jdomparser_deinit(jdomparser_ref parser);
+
+/**
+ * @brief jdomparser_free_memory Release DOM parser created by jdomparser_alloc_memory
+ * @param parser Pointer to DOM parser
+ */
+void jdomparser_free_memory(jdomparser_ref parser);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* JPARSE_STREAM_INTERNAL_H_ */

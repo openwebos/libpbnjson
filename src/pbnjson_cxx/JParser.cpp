@@ -1,6 +1,6 @@
 /* @@@LICENSE
 *
-*      Copyright (c) 2012-2013 LG Electronics, Inc.
+*      Copyright (c) 2012-2014 LG Electronics, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ LICENSE@@@ */
 #include <JResolver.h>
 #include <JSchemaResolverWrapper.h>
 #include "liblog.h"
+#include "../pbnjson_c/jparse_stream_internal.h"
 
 namespace pbnjson {
 
@@ -91,9 +92,11 @@ static int __number(JSAXContextRef ctxt, const char *number, size_t len)
 			ConversionResultFlags toFloatErrors;
 
 			if (CONV_OK == jnumber_get_i64(toConv, &asInteger)) {
+				j_release(&toConv);
 				return SaxBounce::n(p, (asInteger));
 			}
 			toFloatErrors = jnumber_get_f64(toConv, &asFloat);
+			j_release(&toConv);
 			return SaxBounce::n(p, asFloat, toFloatErrors);
 		}
 		default:
@@ -112,7 +115,13 @@ static int __jnull(JSAXContextRef ctxt)
 	return SaxBounce::N(static_cast<JParser *>(jsax_getContext(ctxt)));
 }
 
-static bool __err_parser(void *ctxt, JSAXContextRef parseCtxt)
+static PJSAXCallbacks callbacks = {
+	__obj_start, __obj_key, __obj_end, __arr_start, __arr_end, __string, __number, __boolean, __jnull,
+};
+
+namespace {
+
+bool ErrorCallbackParser(void *ctxt, JSAXContextRef parseCtxt)
 {
 	JParser *parser = static_cast<JParser *>(jsax_getContext(parseCtxt));
 	JErrorHandler* handler = static_cast<JErrorHandler *>(ctxt);
@@ -121,7 +130,7 @@ static bool __err_parser(void *ctxt, JSAXContextRef parseCtxt)
 	return false;
 }
 
-static bool __err_schema(void *ctxt, JSAXContextRef parseCtxt)
+bool ErrorCallbackSchema(void *ctxt, JSAXContextRef parseCtxt)
 {
 	JParser *parser = static_cast<JParser *>(jsax_getContext(parseCtxt));
 	JErrorHandler* handler = static_cast<JErrorHandler *>(ctxt);
@@ -130,13 +139,15 @@ static bool __err_schema(void *ctxt, JSAXContextRef parseCtxt)
 	return false;
 }
 
-static bool __err_unknown(void *ctxt, JSAXContextRef parseCtxt)
+bool ErrorCallbackUnknown(void *ctxt, JSAXContextRef parseCtxt)
 {
 	JParser *parser = static_cast<JParser *>(jsax_getContext(parseCtxt));
 	JErrorHandler* handler = static_cast<JErrorHandler *>(ctxt);
 	if (handler)
 		handler->misc(parser, "unknown error parsing");
 	return false;
+}
+
 }
 
 static inline raw_buffer strToRawBuffer(const std::string& str)
@@ -146,51 +157,115 @@ static inline raw_buffer strToRawBuffer(const std::string& str)
 
 JParser::JParser(JResolver* schemaResolver)
 	: m_resolverWrapper(new JSchemaResolverWrapper(schemaResolver))
+	, schema(JSchema::AllSchema())
 	, m_errors(NULL)
+	, parser(NULL)
 {
 }
 
 JParser::JParser(const JParser& other)
 	: m_resolverWrapper(new JSchemaResolverWrapper(*other.m_resolverWrapper))
-	, m_keyStack(other.m_keyStack)
-	, m_stateStack(other.m_stateStack)
+	, schema(JSchema::AllSchema())
 	, m_errors(other.m_errors)
+	, parser(NULL)
 {
 }
 
 JParser::~JParser()
 {
+	if (parser) {
+		jsaxparser_deinit(parser);
+		jsaxparser_free_memory(parser);
+	}
+}
+
+JSchemaInfo JParser::prepare(const JSchema& schema, JSchemaResolver& resolver, JErrorCallbacks& cErrCbs, JErrorHandler *errors)
+{
+	JSchemaInfo schemaInfo;
+
+	jschema_info_init(&schemaInfo,
+	                  schema.peek(),
+	                  &resolver,
+	                  &cErrCbs);
+
+	setErrorHandlers(errors);
+
+	return schemaInfo;
+}
+
+
+JSchemaResolver JParser::prepareResolver() const
+{
+	JSchemaResolver resolver;
+	resolver.m_resolve = &(m_resolverWrapper->sax_schema_resolver);
+	resolver.m_userCtxt = m_resolverWrapper.get();
+	return resolver;
+}
+
+JErrorCallbacks JParser::prepareCErrorCallbacks()
+{
+	/*
+	*  unfortunately, I can't see a way to re-use the C++ sax parsing code
+	*  while at the same time using the C code that builds the DOM.
+	*/
+	JErrorCallbacks cErrCallbacks;
+	cErrCallbacks.m_parser = ErrorCallbackParser;
+	cErrCallbacks.m_schema = ErrorCallbackSchema;
+	cErrCallbacks.m_unknown = ErrorCallbackUnknown;
+	cErrCallbacks.m_ctxt = this;
+	return cErrCallbacks;
+}
+
+bool JParser::begin(const JSchema &_schema, JErrorHandler *errors)
+{
+	if (parser)
+		jsaxparser_deinit(parser);
+	else {
+		parser = jsaxparser_alloc_memory();
+	}
+		
+	schema = _schema;
+	externalRefResolver = prepareResolver();
+	errorHandler = prepareCErrorCallbacks();
+	schemaInfo = prepare(schema, externalRefResolver, errorHandler, errors);
+	jschema_info_init(&schemaInfo, schema.peek(), &externalRefResolver, &errorHandler);
+
+	return jsaxparser_init(parser, &schemaInfo, &callbacks, this);
+}
+
+bool JParser::feed(const char *buf, int length)
+{
+	return jsaxparser_feed(parser, buf, length);
+}
+
+bool JParser::end()
+{
+	return jsaxparser_end(parser);
+}
+
+char const *JParser::getError()
+{
+	return jsaxparser_get_error(parser);
 }
 
 bool JParser::parse(const std::string& input, const JSchema& schema, JErrorHandler *errors)
 {
-	PJSAXCallbacks callbacks = {
-		__obj_start, __obj_key, __obj_end, __arr_start, __arr_end, __string, __number, __boolean, __jnull,
-	};
+	jsaxparser_ref prev = parser;
 
-	JErrorCallbacks errorHandler;
-	errorHandler.m_parser = __err_parser;
-	errorHandler.m_schema = __err_schema;
-	errorHandler.m_unknown = __err_unknown;
-	errorHandler.m_ctxt = errors;
+	jsaxparser parser_memory;
+	memset(&parser_memory, 0, sizeof(jsaxparser));
+	parser = &parser_memory;
 
-	JSchemaResolver externalRefResolver;
-	externalRefResolver.m_resolve = NULL;
-	externalRefResolver.m_userCtxt = this;
-
-	JSchemaInfo schemaInfo;
-	jschema_info_init(&schemaInfo, schema.peek(), &externalRefResolver, &errorHandler);
-
-	void *ctxt = this;
-	m_errors = errors;
-	bool parsed = jsax_parse_ex(&callbacks, strToRawBuffer(input), &schemaInfo, &ctxt, false);
-
-	if (!parsed) {
-		if (errors) errors->parseFailed(this, "");
-		return false;
+	if (begin(schema, errors) && feed(input) && end()) {
+		jsaxparser_deinit(parser);
+		parser = prev;
+		return true;
 	}
 
-	return true;
+	jsaxparser_deinit(parser);
+	parser = prev;
+
+	return false;
 }
 
 JErrorHandler* JParser::errorHandlers() const

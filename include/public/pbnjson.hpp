@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -156,8 +156,54 @@
 	std::cout << parsed["guess"].asNumber<double>() << std::endl; // this is always guaranteed to print a number between 1 & 10.  no additional validation necessary within the code.
 	std::cout << parsed["cheat"].asBool() << std::endl; // this will print the value of cheat (if cheat isn't present or isn't a boolean, this will print false)
 }
-
 @endcode
+
+@section PBNJSONCPP_STREAM_PARSERS Stream parsers
+The library is able to parse input json data from stream e.g chuck by chunk
+It could be used when there is no possibility to load entire json into memory.
+The following examples will show how to use it.
+
+@subsection PBNJSONCPP_STREAM_PARSERS_DOM Example of usage of stream DOM parser:
+@code
+#include <pbnjson.hpp>
+#include <string>
+#include <iostream>
+
+int main(int argc, char *argv[]) {
+
+	std::string input("{\"number\":1, \"str\":\"asd\"}");
+
+	// Create a new parser, use default schema
+	pbnjson::JDomParser parser(NULL);
+
+	// Start stream parsing
+	if (!parser.begin(JSchema::AllSchema())) {
+		char const *error = parser.getError();
+		return 1;
+	}
+
+	// parse input data part by part. Parts can be of any size, in this example it will be one byte.
+	// Actually all data, that is available for the moment of call Parse, should be passed. It
+	// will increase performance.
+	for (std::string::const_iterator i = input.begin(); i != input.end() ; ++i) {
+		if (!parser.feed(&(*i), 1)) {
+			char const *error = parser.getError();
+			return 1;
+		}
+	}
+
+	if (!parser.end()) {
+		const char *error = parser.getError();
+		return 1;
+	}
+
+	// Get root JValue
+	pbnjson::JValue json = parser.getDom();
+
+	return 0;
+}
+@endcode
+
  */
 
 #include "pbnjson/cxx/japi.h"

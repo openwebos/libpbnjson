@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@
 #include "JSchemaResolverWrapper.h"
 #include "../pbnjson_c/jschema_types_internal.h"
 #include "../pbnjson_c/validation/error_code.h"
+#include "../pbnjson_c/jparse_stream_internal.h"
 
 #include <JResolver.h>
 
@@ -34,7 +35,9 @@ static inline raw_buffer strToRawBuffer(const std::string& str)
 	return j_str_to_buffer(str.c_str(), str.length());
 }
 
-static bool __err_parser(void *ctxt, JSAXContextRef parseCtxt)
+namespace {
+
+bool ErrorCallbackParser(void *ctxt, JSAXContextRef parseCtxt)
 {
 	JDomParser *parser = static_cast<JDomParser *>(ctxt);
 	JErrorHandler* handler = parser->getErrorHandler();
@@ -43,7 +46,7 @@ static bool __err_parser(void *ctxt, JSAXContextRef parseCtxt)
 	return false;
 }
 
-static bool __err_schema(void *ctxt, JSAXContextRef parseCtxt)
+bool ErrorCallbackSchema(void *ctxt, JSAXContextRef parseCtxt)
 {
 	JDomParser *parser = static_cast<JDomParser *>(ctxt);
 	JErrorHandler* handler = parser->getErrorHandler();
@@ -54,7 +57,7 @@ static bool __err_schema(void *ctxt, JSAXContextRef parseCtxt)
 	return false;
 }
 
-static bool __err_unknown(void *ctxt, JSAXContextRef parseCtxt)
+bool ErrorCallbackUnkown(void *ctxt, JSAXContextRef parseCtxt)
 {
 	JDomParser *parser = static_cast<JDomParser *>(ctxt);
 	JErrorHandler* handler = parser->getErrorHandler();
@@ -63,66 +66,106 @@ static bool __err_unknown(void *ctxt, JSAXContextRef parseCtxt)
 	return false;
 }
 
+} //anonymous namespace
+
 JDomParser::JDomParser(JResolver *resolver)
-	: JParser(resolver), m_optimization(DOMOPT_NOOPT)
+	: JParser(resolver)
+	, m_optimization(DOMOPT_NOOPT)
+	, parser(NULL)
 {
 }
 
 JDomParser::~JDomParser()
 {
+	if (parser) {
+		jdomparser_deinit(parser);
+		jdomparser_free_memory(parser);
+	}
 }
 
-JSchemaInfo JDomParser::prepare(const JSchema& schema, const JSchemaResolver& resolver, const JErrorCallbacks& cErrCbs, JErrorHandler *errors)
-{
-	JSchemaInfo schemaInfo;
-
-	jschema_info_init(&schemaInfo,
-	                  schema.peek(),
-	                  const_cast<JSchemaResolverRef>(&resolver),
-	                  const_cast<JErrorCallbacksRef>(&cErrCbs));
-
-	setErrorHandlers(errors);
-
-	return schemaInfo;
-}
-
-
-JSchemaResolver JDomParser::prepareResolver() const
-{
-	JSchemaResolver resolver;
-	resolver.m_resolve = &(m_resolverWrapper->sax_schema_resolver);
-	resolver.m_userCtxt = m_resolverWrapper.get();
-	return resolver;
-}
-
-JErrorCallbacks JDomParser::prepareCErrorCallbacks() const
+JErrorCallbacks JDomParser::prepareCErrorCallbacks()
 {
 	/*
  	 *  unfortunately, I can't see a way to re-use the C++ sax parsing code
  	 *  while at the same time using the C code that builds the DOM.
  	 */
 	JErrorCallbacks cErrCallbacks;
-	cErrCallbacks.m_parser = __err_parser;
-	cErrCallbacks.m_schema = __err_schema;
-	cErrCallbacks.m_unknown = __err_unknown;
-	cErrCallbacks.m_ctxt = const_cast<JDomParser *>(this);
+	cErrCallbacks.m_parser = ErrorCallbackParser;
+	cErrCallbacks.m_schema = ErrorCallbackSchema;
+	cErrCallbacks.m_unknown = ErrorCallbackUnkown;
+	cErrCallbacks.m_ctxt = this;
 	return cErrCallbacks;
 }
 
 bool JDomParser::parse(const std::string& input, const JSchema& schema, JErrorHandler *errors)
 {
-	JSchemaResolver resolver = prepareResolver();
-	JErrorCallbacks errCbs = prepareCErrorCallbacks();
-	JSchemaInfo schemaInfo = prepare(schema, resolver, errCbs, errors);
+	jdomparser_ref prev = parser;
 
-	m_dom = jdom_parse(strToRawBuffer(input), m_optimization, &schemaInfo);
+	jdomparser parser_memory;
+	memset(&parser_memory, 0, sizeof(jdomparser));
+	parser = &parser_memory;
 
-	if (m_dom.isNull()) {
-		if (errors) errors->parseFailed(this, "");
+	if (begin(schema, errors) && feed(input) && end()) {
+		jdomparser_deinit(parser);
+		parser = prev;
+		return true;
+	}
+
+	jdomparser_deinit(parser);
+	parser = prev;
+
+	return false;
+}
+
+bool JDomParser::begin(const JSchema &_schema, JErrorHandler *errors)
+{
+	if (parser)
+		jdomparser_deinit(parser);
+	else {
+		parser = jdomparser_alloc_memory();
+	}
+
+	schema = _schema;
+	externalRefResolver = prepareResolver();
+	errorHandler = prepareCErrorCallbacks();
+	schemaInfo = prepare(schema, externalRefResolver, errorHandler, errors);
+
+	return jdomparser_init(parser, &schemaInfo, m_optimization);
+}
+
+bool JDomParser::feed(const char *buf, int length)
+{
+	if (!jdomparser_feed(parser, buf, length)) {
+		if (getErrorHandler())
+			getErrorHandler()->parseFailed(this, "parseStreamFeed failed");
 		return false;
 	}
 
 	return true;
+}
+
+bool JDomParser::end()
+{
+	if (!jdomparser_end(parser)) {
+		if (getErrorHandler())
+			getErrorHandler()->parseFailed(this, "jdomparser_end failed");
+		return false;
+	}
+
+	jvalue_ref jval = jdomparser_get_result(parser);
+	if (!jis_valid(jval)) {
+		if (getErrorHandler())
+			getErrorHandler()->parseFailed(this, "parseStreamEnd failed");
+		return false;
+	}
+
+	m_dom = jval;
+	return true;
+}
+
+const char *JDomParser::getError()
+{
+	return jdomparser_get_error(parser);
 }
 
 bool JDomParser::parseFile(const std::string &file, const JSchema &schema, JFileOptimizationFlags optimization, JErrorHandler *errors)

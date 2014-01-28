@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -90,6 +90,41 @@ public:
 	bool parseFile(const std::string& file, const JSchema& schema, ::JFileOptimizationFlags optimization = JFileOptNoOpt, JErrorHandler *errors = NULL);
 
 	/**
+	 * @brief begin Prepare class to parse json from stream
+	 * @param schema Schema to validate
+	 * @param errors Custom error callbacks
+	 * @return false on error
+	 */
+	bool begin(const JSchema &schema, JErrorHandler *errors = NULL);
+
+	/**
+	 * @brief feed parse input json chunk by chunk
+	 * @param buf input buffer
+	 * @param length input buffer size
+	 * @return false on error
+	 */
+	bool feed(const char *buf, int length);
+
+	/**
+	 * @brief feed parse input json chunk by chunk
+	 * @param data input buffer
+	 * @return false on error
+	 */
+	bool feed(const std::string &data) { return feed(data.data(), data.size()); }
+
+	/**
+	 * @brief end Finalize stream parsing. Final schema checks
+	 * @return false on error
+	 */
+	bool end();
+
+	/**
+	 * @brief getError Rreturn error description if any of begin, feed, end return false;
+	 * @return error description
+	 */
+	const char *getError();
+
+	/**
 	 * Retrieve the "DOM" representation of the input that was last parsed by this object.
 	 *
 	 * @return A JValue representation of the input.
@@ -101,17 +136,14 @@ protected:
 	JParser::NumberType conversionToUse() const { return JParser::JNUM_CONV_RAW; }
 
 private:
-	JSchemaInfo prepare(const JSchema& schema, const JSchemaResolver& resolver, const JErrorCallbacks& cErrCbs, JErrorHandler *errors);
-	inline JSchemaResolver prepareResolver() const;
-	inline JErrorCallbacks prepareCErrorCallbacks() const;
-
 	bool jsonPrimitive(const JValue& created);
-
 	JSchemaResolutionResult resolve(void *resolver, jschema_ref *resolvedSchema);
+	JErrorCallbacks prepareCErrorCallbacks();
 
 	JValue m_dom;
 	JDOMOptimization m_optimization;
 	JResolver *m_resolver;
+	jdomparser_ref parser;
 
 	friend JSchemaResolutionResult dom_bounce_resolver(JSchemaResolverRef, jschema_ref *);
 };

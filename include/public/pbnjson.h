@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -157,6 +157,131 @@
 	fprintf(stdout, "The guess was %d\n", guess);
 
 	j_release(&parsed);
+@endcode
+
+@section PBNJSONC_STREAM_PARSERS Stream parsers
+The library provides two stream parsers - SAX and DOM parsers. These parsers were added to provide a mechanism to parse
+large json strings, when loading entire string in memory is not possible or is too expensive. These parsers are able to
+process incoming json string part by part(even byte by byte), so there is no need to load entire string into memeory.
+The following examples will show how to use it.
+
+@subsection PBNJSONC_STREAM_PARSERS_DOM Example of usage of stream DOM parser:
+@code
+#include <pbnjson.h>
+
+int main(int argc, char *argv[])
+{
+	const char input_json[] = "{\"number\":1, \"str\":\"asd\"}";
+
+	// initialize schema - allow everything
+	JSchemaInfo schemaInfo;
+	jschema_info_init(&schemaInfo, jschema_all(), NULL, NULL);
+
+	//create parser
+	jdomparser_ref parser = jdomparser_create(&schemaInfo, 0);
+	if (!parser)
+		return 1;
+
+	// Call jdomparser_feed for every part of incoming json string. It will be done byte by byte.
+	const char *input_json_end = input_json + strlen(input_json);
+	for (const char *i = input_json ; i != input_json_end ; ++i) {
+
+		if (!jdomparser_feed(parser, i, 1)) {
+			// Get error description
+			const char *error = jdomparser_get_error(parser);
+			break;
+		}
+	}
+
+	// Finalize parsing
+	if (!jdomparser_end(parser)) {
+		// Get error description
+		const char *error = jdomparser_get_error(parser);
+	}
+
+	// Get root of json tree
+	jvalue_ref jval = jdomparser_get_result(parser);
+
+	// Release parser
+	jdomparser_release(&parser);
+
+	// Release json object
+	j_release(&jval);
+
+	return 0;
+}
+@endcode
+
+@subsection PBNJSONC_STREAM_PARSERS_SAX Example of usage of stream SAX parser:
+@code
+#include <pbnjson.h>
+
+int on_null(JSAXContextRef ctxt) {
+	// get pointer that was passed to jsaxparser_init
+	void *orig_context = jsax_getContext(ctxt);
+
+	// return 1 to continue parsing
+	return 1;
+}
+int on_boolean(JSAXContextRef ctxt, bool value)                             {return 1;}
+int on_number(JSAXContextRef ctxt, const char *number, size_t numberLen)    {return 1;}
+int on_string(JSAXContextRef ctxt, const char *string, size_t stringLen)    {return 1;}
+int on_object_start(JSAXContextRef ctxt)                                    {return 1;}
+int on_object_key(JSAXContextRef ctxt, const char *key, size_t keyLen)      {return 1;}
+int on_object_end(JSAXContextRef ctxt)                                      {return 1;}
+int on_array_start(JSAXContextRef ctxt)                                     {return 1;}
+int on_array_end(JSAXContextRef ctxt)                                       {return 1;}
+
+int main(int argc, char *argv[])
+{
+	const char input_json[] = "{\"number\":1, \"str\":\"asd\"}";
+
+	// initialize schema - allow everything
+	JSchemaInfo schemaInfo;
+	jschema_info_init(&schemaInfo, jschema_all(), NULL, NULL);
+
+	// initialize sax callback structure.
+	PJSAXCallbacks callbacks;
+	callbacks.m_objStart    = on_object_start;
+	callbacks.m_objKey      = on_object_key;
+	callbacks.m_objEnd      = on_object_end;
+	callbacks.m_arrStart    = on_array_start;
+	callbacks.m_arrEnd      = on_array_end;
+	callbacks.m_string      = on_string;
+	callbacks.m_number      = on_number;
+	callbacks.m_boolean     = on_boolean;
+	callbacks.m_null        = on_null;
+
+	// Pointer that will be passed to callback. void * for simplicity
+	void *callback_ctxt = NULL;
+
+	//create parser
+	jsaxparser_ref parser = jsaxparser_create(&schemaInfo, &callbacks, callback_ctxt);
+	if (!parser)
+		return 1;
+
+	// Call jsaxparser_feed for every part of incoming json string. It will be done byte by byte.
+	const char *input_json_end = input_json + strlen(input_json);
+	for (const char *i = input_json ; i != input_json_end ; ++i) {
+
+		if (!jsaxparser_feed(parser, i, 1)) {
+			// Get error description
+			const char *error = jsaxparser_get_error(parser);
+			break;
+		}
+	}
+
+	if (!jsaxparser_end(parser)) {
+		// Get error description
+		const char *error = jsaxparser_get_error(parser);
+	}
+
+	// Release parser
+	jsaxparser_release(&parser);
+
+	return 0;
+}
+
 @endcode
 
  */
