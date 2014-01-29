@@ -92,6 +92,13 @@ static bool jstring_equal_internal(jvalue_ref str, jvalue_ref other) NON_NULL(1,
 static inline bool jstring_equal_internal2(jvalue_ref str, raw_buffer *other) NON_NULL(1, 2);
 static bool jstring_equal_internal3(raw_buffer *str, raw_buffer *other) NON_NULL(1, 2);
 
+static bool jis_const(jvalue_ref val)
+{
+	return val == &JNULL
+	    || UNLIKELY(val == &JEMPTY_STR.m_value)
+	;
+}
+
 bool jbuffer_equal(raw_buffer buffer1, raw_buffer buffer2)
 {
 	return buffer1.m_len == buffer2.m_len &&
@@ -115,11 +122,7 @@ jvalue_ref jvalue_copy (jvalue_ref val)
 	CHECK_POINTER_RETURN(val);
 	assert(s_inGdb || val->m_refCnt > 0);
 
-	if (val == &JNULL) {
-		return val;
-	} else if (val == &JEMPTY_STR.m_value) {
-		return val;
-	}
+	if (jis_const(val)) return val;
 
 	val->m_refCnt++;
 	TRACE_REF("inc refcnt to %d", val, val->m_refCnt);
@@ -131,7 +134,7 @@ jvalue_ref jvalue_duplicate (jvalue_ref val)
 	jvalue_ref result = val;
 	SANITY_CHECK_POINTER(val);
 
-	if (jis_null (val) || val == &JEMPTY_STR.m_value) return result;
+	if (jis_const(val)) return result;
 
 	if (jis_object (val)) {
 		result = jobject_create_hint (jobject_size (val));
@@ -225,10 +228,7 @@ void j_release (jvalue_ref *val)
 		SANITY_KILL_POINTER(*val);
 		return;
 	}
-	if (UNLIKELY(*val == &JNULL)) {
-		SANITY_KILL_POINTER(*val);
-		return;
-	} else if (UNLIKELY(*val == &JEMPTY_STR.m_value)) {
+	if (UNLIKELY(jis_const(*val))) {
 		SANITY_KILL_POINTER(*val);
 		return;
 	}
