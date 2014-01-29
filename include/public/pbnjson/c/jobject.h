@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ extern "C" {
 
 /**
  * Create - creates a JSON value with ownership given to the caller.  This call will usually only ever return NULL if memory allocation failed or a reference to a valid
- *          JSON value (never a reference to a JSON null).  Still, it is recommended to use jis_null to check the result (in fact, always use jis_null instead of actually
+ *          JSON value (never a reference to a JSON null).  Still, it is recommended to use jis_valid to check the result (in fact, always use jis_null instead of actually
  *          comparing against some value).  For instance, the creation of a number from a double might return null if you attempt to provide it with a NaN or an infinity or any other
  *          unsupported value.
  *
@@ -113,6 +113,23 @@ PJSON_API bool jvalue_equal(jvalue_ref val, jvalue_ref other) NON_NULL(1, 2);
  * @param val A pointer to a value reference to release ownership for.  In DEBUG mode, the reference is changed to some garbage value afterwards.
  */
 PJSON_API void j_release(jvalue_ref *val);
+
+/**
+ * Return a reference to a value representing an invalid JSON null value. It is
+ * redundant (but not illegal) to copy or release ownership on this reference
+ * since the implementation must guarantee that this reference has static
+ * program scope.
+ *
+ * NOTE: Do not use this to test for whether or not a
+ */
+PJSON_API jvalue_ref jinvalid() PURE_FUNC;
+
+/**
+ * Lets the caller determine whether or not the reference points to valid result
+ * @param val A reference to a JSON value
+ * @return true if val is a reference to a valid JSON value.  false otherwise
+ */
+PJSON_API bool jis_valid(jvalue_ref val);
 
 /**
  * Return a reference to a value representing a JSON null.  It is redundant (but not illegal) to copy
@@ -201,7 +218,7 @@ PJSON_API jvalue_ref jobject_create();
  * @param item A key value pair
  * @param ... The remaining jobject_key_value items.
  *
- * @return A JSON Object with the specified key-value pairs or a value for which jis_null returns true.
+ * @return A JSON Object with the specified key-value pairs or a value for which jis_invalid returns true.
  *
  * @see jobject_put
  * @see J_END_OBJ_DECL
@@ -455,7 +472,7 @@ PJSON_API ssize_t jarray_size(jvalue_ref arr) NON_NULL(1);
  *
  * @param arr The reference to the array
  * @param index The element number in the array to retrieve.
- * @return A reference to the value.  Ownership of this value remains with the parent array.  jis_null will return true on the
+ * @return A reference to the value.  Ownership of this value remains with the parent array.  jis_invalid will return true on the
  * result if the index'th element is null or invalid parameters are provided.
  */
 PJSON_API jvalue_ref jarray_get(jvalue_ref arr, ssize_t index) NON_NULL(1);

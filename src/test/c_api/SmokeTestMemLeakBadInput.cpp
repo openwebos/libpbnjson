@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ TEST(MemLeak, BadInput)
 
 	raw_buffer bad_input = J_CSTR_TO_BUF("{\"a\", [,]}");
 	jvalue_ref parsed = jdom_parse(bad_input, DOMOPT_NOOPT, &schemaInfo);
-	EXPECT_TRUE(jis_null(parsed));
+	EXPECT_FALSE(jis_valid(parsed));
 	j_release(&parsed);
 }
 

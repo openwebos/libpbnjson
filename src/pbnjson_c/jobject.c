@@ -73,6 +73,13 @@ jvalue JNULL = {
 	.m_toStringDealloc = NULL
 };
 
+jvalue JINVALID = {
+	.m_type = JV_NULL,
+	.m_refCnt = 1,
+	.m_toString = "null /* invalid */",
+	.m_toStringDealloc = NULL
+};
+
 static jstring JEMPTY_STR = {
 	.m_value = {
 		.m_type = JV_STR,
@@ -96,6 +103,7 @@ static bool jis_const(jvalue_ref val)
 {
 	return val == &JNULL
 	    || UNLIKELY(val == &JEMPTY_STR.m_value)
+	    || UNLIKELY(val == &JINVALID)
 	;
 }
 
@@ -286,16 +294,32 @@ void j_release (jvalue_ref *val)
 	SANITY_KILL_POINTER(*val);
 }
 
+jvalue_ref jinvalid ()
+{ return &JINVALID; }
+
+static bool jis_valid_unsafe (jvalue_ref val)
+{ return val != &JINVALID && val != NULL; }
+
+bool jis_valid (jvalue_ref val)
+{
+	SANITY_CHECK_POINTER(val);
+	assert( val == NULL
+	     || val->m_type != JV_NULL
+	     || val == &JNULL
+	     || val == &JINVALID
+	);
+	return jis_valid_unsafe(val);
+}
+
 bool jis_null (jvalue_ref val)
 {
 	SANITY_CHECK_POINTER(val);
-	if (val == &JNULL || val == NULL) {
-		assert(val == NULL || val->m_type == JV_NULL);
-	}
-	else {
-		assert(val->m_type != JV_NULL);
-	}
-	return val == &JNULL || val == NULL;
+	assert( val == NULL
+	     || val->m_type != JV_NULL
+	     || val == &JNULL
+	     || val == &JINVALID
+	);
+	return val == &JNULL || !jis_valid_unsafe(val);
 }
 
 jvalue_ref jnull ()
@@ -412,8 +436,9 @@ jvalue_ref jobject_create_var (jobject_key_value item, ...)
 		assert(item.value != NULL);
 
 		if (UNLIKELY(!jobject_put (new_object, item.key, item.value))) {
+			PJ_LOG_ERR("Failed to insert requested key/value into new object");
 			j_release (&new_object);
-			return jnull();
+			return jinvalid();
 		}
 
 		va_start (ap, item);
@@ -423,7 +448,7 @@ jvalue_ref jobject_create_var (jobject_key_value item, ...)
 			if (UNLIKELY(!jobject_put (new_object, arg.key, arg.value))) {
 				PJ_LOG_ERR("Failed to insert requested key/value into new object");
 				j_release (&new_object);
-				new_object = jnull();
+				new_object = jinvalid();
 				break;
 			}
 		}
@@ -528,7 +553,7 @@ jvalue_ref jobject_get (jvalue_ref obj, raw_buffer key)
 	assert(key.m_str != NULL);
 	if (jobject_get_exists (obj, key, &result))
 		return result;
-	return jnull ();
+	return jinvalid();
 }
 
 bool jobject_remove (jvalue_ref obj, raw_buffer key)
@@ -567,7 +592,7 @@ bool jobject_set (jvalue_ref obj, raw_buffer key, jvalue_ref val)
 	//CHECK_CONDITION_RETURN_VALUE(jis_null(newVal) && !jis_null(val), false, "Failed to create a copy of the value")
 
 	newKey = jstring_create_copy (key);
-	if (jis_null (newKey)) {
+	if (!jis_valid_unsafe (newKey)) {
 		PJ_LOG_ERR("Failed to create a copy of %.*s", (int)key.m_len, key.m_str);
 		j_release (&newVal);
 		return false;
@@ -631,6 +656,11 @@ bool jobject_put (jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 
 		if (val == NULL) {
 			PJ_LOG_WARN("Please don't pass in NULL - use jnull() instead");
+			val = jnull ();
+		}
+
+		if (!jis_valid(val)) {
+			PJ_LOG_WARN("Passed invalid value converted to jnull()");
 			val = jnull ();
 		}
 
@@ -859,12 +889,12 @@ jvalue_ref jarray_get (jvalue_ref arr, ssize_t index)
 {
 	jvalue_ref result;
 
-	CHECK_CONDITION_RETURN_VALUE(!valid_index_bounded(arr, index), jnull(), "Attempt to get array element from %p with out-of-bounds index value %zd", arr, index);
+	CHECK_CONDITION_RETURN_VALUE(!valid_index_bounded(arr, index), jinvalid(), "Attempt to get array element from %p with out-of-bounds index value %zd", arr, index);
 
 	result = * (jarray_get_unsafe (arr, index));
 	if (result == NULL)
 	// need to fix up in case we haven't assigned anything to that space - it's initialized to NULL (JSON undefined)
-	result = jnull ();
+	result = jinvalid ();
 	return result;
 }
 
@@ -898,7 +928,7 @@ static void jarray_remove_unsafe (jvalue_ref arr, ssize_t index)
 
 bool jarray_remove (jvalue_ref arr, ssize_t index)
 {
-	CHECK_CONDITION_RETURN_VALUE(!valid_index_bounded(arr, index), jnull(), "Attempt to get array element from %p with out-of-bounds index value %zd", arr, index);
+	CHECK_CONDITION_RETURN_VALUE(!valid_index_bounded(arr, index), false, "Attempt to get array element from %p with out-of-bounds index value %zd", arr, index);
 
 	jarray_remove_unsafe (arr, index);
 
@@ -1060,7 +1090,7 @@ bool jarray_insert(jvalue_ref arr, ssize_t index, jvalue_ref val)
 	{
 		jvalue_ref *toMove, *hole;
 		// we increment the size of the array
-		jarray_put_unsafe(arr, jarray_size_unsafe(arr), jnull());
+		jarray_put_unsafe(arr, jarray_size_unsafe(arr), jinvalid());
 
 		// stopping at the first jis_null as an optimization is actually
 		// wrong because we change the array structure.  we have to move up
@@ -1270,7 +1300,7 @@ jvalue_ref jstring_create_copy (raw_buffer str)
 	copyBuffer = calloc (str.m_len + SAFE_TERM_NULL_LEN, sizeof(char));
 	if (copyBuffer == NULL) {
 		PJ_LOG_ERR("Failed to allocate space for private string copy");
-		return jnull();
+		return jinvalid();
 	}
 	memcpy(copyBuffer, str.m_str, str.m_len);
 
@@ -1304,7 +1334,7 @@ jvalue_ref jstring_create_nocopy_full (raw_buffer val, jdeallocator buffer_deall
 {
 	SANITY_CHECK_POINTER(val.m_str);
 	SANITY_CHECK_MEMORY(val.m_str, val.m_len);
-	CHECK_CONDITION_RETURN_VALUE(val.m_str == NULL, jnull(), "Invalid string to set JSON string to NULL");
+	CHECK_CONDITION_RETURN_VALUE(val.m_str == NULL, jinvalid(), "Invalid string to set JSON string to NULL");
 	if (val.m_len == 0) {
 		if (buffer_dealloc) buffer_dealloc((void *)val.m_str);
 		return &JEMPTY_STR.m_value;
@@ -1445,7 +1475,7 @@ jvalue_ref jnumber_duplicate (jvalue_ref num)
 		return jnumber_create_i64(jnum_deref(num)->value.integer);
 	}
 	assert(false);
-	return jnull();
+	return jinvalid();
 }
 
 jvalue_ref jnumber_create (raw_buffer str)
@@ -1456,16 +1486,16 @@ jvalue_ref jnumber_create (raw_buffer str)
 	assert(str.m_str != NULL);
 	assert(str.m_len > 0);
 
-	CHECK_POINTER_RETURN_VALUE(str.m_str, jnull());
-	CHECK_CONDITION_RETURN_VALUE(str.m_len <= 0, jnull(), "Invalid length parameter for numeric string %s", str.m_str);
+	CHECK_POINTER_RETURN_VALUE(str.m_str, jinvalid());
+	CHECK_CONDITION_RETURN_VALUE(str.m_len <= 0, jinvalid(), "Invalid length parameter for numeric string %s", str.m_str);
 
 	createdBuffer = (char *) calloc (str.m_len + NUM_TERM_NULL, sizeof(char));
-	CHECK_ALLOC_RETURN_VALUE(createdBuffer, jnull());
+	CHECK_ALLOC_RETURN_VALUE(createdBuffer, jinvalid());
 
 	memcpy (createdBuffer, str.m_str, str.m_len);
 	str.m_str = createdBuffer;
 	new_number = jnumber_create_unsafe(str, free);
-	if (jis_null(new_number))
+	if (!jis_valid_unsafe(new_number))
 		free(createdBuffer);
 
 	return new_number;
@@ -1476,8 +1506,8 @@ jvalue_ref jnumber_create_unsafe (raw_buffer str, jdeallocator strFree)
 	assert(str.m_str != NULL);
 	assert(str.m_len > 0);
 
-	CHECK_POINTER_RETURN_VALUE(str.m_str, jnull());
-	CHECK_CONDITION_RETURN_VALUE(str.m_len == 0, jnull(), "Invalid length parameter for numeric string %s", str.m_str);
+	CHECK_POINTER_RETURN_VALUE(str.m_str, jinvalid());
+	CHECK_CONDITION_RETURN_VALUE(str.m_len == 0, jinvalid(), "Invalid length parameter for numeric string %s", str.m_str);
 
 	jnum *new_number = (jnum *) calloc(1, sizeof(jnum));
 	CHECK_ALLOC_RETURN_NULL(new_number);
@@ -1493,8 +1523,8 @@ jvalue_ref jnumber_create_unsafe (raw_buffer str, jdeallocator strFree)
 
 jvalue_ref jnumber_create_f64 (double number)
 {
-	CHECK_CONDITION_RETURN_VALUE(isnan(number), jnull(), "NaN has no representation in JSON");
-	CHECK_CONDITION_RETURN_VALUE(isinf(number), jnull(), "Infinity has no representation in JSON");
+	CHECK_CONDITION_RETURN_VALUE(isnan(number), jinvalid(), "NaN has no representation in JSON");
+	CHECK_CONDITION_RETURN_VALUE(isinf(number), jinvalid(), "Infinity has no representation in JSON");
 
 	jnum *new_number = (jnum *) calloc(1, sizeof(jnum));
 	CHECK_ALLOC_RETURN_NULL(new_number);

@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -83,6 +83,16 @@ struct jptr_schema : public jptr_generic<jschema>
 		return get();
 	}
 };
+
+TEST(TestParse, testInvalidJson) {
+	JSchemaInfo schemaInfo;
+
+	jschema_info_init(&schemaInfo, jschema_all(), NULL, NULL);
+
+	jptr_value parsed{ jdom_parse(j_cstr_to_buffer("}} ..bad value.. {{"), DOMOPT_NOOPT, &schemaInfo) };
+	ASSERT_TRUE( jis_null(parsed) );
+	ASSERT_FALSE( jis_valid(parsed) );
+}
 
 TEST(TestParse, testParseDoubleAccuracy) {
 

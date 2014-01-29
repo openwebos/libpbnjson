@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ protected:
 		JSchemaInfo schemaInfo;
 		jschema_info_init(&schemaInfo, schema.get(), NULL, &errors);
 
-		EXPECT_TRUE(jis_null(mk_jvalue_ptr(jdom_parse(j_cstr_to_buffer(json), DOMOPT_NOOPT, &schemaInfo)).get()));
+		EXPECT_FALSE(jis_valid(mk_jvalue_ptr(jdom_parse(j_cstr_to_buffer(json), DOMOPT_NOOPT, &schemaInfo)).get()));
 		EXPECT_EQ(error, errorCode);
 		EXPECT_EQ(1, errorCounter);
 		return errorCounter == 1;

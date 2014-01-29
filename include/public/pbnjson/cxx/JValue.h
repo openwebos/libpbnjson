@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -65,6 +65,7 @@ class PJSONCXX_API JValue
 private:
 
 	static JValue JNULL;
+	static JValue JINVALID;
 
 	jvalue_ref m_jval;
 	std::string m_input;
@@ -78,6 +79,11 @@ private:
 	static JValue& Null()
 	{
 		return JNULL;
+	}
+
+	static JValue& Invalid()
+	{
+		return JINVALID;
 	}
 
 	const char * asCString() const;
@@ -454,6 +460,12 @@ public:
 	 * @return True if this value is an array & the value was added successfully.
 	 */
 	bool append(const JValue& value);
+
+	/**
+	 * Determines whether or not this JSON value represents an invalid result
+	 * @return True if this is an invalid value, false otherwise
+	 */
+	bool isValid() const;
 
 	/**
 	 * Determines whether or not this JSON value represents a NULL

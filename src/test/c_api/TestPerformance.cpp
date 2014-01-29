@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ void ParsePbnjson(raw_buffer const &input, JDOMOptimizationFlags opt, jschema_re
 	unique_ptr<jvalue, function<void(jvalue_ref &)>>
 		jv{jdom_parse(input, opt, &schemaInfo), [](jvalue_ref &v) { j_release(&v); }};
 
-	ASSERT_FALSE(jis_null(jv.get()));
+	ASSERT_TRUE(jis_valid(jv.get()));
 }
 
 #if HAVE_YAJL

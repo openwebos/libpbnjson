@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -156,6 +156,7 @@ static bool check_schema_jbool(jvalue_ref jref, ValidationState *validation_stat
 
 static bool check_schema_jvalue_internal(jvalue_ref jref, ValidationState *validation_state, InnerContext *ctxt)
 {
+	if (UNLIKELY(!jis_valid(jref))) return false; /* errors never validates */
 	switch (jref->m_type)
 	{
 	case JV_NULL   : return check_schema_jnull(jref, validation_state, ctxt);

@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ extern "C" {
  * @param schemaInfo The schema to use for validation of the input, along with any other callbacks necessary (such as schema resolver,
  *                   error handler).
  * @param opts The optimization mode to use when parsing the file.
- * @return An opaque reference handle to the DOM.  Use jis_null to determine whether or
+ * @return An opaque reference handle to the DOM.  Use jis_valid to determine whether or
  *         not parsing succeeded.
  */
 PJSON_API jvalue_ref jdom_parse_file(const char *file, JSchemaInfoRef schemaInfo, JFileOptimizationFlags opts) NON_NULL(1, 2);
@@ -52,7 +52,7 @@ PJSON_API jvalue_ref jdom_parse_file(const char *file, JSchemaInfoRef schemaInfo
  * @param optimizationMode Additional information about the input string that lets us optimize the creation process of the DOM.
  * @param schemaInfo The schema to use for validation of the input, along with any other callbacks necessary (such as schema resolver,
  *                   error handler).
- * @return An opaque reference handle to the DOM.  Use jis_null to determine whether or
+ * @return An opaque reference handle to the DOM.  Use jis_valid to determine whether or
  *         not parsing succeeded.
  */
 PJSON_API jvalue_ref jdom_parse(raw_buffer input, JDOMOptimizationFlags optimizationMode, JSchemaInfoRef schemaInfo) NON_NULL(3);

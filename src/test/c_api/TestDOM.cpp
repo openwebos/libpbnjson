@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,6 +46,17 @@ static jvalue_ref manage(jvalue_ref val)
 	return g_manager(val);
 }
 
+TEST(TestDOM, ObjectInvalidVsNull)
+{
+	jvalue_ref invalid = jinvalid();
+	EXPECT_TRUE( jis_null(invalid) );
+	EXPECT_FALSE( jis_valid(invalid) );
+
+	jvalue_ref null = jnull();
+	EXPECT_TRUE( jis_null(null) );
+	EXPECT_TRUE( jis_valid(null) );
+}
+
 TEST(TestDOM, ObjectSimple)
 {
 	ASSERT_FALSE(jis_null(manage(J_CSTR_TO_JVAL("abc"))));
@@ -76,7 +87,8 @@ TEST(TestDOM, ObjectMisuse)
 	EXPECT_FALSE(jobject_set2(arr, manage(j_cstr_to_jval("abc")), manage(j_cstr_to_jval("hello"))));
 	EXPECT_FALSE(jobject_get_exists(arr, J_CSTR_TO_BUF("abc"), NULL));
 	jvalue_ref memb = jobject_get(arr, J_CSTR_TO_BUF("abc"));
-	EXPECT_TRUE(memb == jnull());
+	EXPECT_TRUE( jis_null(memb) );
+	EXPECT_FALSE( jis_valid(memb) );
 	EXPECT_FALSE(jobject_remove(arr, J_CSTR_TO_BUF("abc")));
 }
 
@@ -252,14 +264,18 @@ TEST(TestDOM, ObjectComplex)
 
 	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numf64_4"));
 	EXPECT_TRUE(jis_null(jnum));  // + inf
+	EXPECT_TRUE(jis_valid(jnum)); // invalid number converted to null
 	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numf64_5"));
 	EXPECT_TRUE(jis_null(jnum));  // - inf
+	EXPECT_TRUE(jis_valid(jnum));
 	jnum = jobject_get(complexObject, J_CSTR_TO_BUF("numf64_6"));
 	EXPECT_TRUE(jis_null(jnum));  // NaN
+	EXPECT_TRUE(jis_valid(jnum));
 
 
 	jvalue_ref jstr = jobject_get(complexObject, J_CSTR_TO_BUF("str1"));
 	EXPECT_TRUE(jis_null(jstr));
+	EXPECT_TRUE(jis_valid(jstr)); // we actually got null value rather than error
 	jstr = jobject_get(complexObject, J_CSTR_TO_BUF("str2"));
 	EXPECT_TRUE(jis_null(jstr));
 
@@ -300,6 +316,11 @@ TEST(TestDOM, ObjectComplex)
 	raw_buffer raw;
 	EXPECT_EQ(jnumber_get_raw(jnum, &raw), CONV_OK);
 	EXPECT_EQ(string(raw.m_str, raw.m_str + raw.m_len), string(veryLargeNumber));
+
+
+	jvalue_ref missing = jobject_get(complexObject, J_CSTR_TO_BUF("missing"));
+	EXPECT_TRUE(jis_null(missing));
+	EXPECT_FALSE(jis_valid(missing)); // we reference to nonexistent property
 }
 
 TEST(TestDOM, ObjectPut)

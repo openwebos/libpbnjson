@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -198,7 +198,7 @@ int dom_object_start(JSAXContextRef ctxt)
 	newParent = jobject_create();
 	newChild = calloc(1, sizeof(DomInfo));
 
-	if (UNLIKELY(newChild == NULL || jis_null(newParent))) {
+	if (UNLIKELY(newChild == NULL || !jis_valid(newParent))) {
 		PJ_LOG_ERR("Failed to allocate space for new object");
 		j_release(&newParent);
 		free(newChild);
@@ -277,7 +277,7 @@ int dom_array_start(JSAXContextRef ctxt)
 
 	newParent = jarray_create(NULL);
 	newChild = calloc(1, sizeof(DomInfo));
-	if (UNLIKELY(newChild == NULL || jis_null(newParent))) {
+	if (UNLIKELY(newChild == NULL || !jis_valid(newParent))) {
 		PJ_LOG_ERR("Failed to allocate space for new array node");
 		j_release(&newParent);
 		free(newChild);
@@ -382,12 +382,12 @@ jvalue_ref jdom_parse_ex(raw_buffer input, JDOMOptimizationFlags optimizationMod
 
 	if (!parsedOK) {
 		PJ_LOG_ERR("Parser failure");
-		return jnull();
+		return jinvalid();
 	}
 
 	if (result == NULL)
 		PJ_LOG_ERR("result was NULL - unexpected. input was '%.*s'", (int)input.m_len, input.m_str);
-	else if (result == jnull())
+	else if (!jis_valid(result))
 		PJ_LOG_WARN("result was NULL JSON - unexpected.  input was '%.*s'", (int)input.m_len, input.m_str);
 	else {
 		if ((optimizationMode & (DOMOPT_INPUT_NOCHANGE | DOMOPT_INPUT_OUTLIVES_DOM | DOMOPT_INPUT_NULL_TERMINATED)) && input.m_str[input.m_len] == '\0') {
@@ -449,7 +449,7 @@ jvalue_ref jdom_parse_file(const char *file, JSchemaInfoRef schemaInfo, JFileOpt
 return_result:
 	close(fd);
 
-	if (UNLIKELY(jis_null(result))) {
+	if (UNLIKELY(!jis_valid(result))) {
 		if (input.m_str) {
 			if (flags & JFileOptMMap) {
 				munmap((void *)input.m_str, input.m_len);
@@ -469,7 +469,7 @@ errno_parse_failure:
 	PJ_LOG_WARN("Attempt to parse json document '%s' failed (%d) : %s", file, errno, err_msg);
 	free(err_msg);
 
-	result = jnull();
+	result = jinvalid();
 	goto return_result;
 }
 
@@ -735,6 +735,8 @@ static bool inject_default_jbool(jvalue_ref jref, JSAXContextRef context)
 
 static bool inject_default_jvalue(jvalue_ref jref, JSAXContextRef context)
 {
+	assert( jis_valid(jref) );
+
 	switch (jref->m_type)
 	{
 	case JV_NULL   : return inject_default_jnull(jref, context);

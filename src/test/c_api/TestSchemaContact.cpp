@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -93,6 +93,7 @@ TEST_F(TestSchemaContact, Invalid1)
 	EXPECT_FALSE(jsax_parse_ex(NULL, INPUT, &schema_info, NULL, true));
 	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
 	EXPECT_TRUE(jis_null(parsed));
+	EXPECT_FALSE(jis_valid(parsed));
 }
 
 TEST_F(TestSchemaContact, Valid1)

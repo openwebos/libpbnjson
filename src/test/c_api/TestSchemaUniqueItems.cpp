@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ TEST_F(TestUniqueItems, Valid0)
 {
 	const raw_buffer INPUT = j_cstr_to_buffer("[]");
 	auto res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info));
-	EXPECT_FALSE(jis_null(res.get()));
+	EXPECT_TRUE(jis_valid(res.get()));
 	EXPECT_TRUE(jvalue_check_schema(res.get(), &schema_info));
 }
 
@@ -102,7 +102,7 @@ TEST_F(TestUniqueItems, Valid1)
 {
 	const raw_buffer INPUT = j_cstr_to_buffer("[null]");
 	auto res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info));
-	EXPECT_FALSE(jis_null(res.get()));
+	EXPECT_TRUE(jis_valid(res.get()));
 	EXPECT_TRUE(jvalue_check_schema(res.get(), &schema_info));
 }
 
@@ -110,7 +110,7 @@ TEST_F(TestUniqueItems, Valid2)
 {
 	const raw_buffer INPUT = j_cstr_to_buffer("[null, true]");
 	auto res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info));
-	EXPECT_FALSE(jis_null(res.get()));
+	EXPECT_TRUE(jis_valid(res.get()));
 	EXPECT_TRUE(jvalue_check_schema(res.get(), &schema_info));
 }
 
@@ -118,7 +118,7 @@ TEST_F(TestUniqueItems, Valid3)
 {
 	const raw_buffer INPUT = j_cstr_to_buffer("[null, true, false]");
 	auto res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info));
-	EXPECT_FALSE(jis_null(res.get()));
+	EXPECT_TRUE(jis_valid(res.get()));
 	EXPECT_TRUE(jvalue_check_schema(res.get(), &schema_info));
 }
 
@@ -126,7 +126,7 @@ TEST_F(TestUniqueItems, Invalid1)
 {
 	const raw_buffer INPUT = j_cstr_to_buffer("[null, true, 1, false, 1]");
 	auto res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info));
-	EXPECT_TRUE(jis_null(res.get()));
+	EXPECT_FALSE(jis_valid(res.get()));
 	res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info_all));
 	ASSERT_TRUE(jis_array(res.get()));
 	errorCounter = 0;
@@ -139,7 +139,7 @@ TEST_F(TestUniqueItems, Invalid2)
 {
 	const raw_buffer INPUT = j_cstr_to_buffer("[null, true, 1, true, 0]");
 	auto res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info));
-	EXPECT_TRUE(jis_null(res.get()));
+	EXPECT_FALSE(jis_valid(res.get()));
 	res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info_all));
 	ASSERT_TRUE(jis_array(res.get()));
 	errorCounter = 0;
@@ -152,7 +152,7 @@ TEST_F(TestUniqueItems, Invalid3)
 {
 	const raw_buffer INPUT = j_cstr_to_buffer("[{\"a\":1, \"b\":\"hello\"}, true, {\"b\":\"hello\", \"a\":1}, 0]");
 	auto res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info));
-	EXPECT_TRUE(jis_null(res.get()));
+	EXPECT_FALSE(jis_valid(res.get()));
 	res = mk_ptr(jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info_all));
 	ASSERT_TRUE(jis_array(res.get()));
 	errorCounter = 0;
