@@ -421,34 +421,37 @@ jvalue_ref jobject_create ()
 	return (jvalue_ref)new_obj;
 }
 
+static jvalue_ref jobject_put_keyvalue(jvalue_ref obj, jobject_key_value item)
+{
+	assert(jis_string(item.key));
+	assert(item.value != NULL);
+
+	if (UNLIKELY(!jis_valid(obj))) {
+		j_release(&item.key);
+		j_release(&item.value);
+	}
+	else if (UNLIKELY(!jobject_put(obj, item.key, item.value))) {
+		PJ_LOG_ERR("Failed to insert requested key/value into new object");
+		j_release (&obj);
+		obj = jinvalid();
+	}
+	return obj;
+}
+
 jvalue_ref jobject_create_var (jobject_key_value item, ...)
 {
 	va_list ap;
-	jobject_key_value arg;
 	jvalue_ref new_object = jobject_create ();
 
-	CHECK_POINTER_RETURN_NULL(new_object);
+	if (!new_object)
+		new_object = jinvalid();
 
 	if (item.key != NULL) {
-		assert(jis_string(item.key));
-		assert(item.value != NULL);
-
-		if (UNLIKELY(!jobject_put (new_object, item.key, item.value))) {
-			PJ_LOG_ERR("Failed to insert requested key/value into new object");
-			j_release (&new_object);
-			return jinvalid();
-		}
+		new_object = jobject_put_keyvalue(new_object, item);
 
 		va_start (ap, item);
-		while ( (arg = va_arg (ap, jobject_key_value)).key != NULL) {
-			assert(jis_string(arg.key));
-			assert(arg.value != NULL);
-			if (UNLIKELY(!jobject_put (new_object, arg.key, arg.value))) {
-				PJ_LOG_ERR("Failed to insert requested key/value into new object");
-				j_release (&new_object);
-				new_object = jinvalid();
-				break;
-			}
+		while ((item = va_arg (ap, jobject_key_value)).key != NULL) {
+			new_object = jobject_put_keyvalue(new_object, item);
 		}
 		va_end (ap);
 	}
@@ -628,12 +631,12 @@ bool jobject_put (jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 	assert(val != NULL);
 
 	do {
-		if (!jobject_deref(obj)->m_members) {
+		if (UNLIKELY(!jis_object(obj))) {
+			PJ_LOG_ERR("%p is %d not an object (%d)", obj, obj->m_type, JV_OBJECT);
 			break;
 		}
 
-		if (UNLIKELY(!jis_object(obj))) {
-			PJ_LOG_ERR("%p is %d not an object (%d)", obj, obj->m_type, JV_OBJECT);
+		if (!jobject_deref(obj)->m_members) {
 			break;
 		}
 
