@@ -21,7 +21,14 @@
 #include <vector>
 #include <algorithm>
 
+#define BYTES_IN_MB 1000000
+
 using namespace std;
+
+inline double ConvertToMBps(size_t bytes, double seconds)
+{
+	return bytes / (seconds * BYTES_IN_MB);
+}
 
 static clockid_t ChooseBenchmarkClock()
 {
@@ -63,7 +70,7 @@ double Median(std::vector<double> &samples)
 }
 
 // benchmark scalable code function (linearity is required)
-double BenchmarkPerformNs(function<void(size_t)> code)
+double BenchmarkPerform(function<void(size_t)> code)
 {
 	const double low_time_threshold = 1; // seconds, assume a good good resolution warmup
 	const double measure_seconds = 15; // quarter of minute
@@ -84,7 +91,7 @@ double BenchmarkPerformNs(function<void(size_t)> code)
 		if (t < low_time_threshold) n *= 2;
 		else n = sample_time * n / t;
 	}
-	samples.push_back(t * 1e9 / n);
+	samples.push_back(t / n);
 
 	// for rest we do only slight adjustment
 	size_t total_n = n;
@@ -100,7 +107,7 @@ double BenchmarkPerformNs(function<void(size_t)> code)
 			// linearity
 			total_n += n, total_t += t;
 		} while (t < sample_time_mark); // take only values with a good resolution
-		samples.push_back(t * 1e9 / n);
+		samples.push_back(t / n);
 	}
 	return Median(samples);
 }

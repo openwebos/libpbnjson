@@ -29,6 +29,8 @@
 #include "validation/validation_api.h"
 #include "validation/nothing_validator.h"
 
+#define MEMORY_POOL_SIZE 4024
+
 int dom_null(JSAXContextRef ctxt);
 int dom_boolean(JSAXContextRef ctxt, bool value);
 int dom_number(JSAXContextRef ctxt, const char *number, size_t numberLen);
@@ -77,6 +79,25 @@ typedef struct DomInfo {
 	jvalue_ref m_value;
 } DomInfo;
 
+/**
+ * Memory pool type for YAJL parser
+ *
+ * 0                                 MEMORY_POOL_SIZE
+ * xxxxxxxxxxxxxxxXXXXXX-------------------->|
+ * |              |     |                    |
+ * |  allocated   |last |      free          |
+ * |              |     |                    |
+ * +              +     +                    +
+ * begin        prev   current              end
+ *
+ */
+typedef struct memory_pool_t {
+	char begin[MEMORY_POOL_SIZE];
+	void *end;     ///< End of the pool
+	void *prev;    ///< Pointer to the last allocated chunk
+	void *current; ///< Pointer to the next free memory
+} mem_pool;
+
 typedef struct __JSAXContext PJSAXContext;
 
 struct jsaxparser {
@@ -91,11 +112,11 @@ struct jsaxparser {
 	struct JErrorCallbacks errorHandler;
 	char *schemaError;
 	char *yajlError;
+	mem_pool mpool;
 };
 
 struct jdomparser {
 	struct jsaxparser saxparser;
-	PJSAXCallbacks callbacks;
 	DomInfo topLevelContext;
 };
 

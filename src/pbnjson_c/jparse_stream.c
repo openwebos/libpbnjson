@@ -26,6 +26,7 @@
 #include "jparse_stream_internal.h"
 #include <assert.h>
 #include <errno.h>
+#include <pthread.h>
 #include <string.h>
 
 #include <sys/stat.h>
@@ -34,13 +35,27 @@
 #include <fcntl.h>
 #include <inttypes.h>
 
+#define DOM_POOL_SIZE 4
 
-static PJSAXCallbacks no_callbacks = { 0 };
-#define DEREF_CALLBACK(callback, ...) \
-	do { \
-		if (callback != NULL) return callback(__VA_ARGS__); \
-		return 1; \
-	} while (0)
+//Dummy PJSAXCallbacks for DOM parsing
+static int dummy_dom_boolean(void *context, int value) { return 1; }
+static int dummy_dom_string(void *context, const char *string, yajl_size_t len) { return 1; }
+static int dummy_dom_context(void *context) { return 1; }
+
+static yajl_callbacks no_callbacks =
+{
+	dummy_dom_context, // yajl_null
+	dummy_dom_boolean, // yajl_boolean
+	NULL, // yajl_integer
+	NULL, // yajl_double
+	dummy_dom_string, // yajl_number
+	(pj_yajl_string)dummy_dom_string, // yajl_string
+	dummy_dom_context, // yajl_start_map
+	(pj_yajl_map_key)dummy_dom_string, // yajl_map_key
+	dummy_dom_context, // yajl_end_map
+	dummy_dom_context, // yajl_start_array
+	dummy_dom_context, // yajl_end_array
+};
 
 static bool jsax_parse_internal(PJSAXCallbacks *parser, raw_buffer input, JSchemaInfoRef schemaInfo, void **ctxt);
 
@@ -445,100 +460,109 @@ void* jsax_getContext(JSAXContextRef saxCtxt)
 int my_bounce_start_map(void *ctxt)
 {
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	assert(spring->m_handlers->yajl_start_map);
 
 	ValidationEvent e = validation_event_obj_start();
 	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
-	DEREF_CALLBACK(spring->m_handlers->yajl_start_map, ctxt);
+	return spring->m_handlers->yajl_start_map(ctxt);
 }
 
 int my_bounce_map_key(void *ctxt, const unsigned char *str, yajl_size_t strLen)
 {
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	assert(spring->m_handlers->yajl_map_key);
 
 	ValidationEvent e = validation_event_obj_key((char const *) str, strLen);
 	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
-	DEREF_CALLBACK(spring->m_handlers->yajl_map_key, ctxt, str, strLen);
+	return spring->m_handlers->yajl_map_key(ctxt, str, strLen);
 }
 
 int my_bounce_end_map(void *ctxt)
 {
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	assert(spring->m_handlers->yajl_end_map);
 
 	ValidationEvent e = validation_event_obj_end();
 	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
-	DEREF_CALLBACK(spring->m_handlers->yajl_end_map, ctxt);
+	return spring->m_handlers->yajl_end_map(ctxt);
 }
 
 int my_bounce_start_array(void *ctxt)
 {
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	assert(spring->m_handlers->yajl_start_array);
 
 	ValidationEvent e = validation_event_arr_start();
 	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
-	DEREF_CALLBACK(spring->m_handlers->yajl_start_array, ctxt);
+	return spring->m_handlers->yajl_start_array(ctxt);
 }
 
 int my_bounce_end_array(void *ctxt)
 {
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	assert(spring->m_handlers->yajl_end_array);
 
 	ValidationEvent e = validation_event_arr_end();
 	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
-	DEREF_CALLBACK(spring->m_handlers->yajl_end_array, ctxt);
+	return spring->m_handlers->yajl_end_array(ctxt);
 }
 
 int my_bounce_string(void *ctxt, const unsigned char *str, yajl_size_t strLen)
 {
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	assert(spring->m_handlers->yajl_string);
 
 	ValidationEvent e = validation_event_string((char const *) str, strLen);
 	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
-	DEREF_CALLBACK(spring->m_handlers->yajl_string, ctxt, str, strLen);
+	return spring->m_handlers->yajl_string(ctxt, str, strLen);
 }
 
 int my_bounce_number(void *ctxt, const char *numberVal, yajl_size_t numberLen)
 {
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	assert(spring->m_handlers->yajl_number);
 
 	ValidationEvent e = validation_event_number(numberVal, numberLen);
 	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
-	DEREF_CALLBACK(spring->m_handlers->yajl_number, ctxt, numberVal, numberLen);
+	return spring->m_handlers->yajl_number(ctxt, numberVal, numberLen);
 }
 
 int my_bounce_boolean(void *ctxt, int boolVal)
 {
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	assert(spring->m_handlers->yajl_boolean);
 
 	ValidationEvent e = validation_event_boolean(boolVal);
 	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
-	DEREF_CALLBACK(spring->m_handlers->yajl_boolean, ctxt, boolVal);
+	return spring->m_handlers->yajl_boolean(ctxt, boolVal);
 }
 
 int my_bounce_null(void *ctxt)
 {
 	JSAXContextRef spring = (JSAXContextRef)ctxt;
+	assert(spring->m_handlers->yajl_null);
 
 	ValidationEvent e = validation_event_null();
 	if (!validation_check(&e, spring->validation_state, ctxt))
 		return false;
 
-	DEREF_CALLBACK(spring->m_handlers->yajl_null, ctxt);
+	return spring->m_handlers->yajl_null(ctxt);
 }
 
 static yajl_callbacks my_bounce =
@@ -561,8 +585,6 @@ static yajl_callbacks my_bounce =
 
 static bool inject_default_jnull(jvalue_ref jref, JSAXContextRef context)
 {
-	if (!context->m_handlers->yajl_null)
-		return true;
 	return context->m_handlers->yajl_null(context);
 }
 
@@ -571,8 +593,6 @@ static bool inject_default_jvalue(jvalue_ref jref, JSAXContextRef context);
 //Helper function for jobject_to_string_append()
 static bool inject_default_jkeyvalue(jobject_key_value jref, JSAXContextRef context)
 {
-	if (!context->m_handlers->yajl_map_key)
-		return true;
 	raw_buffer buf = jstring_deref(jref.key)->m_data;
 	if (!context->m_handlers->yajl_map_key(context, (unsigned char const *) buf.m_str, buf.m_len))
 		return false;
@@ -582,8 +602,6 @@ static bool inject_default_jkeyvalue(jobject_key_value jref, JSAXContextRef cont
 
 static bool inject_default_jobject(jvalue_ref jref, JSAXContextRef context)
 {
-	if (!context->m_handlers->yajl_start_map)
-		return true;
 	if (!context->m_handlers->yajl_start_map(context))
 		return false;
 
@@ -596,24 +614,15 @@ static bool inject_default_jobject(jvalue_ref jref, JSAXContextRef context)
 			return false;
 	}
 
-	if (!context->m_handlers->yajl_end_map)
-		return true;
-	if (!context->m_handlers->yajl_end_map(context))
-		return false;
-
-	return true;
+	return context->m_handlers->yajl_end_map(context);
 }
 
 static bool inject_default_jarray(jvalue_ref jref, JSAXContextRef context)
 {
-	int i = 0;
-
-	if (!context->m_handlers->yajl_start_array)
-		return true;
 	if (!context->m_handlers->yajl_start_array(context))
 		return false;
 
-	for (i = 0; i < jarray_size(jref); i++)
+	for (int i = 0; i < jarray_size(jref); i++)
 	{
 		jvalue_ref element = jarray_get(jref, i);
 		if (!inject_default_jvalue(element, context))
@@ -622,12 +631,7 @@ static bool inject_default_jarray(jvalue_ref jref, JSAXContextRef context)
 		}
 	}
 
-	if (!context->m_handlers->yajl_end_array)
-		return true;
-	if (!context->m_handlers->yajl_end_array(context))
-		return false;
-
-	return true;
+	return context->m_handlers->yajl_end_array(context);
 }
 
 static bool inject_default_jnumber(jvalue_ref jref, JSAXContextRef context)
@@ -635,17 +639,12 @@ static bool inject_default_jnumber(jvalue_ref jref, JSAXContextRef context)
 	char buf[24];
 	int printed;
 
-	if (!context->m_handlers->yajl_number)
-		return true;
-
 	switch (jnum_deref(jref)->m_type)
 	{
 		case NUM_RAW:
 			{
 				raw_buffer n = jnum_deref(jref)->value.raw;
-				if (!context->m_handlers->yajl_number(context, n.m_str, n.m_len))
-					return false;
-				return true;
+				return context->m_handlers->yajl_number(context, n.m_str, n.m_len);
 			}
 		case NUM_FLOAT:
 			printed = snprintf(buf, sizeof(buf) - 1, "%.14lg", jnum_deref(jref)->value.floating);
@@ -657,28 +656,18 @@ static bool inject_default_jnumber(jvalue_ref jref, JSAXContextRef context)
 			return false;
 	}
 
-	if (!context->m_handlers->yajl_number(context, buf, printed))
-		return false;
-	return true;
+	return context->m_handlers->yajl_number(context, buf, printed);
 }
 
 static bool inject_default_jstring(jvalue_ref jref, JSAXContextRef context)
 {
-	if (!context->m_handlers->yajl_string)
-		return true;
 	raw_buffer s = jstring_deref(jref)->m_data;
-	if (!context->m_handlers->yajl_string(context, (unsigned char const *) s.m_str, s.m_len))
-		return false;
-	return true;
+	return context->m_handlers->yajl_string(context, (unsigned char const *) s.m_str, s.m_len);
 }
 
 static bool inject_default_jbool(jvalue_ref jref, JSAXContextRef context)
 {
-	if (!context->m_handlers->yajl_boolean)
-		return true;
-	if (!context->m_handlers->yajl_boolean(context, jboolean_deref(jref)->value))
-		return false;
-	return true;
+	return context->m_handlers->yajl_boolean(context, jboolean_deref(jref)->value);
 }
 
 static bool inject_default_jvalue(jvalue_ref jref, JSAXContextRef context)
@@ -702,8 +691,6 @@ static bool on_default_property(ValidationState *s, char const *key, jvalue_ref 
 {
 	JSAXContextRef spring = (JSAXContextRef) ctxt;
 
-	if (!spring->m_handlers->yajl_map_key)
-		return true;
 	if (!spring->m_handlers->yajl_map_key(ctxt, (unsigned char const *) key, strlen(key)))
 		return false;
 
@@ -875,26 +862,58 @@ void jsaxparser_release(jsaxparser_ref *parser)
 	jsaxparser_free_memory(*parser);
 }
 
+void mempool_init(mem_pool *m)
+{
+	m->end = m->begin + sizeof(m->begin);
+	m->prev = m->begin;
+	m->current = m->begin;
+}
+
+void mempool_free(void *ctx, void *p)
+{
+	mem_pool *m = (mem_pool*)ctx;
+	if (p && ((char*)p < m->begin || p >= m->end))
+		free(p);
+}
+
+void* mempool_malloc(void *ctx, yajl_size_t size)
+{
+	mem_pool *m = (mem_pool*)ctx;
+
+	if ((char*)m->end >= (char*)m->current + size) {
+		m->prev = m->current;
+		m->current = (char*)m->prev + size;
+		return m->prev;
+	}
+	return malloc(size); // can not allocate from pool
+}
+
+void* mempool_realloc(void *ctx, void *p, yajl_size_t size)
+{
+	mem_pool *m = (mem_pool*)ctx;
+
+	if (p && ((char*)p < m->begin || p >= m->end)) // p from heap
+		return realloc(p, size);
+
+	if (p == m->prev && (char*)m->end >= (char*)p + size) { // p last chunk in pool
+		m->current = (char*)p + size;
+		return p;
+	}
+	// p inside pool or null pointer
+	char *top = m->current;
+	void *newp = mempool_malloc(ctx, size);
+	if (p) {
+		size_t diff = top - (char*)p;
+		size_t sz = (diff < size) ? diff : size;
+		memcpy(newp, p, sz);
+	}
+	return newp;
+}
+
 bool jsaxparser_init(jsaxparser_ref parser, JSchemaInfoRef schemaInfo, PJSAXCallbacks *callback, void *callback_ctxt)
 {
 	memset(parser, 0, sizeof(struct jsaxparser));
 
-	if (callback == NULL)
-		callback = &no_callbacks;
-
-	parser->yajl_cb.yajl_null = (pj_yajl_null)callback->m_null;
-	parser->yajl_cb.yajl_boolean = (pj_yajl_boolean)callback->m_boolean;
-	parser->yajl_cb.yajl_integer = NULL;
-	parser->yajl_cb.yajl_double = NULL;
-	parser->yajl_cb.yajl_number = (pj_yajl_number)callback->m_number;
-	parser->yajl_cb.yajl_string = (pj_yajl_string)callback->m_string;
-	parser->yajl_cb.yajl_start_map = (pj_yajl_start_map)callback->m_objStart;
-	parser->yajl_cb.yajl_map_key = (pj_yajl_map_key)callback->m_objKey;
-	parser->yajl_cb.yajl_end_map = (pj_yajl_end_map)callback->m_objEnd;
-	parser->yajl_cb.yajl_start_array = (pj_yajl_start_array)callback->m_arrStart;
-	parser->yajl_cb.yajl_end_array = (pj_yajl_end_array)callback->m_arrEnd;
-
-	parser->schemaInfo = schemaInfo;
 	parser->validator = NOTHING_VALIDATOR;
 	parser->uri_resolver = NULL;
 	if (schemaInfo && schemaInfo->m_schema)
@@ -905,6 +924,23 @@ bool jsaxparser_init(jsaxparser_ref parser, JSchemaInfoRef schemaInfo, PJSAXCall
 
 	if (parser->uri_resolver && !jschema_resolve(schemaInfo)) {
 		return false;
+	}
+	parser->schemaInfo = schemaInfo;
+
+	if (callback == NULL) {
+		parser->yajl_cb = no_callbacks;
+	} else {
+		parser->yajl_cb.yajl_null = callback->m_null ? (pj_yajl_null)callback->m_null : no_callbacks.yajl_null;
+		parser->yajl_cb.yajl_boolean = callback->m_boolean ? (pj_yajl_boolean)callback->m_boolean : no_callbacks.yajl_boolean;
+		parser->yajl_cb.yajl_integer = NULL;
+		parser->yajl_cb.yajl_double = NULL;
+		parser->yajl_cb.yajl_number = callback->m_number ? (pj_yajl_number)callback->m_number : no_callbacks.yajl_number;
+		parser->yajl_cb.yajl_string = callback->m_string ? (pj_yajl_string)callback->m_string : no_callbacks.yajl_string;
+		parser->yajl_cb.yajl_start_map = callback->m_objStart ? (pj_yajl_start_map)callback->m_objStart : no_callbacks.yajl_start_map;
+		parser->yajl_cb.yajl_map_key = callback->m_objKey ? (pj_yajl_map_key)callback->m_objKey : no_callbacks.yajl_map_key;
+		parser->yajl_cb.yajl_end_map = callback->m_objEnd ? (pj_yajl_end_map)callback->m_objEnd : no_callbacks.yajl_end_map;
+		parser->yajl_cb.yajl_start_array = callback->m_arrStart ? (pj_yajl_start_array)callback->m_arrStart : no_callbacks.yajl_start_array;
+		parser->yajl_cb.yajl_end_array = callback->m_arrEnd ? (pj_yajl_end_array)callback->m_arrEnd : no_callbacks.yajl_end_array;
 	}
 
 	parser->errorHandler.m_parser = err_parser;
@@ -928,6 +964,13 @@ bool jsaxparser_init(jsaxparser_ref parser, JSchemaInfoRef schemaInfo, PJSAXCall
 	};
 	parser->internalCtxt = __internalCtxt;
 
+	mempool_init(&parser->mpool);
+	yajl_alloc_funcs allocFuncs = {
+		mempool_malloc,
+		mempool_realloc,
+		mempool_free,
+		&parser->mpool
+	};
 	const bool allow_comments = true;
 
 #if YAJL_VERSION < 20000
@@ -937,14 +980,13 @@ bool jsaxparser_init(jsaxparser_ref parser, JSchemaInfoRef schemaInfo, PJSAXCall
 		0, // currently only UTF-8 will be supported for input.
 	};
 
-	parser->handle = yajl_alloc(&my_bounce, &yajl_opts, NULL, &parser->internalCtxt);
+	parser->handle = yajl_alloc(&my_bounce, &yajl_opts, &allocFuncs, &parser->internalCtxt);
 #else
-	parser->handle = yajl_alloc(&my_bounce, NULL, &parser->internalCtxt);
-
+	parser->handle = yajl_alloc(&my_bounce, &allocFuncs, &parser->internalCtxt);
 	yajl_config(parser->handle, yajl_allow_comments, allow_comments ? 1 : 0);
 
 	// currently only UTF-8 will be supported for input.
-	yajl_config(parser->handle, yajl_dont_validate_strings, 0);
+	yajl_config(parser->handle, yajl_dont_validate_strings, 1);
 #endif // YAJL_VERSION
 
 	return true;
@@ -1026,14 +1068,49 @@ static void *jsaxparser_get_sax_context(jsaxparser_ref parser)
 	return jsax_getContext(&parser->internalCtxt);
 }
 
+/**
+ * DomParser pool type for YAJL parser
+ */
+typedef struct domparser_pool_t {
+	struct jdomparser stack[DOM_POOL_SIZE];
+	bool used[DOM_POOL_SIZE];
+	pthread_mutex_t lock;
+} domparser_pool;
+
+static domparser_pool dompool = {.lock = PTHREAD_MUTEX_INITIALIZER};
+
 jdomparser_ref jdomparser_alloc_memory()
 {
-	return malloc(sizeof(struct jdomparser));
+	jdomparser_ref res;
+	int i = 0;
+
+	pthread_mutex_lock(&dompool.lock);
+	for(; i < DOM_POOL_SIZE; i++) {
+		if (!dompool.used[i])
+			break;
+	}
+	if (i < DOM_POOL_SIZE) {
+		res = &dompool.stack[i];
+		dompool.used[i] = 1;
+	}
+	pthread_mutex_unlock(&dompool.lock);
+
+	if (i == DOM_POOL_SIZE)
+		res = malloc(sizeof(struct jdomparser));
+
+	return res;
 }
 
 void jdomparser_free_memory(jdomparser_ref parser)
 {
-	free(parser);
+	if (parser < &dompool.stack[0] || (char*)parser >= (char*)&dompool.stack + sizeof(dompool)) {
+		free(parser);
+	} else {
+		int i = parser - &dompool.stack[0];
+		pthread_mutex_lock(&dompool.lock);
+		dompool.used[i] = 0;
+		pthread_mutex_unlock(&dompool.lock);
+	}
 }
 
 jdomparser_ref jdomparser_create(JSchemaInfoRef schemaInfo, JDOMOptimizationFlags optimizationMode)
@@ -1055,21 +1132,23 @@ void jdomparser_release(jdomparser_ref *parser)
 	jdomparser_free_memory(*parser);
 }
 
+static PJSAXCallbacks dom_callbacks = {
+	dom_object_start,
+	dom_object_key,
+	dom_object_end,
+	dom_array_start,
+	dom_array_end,
+	dom_string,
+	dom_number,
+	dom_boolean,
+	dom_null
+};
+
 bool jdomparser_init(jdomparser_ref parser, JSchemaInfoRef schemaInfo, JDOMOptimizationFlags optimizationMode)
 {
-	memset(parser, 0, sizeof(struct jdomparser));
+	memset(&parser->topLevelContext, 0, sizeof(parser->topLevelContext));
 
-	parser->callbacks.m_objStart    = dom_object_start;
-	parser->callbacks.m_objKey      = dom_object_key;
-	parser->callbacks.m_objEnd      = dom_object_end;
-	parser->callbacks.m_arrStart    = dom_array_start;
-	parser->callbacks.m_arrEnd      = dom_array_end;
-	parser->callbacks.m_string      = dom_string;
-	parser->callbacks.m_number      = dom_number;
-	parser->callbacks.m_boolean     = dom_boolean;
-	parser->callbacks.m_null        = dom_null;
-
-	return jsaxparser_init(&parser->saxparser, schemaInfo, &parser->callbacks, &parser->topLevelContext);
+	return jsaxparser_init(&parser->saxparser, schemaInfo, &dom_callbacks, &parser->topLevelContext);
 }
 
 bool jdomparser_feed(jdomparser_ref parser, const char *buf, int buf_len)

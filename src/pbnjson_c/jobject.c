@@ -1228,15 +1228,16 @@ bool jarray_has_duplicates(jvalue_ref arr)
 	assert(jis_array(arr));
 
 	ssize_t size = jarray_size(arr);
-	if (size < 2)
-		return false;
 
 	for (ssize_t i = 0; i < size - 1; ++i)
+	{
+		jvalue_ref jvali = *jarray_get_unsafe(arr, i);
 		for (ssize_t j = i + 1; j < size; ++j)
 		{
-			if (jvalue_equal(*jarray_get_unsafe(arr, i), *jarray_get_unsafe(arr, j)))
+			if (jvalue_equal(jvali, *jarray_get_unsafe(arr, j)))
 				return true;
 		}
+	}
 
 	return false;
 }

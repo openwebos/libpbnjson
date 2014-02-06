@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,9 +32,9 @@ void ParsePbnjson(raw_buffer const &input, JDOMOptimizationFlags opt, jschema_re
 	ASSERT_TRUE(jsax_parse(NULL, input, &schemaInfo));
 }
 
-void BegchmarkSchemas(raw_buffer input, vector<string>& schema_jsons)
+void BenchmarkSchemas(raw_buffer input, vector<string>& schema_jsons)
 {
-	cout << "Parsing JSON (ns): " << endl << string(input.m_str, input.m_len) << endl << endl;
+	cout << "Parsing JSON (MBps): " << endl << string(input.m_str, input.m_len) << endl << endl;
 	for (auto const &sj : schema_jsons)
 	{
 		raw_buffer schema_str;
@@ -49,12 +49,12 @@ void BegchmarkSchemas(raw_buffer input, vector<string>& schema_jsons)
 		ASSERT_TRUE(schema.get());
 
 		cout << "with schema: " << (sj.empty() ? "schema_all()" : sj) << endl;
-		double ns_pbnjson = BenchmarkPerformNs([&](size_t n)
+		double s_pbnjson = BenchmarkPerform([&](size_t n)
 			{
 				for (; n > 0; --n)
 					ParsePbnjson(input, DOMOPT_NOOPT, schema.get());
 			});
-		cout << ns_pbnjson << endl << endl;
+		cout << ConvertToMBps(schema_str.m_len, s_pbnjson) << endl << endl;
 	}
 }
 } //namespace;
@@ -71,7 +71,7 @@ TEST(SchemaPerformance, StringTypeSchema)
 		"{\"type\":\"string\", \"maxLength\":15, \"minLength\":10 }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, NumberTypeSchema)
@@ -86,7 +86,7 @@ TEST(SchemaPerformance, NumberTypeSchema)
 		"{\"type\":\"number\", \"maximum\":2, \"minimum\":1 }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, IntegerTypeSchema)
@@ -101,7 +101,7 @@ TEST(SchemaPerformance, IntegerTypeSchema)
 		"{\"type\":\"integer\", \"maximum\":200, \"minimum\":1 }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, BooleanTypeSchema)
@@ -114,7 +114,7 @@ TEST(SchemaPerformance, BooleanTypeSchema)
 		"{\"type\":\"boolean\"}",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, ArrayTypeSchemaEmpty)
@@ -130,7 +130,7 @@ TEST(SchemaPerformance, ArrayTypeSchemaEmpty)
 		"{\"type\":\"array\", \"items\":[], \"additionalItems\":false }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, ArrayTypeSchemaOneType)
@@ -150,7 +150,7 @@ TEST(SchemaPerformance, ArrayTypeSchemaOneType)
 		"{\"type\":\"array\", \"items\":[{\"type\": \"string\"}, {\"type\": \"string\"}, {\"type\": \"string\"}], \"additionalItems\":false }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, ArrayTypeSchemaMultipleTypes)
@@ -167,7 +167,7 @@ TEST(SchemaPerformance, ArrayTypeSchemaMultipleTypes)
 		"{\"type\":\"array\", \"items\":[{\"type\": \"string\"}, {}, {}, {}] }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, ObjectTypeSchema)
@@ -228,7 +228,7 @@ TEST(SchemaPerformance, ObjectTypeSchema)
 		"}",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, EnumSchemaOneNumber)
@@ -243,7 +243,7 @@ TEST(SchemaPerformance, EnumSchemaOneNumber)
 		"{\"enum\":[12, null, \"abc\", {\"a\": 12}] }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, EnumSchemaOneObject)
@@ -257,7 +257,7 @@ TEST(SchemaPerformance, EnumSchemaOneObject)
 		"{\"enum\":[null, {\"a\": \"abc\"}, {\"a\": null, \"b\": [1, 2, 3]}] }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, EnumSchemaMultiple)
@@ -270,7 +270,7 @@ TEST(SchemaPerformance, EnumSchemaMultiple)
 		"{\"type\":\"array\", \"items\":{\"enum\":[null, 12, \"abc\", [1, 2, 3], {\"a\": true}] } }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, AllOfSchema)
@@ -364,7 +364,7 @@ TEST(SchemaPerformance, AllOfSchema)
 		"] }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, AnyOfSchemaOneItem)
@@ -431,7 +431,7 @@ TEST(SchemaPerformance, AnyOfSchemaOneItem)
 		"] }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, AnyOfSchemaMultipleItems)
@@ -498,7 +498,7 @@ TEST(SchemaPerformance, AnyOfSchemaMultipleItems)
 		"] } }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, OneOfSchemaOneItmem)
@@ -551,7 +551,7 @@ TEST(SchemaPerformance, OneOfSchemaOneItmem)
 		"] }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, OneOfSchemaMultipleItems)
@@ -604,7 +604,7 @@ TEST(SchemaPerformance, OneOfSchemaMultipleItems)
 		"] } }",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 }
 
 TEST(SchemaPerformance, WideRangeSchemas)
@@ -717,7 +717,7 @@ TEST(SchemaPerformance, WideRangeSchemas)
 		"}",
 	};
 
-	BegchmarkSchemas(input, schema_jsons);
+	BenchmarkSchemas(input, schema_jsons);
 
 	SUCCEED();
 }

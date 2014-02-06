@@ -26,10 +26,11 @@ webos_component(2 5 0)
 include(FindPkgConfig)
 
 find_library(GMP_LIBRARY gmp ${LIB_INSTALL_DIR})
+find_package(Threads)
 
 pkg_check_modules(GLIB2 REQUIRED glib-2.0)
 include_directories(${GLIB2_INCLUDE_DIRS})
-webos_add_compiler_flags(ALL -Wall -D__STRICT_ANSI__ ${GLIB2_CFLAGS_OTHER})
+webos_add_compiler_flags(ALL -Wall -D__STRICT_ANSI__ ${GLIB2_CFLAGS_OTHER} -pthread)
 
 # YAJL-1 doesn't ship any pkg-check module
 pkg_check_modules(YAJL yajl)

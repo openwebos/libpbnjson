@@ -99,6 +99,62 @@ void ParseSax(raw_buffer const &input, jschema_ref schema)
 	ASSERT_TRUE(jsax_parse(NULL, input, &schemaInfo));
 }
 
+#define ITERATION_STEP 5
+
+void ParseSaxIterate(raw_buffer const &input, jschema_ref schema)
+{
+	JSchemaInfo schemaInfo;
+	jschema_info_init(&schemaInfo, schema, NULL, NULL);
+
+	jsaxparser_ref parser = jsaxparser_create(&schemaInfo, NULL, NULL);
+
+	ASSERT_TRUE(parser);
+
+	const char* start = input.m_str;
+	const char* end = input.m_str + input.m_len;
+	int modulo = input.m_len % ITERATION_STEP;
+	const char* i = start;
+	for (; i < end - modulo; i += ITERATION_STEP) {
+		if (!jsaxparser_feed(parser, i, ITERATION_STEP)) {
+			ASSERT_TRUE(0);
+			break;
+		}
+	}
+
+	ASSERT_TRUE(jsaxparser_feed(parser, i, modulo));
+	ASSERT_TRUE(jsaxparser_end(parser));
+	jsaxparser_release(&parser);
+}
+
+void ParseDomIterate(raw_buffer const &input, jschema_ref schema)
+{
+	JSchemaInfo schemaInfo;
+	jschema_info_init(&schemaInfo, schema, NULL, NULL);
+
+	jdomparser_ref parser = jdomparser_create(&schemaInfo, 0);
+
+	ASSERT_TRUE(parser);
+
+	const char* start = input.m_str;
+	const char* end = input.m_str + input.m_len;
+	int modulo = input.m_len % ITERATION_STEP;
+	const char* i = start;
+	for (; i < end - modulo; i += ITERATION_STEP) {
+		if (!jdomparser_feed(parser, i, ITERATION_STEP)) {
+			ASSERT_TRUE(0);
+			break;
+		}
+	}
+
+	ASSERT_TRUE(jdomparser_feed(parser, i, modulo));
+	ASSERT_TRUE(jdomparser_end(parser));
+	jvalue_ref jval = jdomparser_get_result(parser);
+	ASSERT_TRUE(jis_valid(jval));
+
+	jdomparser_release(&parser);
+	j_release(&jval);
+}
+
 const int OPT_NONE = DOMOPT_NOOPT;
 
 const int OPT_ALL = DOMOPT_INPUT_NOCHANGE
@@ -118,9 +174,15 @@ TEST(Performance, ParseSmallInput)
 		J_CSTR_TO_BUF("{ \"returnValue\" : true, \"results\" : [ { \"property\" : \"someName\", \"value\" : 40.5 } ] }")
 	};
 
-	cout << "Parsing small JSON (ns):" << endl;
+	size_t small_inputs_size = 0;
+	for (const raw_buffer &rb : small_inputs)
+		small_inputs_size += rb.m_len;
+
+	cout << "Performance test result in megabytes per second, bigger is better." << endl;
+	cout << "Parsing small JSON (size: " << small_inputs_size << " bytes), MBps:" << endl;
+
 #if HAVE_YAJL
-	double ns_yajl = BenchmarkPerformNs([&](size_t n)
+	double s_yajl = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 			{
@@ -128,11 +190,11 @@ TEST(Performance, ParseSmallInput)
 					ParseYajl(rb);
 			}
 		});
-	cout << "YAJL:\t\t\t" << ns_yajl << endl;
+	cout << "YAJL:\t\t\t" << ConvertToMBps(small_inputs_size, s_yajl) << endl;
 #endif
 
 #if HAVE_CJSON
-	double ns_cjson = BenchmarkPerformNs([&](size_t n)
+	double s_cjson = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 			{
@@ -140,10 +202,10 @@ TEST(Performance, ParseSmallInput)
 					ParseCjson(rb);
 			}
 		});
-	cout << "CJSON:\t\t\t" << ns_cjson << endl;
+	cout << "CJSON:\t\t\t" << ConvertToMBps(small_inputs_size, s_cjson) << endl;
 #endif
 
-	double ns_sax = BenchmarkPerformNs([&](size_t n)
+	double s_sax = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 			{
@@ -151,9 +213,9 @@ TEST(Performance, ParseSmallInput)
 					ParseSax(rb, jschema_all());
 			}
 		});
-	cout << "pbnjson-sax:\t\t" << ns_sax << endl;
+	cout << "pbnjson-sax:\t\t" << ConvertToMBps(small_inputs_size, s_sax) << endl;
 
-	double ns_pbnjson = BenchmarkPerformNs([&](size_t n)
+	double s_pbnjson = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 			{
@@ -161,9 +223,9 @@ TEST(Performance, ParseSmallInput)
 					ParsePbnjson(rb, OPT_NONE, jschema_all());
 			}
 		});
-	cout << "pbnjson (-opts):\t" << ns_pbnjson << endl;
+	cout << "pbnjson (-opts):\t" << ConvertToMBps(small_inputs_size, s_pbnjson) << endl;
 
-	double ns_pbnjsonpp = BenchmarkPerformNs([&](size_t n)
+	double s_pbnjsonpp = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 			{
@@ -171,9 +233,9 @@ TEST(Performance, ParseSmallInput)
 					ParsePbnjsonPp(rb, OPT_NONE, jschema_all());
 			}
 		});
-	cout << "pbnjson++ (-opts):\t" << ns_pbnjsonpp << endl;
+	cout << "pbnjson++ (-opts):\t" << ConvertToMBps(small_inputs_size, s_pbnjsonpp) << endl;
 
-	double ns_pbnjson2 = BenchmarkPerformNs([&](size_t n)
+	double s_pbnjson2 = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 			{
@@ -181,9 +243,9 @@ TEST(Performance, ParseSmallInput)
 					ParsePbnjson(rb, OPT_ALL, jschema_all());
 			}
 		});
-	cout << "pbnjson (+opts):\t" << ns_pbnjson2 << endl;
+	cout << "pbnjson (+opts):\t" << ConvertToMBps(small_inputs_size, s_pbnjson2) << endl;
 
-	double ns_pbnjsonpp2 = BenchmarkPerformNs([&](size_t n)
+	double s_pbnjsonpp2 = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 			{
@@ -191,7 +253,27 @@ TEST(Performance, ParseSmallInput)
 					ParsePbnjsonPp(rb, OPT_ALL, jschema_all());
 			}
 		});
-	cout << "pbnjson++ (+opts):\t" << ns_pbnjsonpp2 << endl;
+	cout << "pbnjson++ (+opts):\t" << ConvertToMBps(small_inputs_size, s_pbnjsonpp2) << endl;
+
+	double si_sax = BenchmarkPerform([&](size_t n)
+		{
+			for (; n > 0; --n)
+			{
+				for (auto const &rb : small_inputs)
+					ParseSaxIterate(rb, jschema_all());
+			}
+		});
+	cout << "pbnjson-sax iterate:\t" << ConvertToMBps(small_inputs_size, si_sax) << endl;
+
+	double si_dom = BenchmarkPerform([&](size_t n)
+		{
+			for (; n > 0; --n)
+			{
+				for (auto const &rb : small_inputs)
+					ParseDomIterate(rb, jschema_all());
+			}
+		});
+	cout << "pbnjson-dom iterate:\t" << ConvertToMBps(small_inputs_size, si_dom) << endl;
 
 	SUCCEED();
 }
@@ -223,59 +305,75 @@ TEST(Performance, ParseBigInput)
 		"\"b1\" : true"
 		"}");
 
-	cout << "Parsing big JSON (ns):" << endl;
+	size_t big_input_size = input.m_len;
+	cout << "Parsing big JSON (size: " << big_input_size << " bytes), MBps:" << endl;
+
 #if HAVE_YAJL
-	double ns_yajl = BenchmarkPerformNs([&](size_t n)
+	double s_yajl = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParseYajl(input);
 		});
-	cout << "YAJL:\t\t\t" << ns_yajl << endl;
+	cout << "YAJL:\t\t\t" << ConvertToMBps(big_input_size, s_yajl) << endl;
 #endif
 
 #if HAVE_CJSON
-	double ns_cjson = BenchmarkPerformNs([&](size_t n)
+	double s_cjson = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParseCjson(input);
 		});
-	cout << "CJSON:\t\t\t" << ns_cjson << endl;
+	cout << "CJSON:\t\t\t" << ConvertToMBps(big_input_size, s_cjson) << endl;
 #endif
 
-	double ns_sax = BenchmarkPerformNs([&](size_t n)
+	double s_sax = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParseSax(input, jschema_all());
 		});
-	cout << "pbnjson-sax:\t\t" << ns_sax << endl;
+	cout << "pbnjson-sax:\t\t" << ConvertToMBps(big_input_size, s_sax) << endl;
 
-	double ns_pbnjson = BenchmarkPerformNs([&](size_t n)
+	double s_pbnjson = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParsePbnjson(input, OPT_NONE, jschema_all());
 		});
-	cout << "pbnjson (-opts):\t" << ns_pbnjson << endl;
+	cout << "pbnjson (-opts):\t" << ConvertToMBps(big_input_size, s_pbnjson) << endl;
 
-	double ns_pbnjsonpp = BenchmarkPerformNs([&](size_t n)
+	double s_pbnjsonpp = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParsePbnjsonPp(input, OPT_NONE, jschema_all());
 		});
-	cout << "pbnjson++ (-opts):\t" << ns_pbnjsonpp << endl;
+	cout << "pbnjson++ (-opts):\t" << ConvertToMBps(big_input_size, s_pbnjsonpp) << endl;
 
-	double ns_pbnjson2 = BenchmarkPerformNs([&](size_t n)
+	double s_pbnjson2 = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParsePbnjson(input, OPT_ALL, jschema_all());
 		});
-	cout << "pbnjson (+opts):\t" << ns_pbnjson2 << endl;
+	cout << "pbnjson (+opts):\t" << ConvertToMBps(big_input_size, s_pbnjson2) << endl;
 
-	double ns_pbnjsonpp2 = BenchmarkPerformNs([&](size_t n)
+	double s_pbnjsonpp2 = BenchmarkPerform([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParsePbnjsonPp(input, OPT_ALL, jschema_all());
 		});
-	cout << "pbnjson++ (+opts):\t" << ns_pbnjsonpp2 << endl;
+	cout << "pbnjson++ (+opts):\t" << ConvertToMBps(big_input_size, s_pbnjsonpp2) << endl;
+
+	double si_sax = BenchmarkPerform([&](size_t n)
+		{
+			for (; n > 0; --n)
+				ParseSaxIterate(input, jschema_all());
+		});
+	cout << "pbnjson-sax iterate:\t" << ConvertToMBps(big_input_size, si_sax) << endl;
+
+	double si_dom = BenchmarkPerform([&](size_t n)
+		{
+			for (; n > 0; --n)
+				ParseDomIterate(input, jschema_all());
+		});
+	cout << "pbnjson-dom iterate:\t" << ConvertToMBps(big_input_size, si_dom) << endl;
 
 	SUCCEED();
 }

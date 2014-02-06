@@ -25,12 +25,12 @@ file=$4
 
 keyword_pattern="KEY_[0-9A-Za-z_]*"
 
-found_keywords=`grep -v any_object_key $source_dir/$file | grep -o "$keyword_pattern" | sort | uniq`
-all_keywords=`grep any_object_key $source_dir/$file | grep -o "$keyword_pattern" | sort | uniq`
+found_keywords=`grep -v any_object_key $source_dir/$file | grep -o "$keyword_pattern" | sort -u`
+all_keywords=`grep any_object_key $source_dir/$file | grep -o "$keyword_pattern" | sort -u`
 
 expected_tokens=`echo "$all_keywords" | grep -v NOT_KEYWORD`
 token_keywords=`grep TOKEN $source_dir/schema_keywords.gperf | grep -o "TOKEN_${keyword_pattern}" | \
-	sed 's/TOKEN_//' | sort | uniq`
+	sed 's/TOKEN_//' | sort -u`
 
 if [ "$found_keywords" != "$all_keywords" ]; then
 	echo >&2 "any_object_key doesn't contain all the keywords"
