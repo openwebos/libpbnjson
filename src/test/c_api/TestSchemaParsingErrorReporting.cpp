@@ -50,6 +50,7 @@ protected:
 	virtual void SetUp()
 	{
 		errorCounter = 0;
+		errorCode = VEC_OK;
 		errorMsg = "";
 	}
 

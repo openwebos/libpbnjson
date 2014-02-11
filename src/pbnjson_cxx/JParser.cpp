@@ -288,16 +288,4 @@ JParser::ParserPosition JParser::getPosition() const
 	return (JParser::ParserPosition){ -1, -1 };
 }
 
-JParser::DocumentState::DocumentState()
-{
-}
-
-JParser::DocumentState::DocumentState(const DocumentState& other)
-{
-}
-
-JParser::DocumentState::~DocumentState()
-{
-}
-
 }

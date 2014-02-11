@@ -338,13 +338,11 @@ static unsigned long key_hash_raw (raw_buffer const *str)
 	unsigned long hash = 5381;
 	char const *data = str->m_str;
 	int count = str->m_len;
-	int c = 0;
 
 	assert(str->m_str != NULL);
 	while (count--)
 	{
-		c = *data++;
-		hash = ((hash << 5) + hash) + c;  // hash * 33 + c
+		hash = ((hash << 5) + hash) + *data++;  // hash * 33 + c
 	}
 	return hash;
 }
@@ -1075,8 +1073,6 @@ bool jarray_append (jvalue_ref arr, jvalue_ref val)
  */
 bool jarray_insert(jvalue_ref arr, ssize_t index, jvalue_ref val)
 {
-	ssize_t j;
-
 	SANITY_CHECK_POINTER(arr);
 
 	CHECK_CONDITION_RETURN_VALUE(!jis_array(arr), false, "Array to insert into isn't a valid reference to a JSON DOM node: %p", arr);
@@ -1097,7 +1093,7 @@ bool jarray_insert(jvalue_ref arr, ssize_t index, jvalue_ref val)
 		// all the elements.
 		hole = jarray_get_unsafe(arr, jarray_size_unsafe(arr) - 1);
 
-		for (j = jarray_size_unsafe(arr) - 1; j > index; j--, hole = toMove) {
+		for (ssize_t j = jarray_size_unsafe(arr) - 1; j > index; j--, hole = toMove) {
 			toMove = jarray_get_unsafe(arr, j - 1);
 			*hole = *toMove;
 		}
@@ -1690,7 +1686,6 @@ int64_t jnumber_deref_i64(jvalue_ref num)
 {
 	int64_t result;
 	ConversionResultFlags fail;
-	assert(jnumber_get_i64(num, &result) == CONV_OK);
 	if (CONV_OK != (fail = jnumber_get_i64(num, &result))) {
 		PJ_LOG_WARN("Converting json value to a 64-bit integer but ignoring the conversion error: %d", fail);
 	}
@@ -1704,7 +1699,6 @@ raw_buffer jnumber_deref_raw(jvalue_ref num)
 	// now - it is really up to the caller to ensure they do not
 	// call this on something that is not a raw number.
 	raw_buffer result = { 0 };
-	assert(jnumber_get_raw(num, &result) == CONV_OK);
 	jnumber_get_raw(num, &result);
 	return result;
 }

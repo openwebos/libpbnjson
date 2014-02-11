@@ -133,7 +133,7 @@ int dom_number(JSAXContextRef ctxt, const char *number, size_t numberLen)
 	CHECK_CONDITION_RETURN_VALUE(data == NULL, 0, "number encountered without any context");
 	CHECK_CONDITION_RETURN_VALUE(data->m_prev == NULL, 0, "unexpected state - how is this possible?");
 	CHECK_POINTER_RETURN_VALUE(number, 0);
-	CHECK_CONDITION_RETURN_VALUE(numberLen <= 0, 0, "unexpected - numeric string doesn't actually contain a number");
+	CHECK_CONDITION_RETURN_VALUE(numberLen == 0, 0, "unexpected - numeric string doesn't actually contain a number");
 
 	jnum = createOptimalNumber(data->m_optInformation, number, numberLen);
 

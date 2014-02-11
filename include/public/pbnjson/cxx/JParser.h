@@ -114,15 +114,6 @@ public:
 	char const *getError();
 
 protected:
-	class DocumentState {
-	public:
-		virtual ~DocumentState();
-		DocumentState(const DocumentState& other);
-
-	protected:
-		DocumentState();
-	};
-
 	/*
 	 * By default, this parser will not parse any input.  You must override
 	 * all the functions that might be called if you want.  Schema validation occurs

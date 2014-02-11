@@ -160,7 +160,7 @@ static void log_v(int priority, const char *fullPath, int line, const char *mess
 	size_t messageLen = strlen(message) + strlen(path) + 4 /* line number */ + 100 /* chars for message */;
 	const char *programNameToPrint = getConsumerName_internal();
 	size_t formatLen = messageLen + sizeof(LOG_PREAMBLE) + (using_terminal ? 1 : 0) + strlen(programNameToPrint);
-	char *format = alloca(formatLen);
+	char format[formatLen];
 	snprintf(format, formatLen, LOG_PREAMBLE "%s%s", programNameToPrint, path, line, message, using_terminal ? "\n" : "");
 
 #if HAVE_VSYSLOG

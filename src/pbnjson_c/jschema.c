@@ -191,10 +191,9 @@ jschema_ref jschema_parse_file(const char *file, JErrorCallbacksRef errorHandler
 	// mmap the file
 	const char *mapContents = NULL;
 	size_t mapSize = 0;
-	int fd = -1;
 	struct stat fileInfo;
 
-	fd = open(file, O_RDONLY);
+	int fd = open(file, O_RDONLY);
 	if (-1 == fd)
 	{
 		PJ_LOG_WARN("Unable to open schema file %s", file);
