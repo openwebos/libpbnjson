@@ -18,6 +18,7 @@
 
 #include <gtest/gtest.h>
 #include <pbnjson.h>
+#include <pbnjson.hpp>
 #include <cjson.h>
 #include <yajl.h>
 #include "PerformanceUtils.hpp"
@@ -25,6 +26,14 @@
 using namespace std;
 
 namespace {
+
+class JSchemaC : public pbnjson::JSchema
+{
+public:
+	JSchemaC(jschema_ref schema) :
+		JSchema(new JSchema::Resource(schema, JSchema::Resource::CopySchema))
+	{}
+};
 
 #if HAVE_CJSON
 void ParseCjson(raw_buffer const &input)
@@ -44,6 +53,16 @@ void ParsePbnjson(raw_buffer const &input, JDOMOptimizationFlags opt, jschema_re
 		jv{jdom_parse(input, opt, &schemaInfo), [](jvalue_ref &v) { j_release(&v); }};
 
 	ASSERT_TRUE(jis_valid(jv.get()));
+}
+
+void ParsePbnjsonPp(raw_buffer const &input, JDOMOptimizationFlags opt, jschema_ref schema)
+{
+	pbnjson::JDomParser parser;
+	parser.changeOptimization((JDOMOptimization)opt);
+
+	bool answer = parser.parse(std::string(input.m_str, input.m_len), JSchemaC(schema));
+
+	ASSERT_TRUE( answer );
 }
 
 #if HAVE_YAJL
@@ -144,6 +163,16 @@ TEST(Performance, ParseSmallInput)
 		});
 	cout << "pbnjson (-opts):\t" << ns_pbnjson << endl;
 
+	double ns_pbnjsonpp = BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+			{
+				for (auto const &rb : small_inputs)
+					ParsePbnjsonPp(rb, OPT_NONE, jschema_all());
+			}
+		});
+	cout << "pbnjson++ (-opts):\t" << ns_pbnjsonpp << endl;
+
 	double ns_pbnjson2 = BenchmarkPerformNs([&](size_t n)
 		{
 			for (; n > 0; --n)
@@ -153,6 +182,16 @@ TEST(Performance, ParseSmallInput)
 			}
 		});
 	cout << "pbnjson (+opts):\t" << ns_pbnjson2 << endl;
+
+	double ns_pbnjsonpp2 = BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+			{
+				for (auto const &rb : small_inputs)
+					ParsePbnjsonPp(rb, OPT_ALL, jschema_all());
+			}
+		});
+	cout << "pbnjson++ (+opts):\t" << ns_pbnjsonpp2 << endl;
 
 	SUCCEED();
 }
@@ -217,12 +256,26 @@ TEST(Performance, ParseBigInput)
 		});
 	cout << "pbnjson (-opts):\t" << ns_pbnjson << endl;
 
+	double ns_pbnjsonpp = BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+				ParsePbnjsonPp(input, OPT_NONE, jschema_all());
+		});
+	cout << "pbnjson++ (-opts):\t" << ns_pbnjsonpp << endl;
+
 	double ns_pbnjson2 = BenchmarkPerformNs([&](size_t n)
 		{
 			for (; n > 0; --n)
 				ParsePbnjson(input, OPT_ALL, jschema_all());
 		});
 	cout << "pbnjson (+opts):\t" << ns_pbnjson2 << endl;
+
+	double ns_pbnjsonpp2 = BenchmarkPerformNs([&](size_t n)
+		{
+			for (; n > 0; --n)
+				ParsePbnjsonPp(input, OPT_ALL, jschema_all());
+		});
+	cout << "pbnjson++ (+opts):\t" << ns_pbnjsonpp2 << endl;
 
 	SUCCEED();
 }
