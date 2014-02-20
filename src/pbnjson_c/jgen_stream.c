@@ -234,7 +234,7 @@ static char* finish_stream(ActualStream* stream, StreamStatus *error_code)
 			end_array(stream);
 			break;
 		default:
-			PJ_LOG_ERR("Invalid object type: %d", stream->opened);
+			PJ_LOG_ERR("PBNJSON_INVALID_OBJ_TYPE", 1, PMLOGKFV("TYPE", "%d", stream->opened), "Invalid object type: %d", stream->opened);
 			if (error_code) *error_code = GEN_GENERIC_ERROR;
 			goto stream_error;
 	}

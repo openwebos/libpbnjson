@@ -29,7 +29,7 @@ static bool to_string_append_jnull(void *ctxt)
 	JStreamRef generating = (JStreamRef)ctxt;
 	bool res = (generating->null_value(generating) != NULL);
 	if (!res) {
-		PJ_LOG_ERR("Schema validation error, null value not accepted");
+		PJ_LOG_ERR("PBNJSON_NULL_NOT_ALLOWED", 0, "Schema validation error, null value not accepted");
 	}
 	return res;
 }
@@ -40,7 +40,7 @@ static bool to_string_append_jkeyvalue(void *ctxt, const unsigned char *str, siz
 	JStreamRef generating = (JStreamRef)ctxt;
 	bool res = generating->o_key(generating, (raw_buffer){(const char*)str, len});
 	if (!res) {
-		PJ_LOG_ERR("Schema validation error with key: '%s'", str);
+		PJ_LOG_ERR("PBNJSON_SCHEMA_VALIDATION_ERR", 1, PMLOGKS("KEY", str), "Schema validation error with key: '%s'", str);
 	}
 	return res;
 }
@@ -49,7 +49,7 @@ static bool to_string_append_jobject_start(void *ctxt)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
 	if (!generating->o_begin(generating)) {
-		PJ_LOG_ERR("Schema validation error, objects are not allowed.");
+		PJ_LOG_ERR("PBNJSON_OBJS_NOT_ALLOWED", 0, "Schema validation error, objects are not allowed.");
 		return false;
 	}
 	return true;
@@ -60,7 +60,7 @@ static bool to_string_append_jobject_end(void *ctxt)
 	JStreamRef generating = (JStreamRef)ctxt;
 
 	if (!generating->o_end(generating)) {
-		PJ_LOG_ERR("Schema validation error, object did not validate against schema");
+		PJ_LOG_ERR("PBNJSON_OBJ_INVALID", 0, "Schema validation error, object did not validate against schema");
 		return false;
 	}
 	return true;
@@ -70,7 +70,7 @@ static bool to_string_append_jarray_start(void *ctxt)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
 	if (!generating->a_begin(generating)) {
-		PJ_LOG_ERR("Schema validation error, arrays are not allowed");
+		PJ_LOG_ERR("PBNJSON_ARR_NOT_ALLOWED", 0, "Schema validation error, arrays are not allowed");
 		return false;
 	}
 	return true;
@@ -80,7 +80,7 @@ static bool to_string_append_jarray_end(void *ctxt)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
 	if (!generating->a_end(generating)) {
-		PJ_LOG_ERR("Schema validation error, array did not validate against schema");
+		PJ_LOG_ERR("PBNJSON_ARR_INVALID", 0, "Schema validation error, array did not validate against schema");
 		return false;
 	}
 	return true;
@@ -109,7 +109,7 @@ static inline bool to_string_append_jstring(void *ctxt, const unsigned char *str
 	JStreamRef generating = (JStreamRef)ctxt;
 	bool result = (generating->string(generating, (raw_buffer){(const char*)str, len}) != NULL);
 	if (!result) {
-		PJ_LOG_ERR("Schema validation error, string '%s' did not validate against schema", str);
+		PJ_LOG_ERR("PBNJSON_STR_INVALID", 1, PMLOGKS("STRING", str), "Schema validation error, string '%s' did not validate against schema", str);
 	}
 	return result;
 }
@@ -119,7 +119,7 @@ static inline bool to_string_append_jbool(void *ctxt, bool value)
 	JStreamRef generating = (JStreamRef)ctxt;
 	bool result = (generating->boolean(generating, value) != NULL);
 	if (!result) {
-		PJ_LOG_ERR("Schema validation error, bool did not validate against schema");
+		PJ_LOG_ERR("PBNJSON_BOOL_INVALID", 0, "Schema validation error, bool did not validate against schema");
 	}
 	return result;
 }
@@ -176,7 +176,7 @@ static const char *jvalue_tostring_internal_layer1(jvalue_ref val, JSchemaInfoRe
 	const char* result = jvalue_tostring_internal_layer2(val, schemainfo, schemaNecessary);
 
 	if (result == NULL) {
-		PJ_LOG_ERR("Failed to generate string from jvalue. Error location: %s", val->m_toString);
+		PJ_LOG_ERR("PBNJSON_JVAL_TO_STR_ERR", 1, PMLOGKS("STRING", val->m_toString), "Failed to generate string from jvalue. Error location: %s", val->m_toString);
 	}
 
 	return result;

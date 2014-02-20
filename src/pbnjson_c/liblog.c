@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
 // limitations under the License.
 //
 // LICENSE@@@
-
-#include "liblog.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -34,8 +32,7 @@
 #include <strnlen.h>
 #include <isatty.h>
 
-static const char *program_name = NULL;
-static bool default_program_name = true;
+#include "liblog.h"
 
 #if LOG_INFO < LOG_ERR
 	// increasing numbers indicate higher priority
@@ -45,6 +42,20 @@ static bool default_program_name = true;
 	#define IS_HIGHER_PRIORITY(actual, base) ((actual) < (base))
 #endif
 
+#if HAVE_VFPRINTF
+#define VFPRINTF(priority, file, format, ap)                        \
+	do {                                                            \
+		vfprintf(file, format, ap);                                 \
+		if (IS_HIGHER_PRIORITY(priority, LOG_INFO))                 \
+			fflush(file);                                           \
+	} while (0)
+#else
+#define VFPRINTF(priority, file, format, ap) PJSON_NOOP
+#endif
+
+static const char *program_name = NULL;
+static bool default_program_name = true;
+
 #if GCC_VERSION >= __PJ_APP_VERSION(2, 96, 0)
 #define PURE_FUNCTION __attribute__((pure))
 #else
@@ -53,9 +64,29 @@ static bool default_program_name = true;
 
 #define SAFE_STRING_PRINT(str) ((str) != NULL ? (str) : "(null)")
 
+#if HAVE_VSYSLOG
+static int PmLogLevelToSyslog(PmLogLevel level)
+{
+	switch (level)
+	{
+	case kPmLogLevel_Critical:
+		return LOG_CRIT;
+	case kPmLogLevel_Error:
+		return LOG_ERR;
+	case kPmLogLevel_Warning:
+		return LOG_WARNING;
+	case kPmLogLevel_Info:
+		return LOG_INFO;
+	case kPmLogLevel_Debug:
+	default:
+		return LOG_DEBUG;
+	}
+}
+#endif
+
 void setConsumerName(const char *name)
 {
-	PJ_LOG_INFO("changing program name to %s", SAFE_STRING_PRINT(program_name));
+	PJ_LOG_DBG("PBNJSON_CHANGE_NAME", 1, PMLOGKS("APPID", program_name), "changing program name to %s", SAFE_STRING_PRINT(program_name));
 	if (default_program_name)
 		free((char *)program_name);
 	program_name = name;
@@ -69,7 +100,6 @@ const char *getConsumerName()
 	return program_name;
 }
 
-#ifdef HAVE_LOG_TARGET
 static size_t setProgNameUnknown(char *buffer, size_t bufferSize) PURE_FUNC;
 static size_t setProgNameUnknown(char *buffer, size_t bufferSize)
 {
@@ -122,21 +152,19 @@ static const char *getConsumerName_internal()
 	return (program_name = dyn_program_name);
 }
 
-#if HAVE_VFPRINTF
-#define VFPRINTF(priority, file, format, ap)                        \
-	do {                                                            \
-		vfprintf(file, format, ap);                                 \
-		if (IS_HIGHER_PRIORITY(priority, LOG_INFO))                 \
-			fflush(file);                                           \
-	} while (0)
-#else
-#define VFPRINTF(priority, file, format, ap) PJSON_NOOP
-#endif
-
-static void log_v(int priority, const char *fullPath, int line, const char *message, va_list ap)
+PmLogContext PmLogGetLibContext()
 {
+	return kPmLogDefaultContext;
+}
+
+PmLogErr _PmLogMsgKV(PmLogContext context, PmLogLevel level, unsigned int flags,
+                     const char *msgid, size_t kv_count, const char *check_keywords,
+                     const char *check_formats, const char *fmt, ...)
+{
+#if HAVE_LOG_TARGET
 	static int using_terminal = -1;
-	if (using_terminal == -1) {
+	if (using_terminal == -1)
+	{
 #if defined HAVE_VSYSLOG
 #if defined HAVE_VFPRINTF && defined HAVE_ISATTY
 		using_terminal = isatty(fileno(stderr));
@@ -150,83 +178,32 @@ static void log_v(int priority, const char *fullPath, int line, const char *mess
 #endif
 	}
 
-#define LOG_PREAMBLE "%s PBNJSON %s:%d :: "
+#define LOG_PREAMBLE "%s PBNJSON :: "
 
-	char *pathCopy = strdup(fullPath);
-	char *path = strstr(pathCopy, "src/pbnjson_c");
-	if (!path)
-		path = pathCopy;
+	va_list ap;
+	va_start(ap, fmt);
+
 	// TODO: memoize the program name string length
-	size_t messageLen = strlen(message) + strlen(path) + 4 /* line number */ + 100 /* chars for message */;
+	size_t messageLen = strlen(fmt) + strlen(msgid) + 4 /* line number */ + 100 /* chars for message */;
 	const char *programNameToPrint = getConsumerName_internal();
 	size_t formatLen = messageLen + sizeof(LOG_PREAMBLE) + (using_terminal ? 1 : 0) + strlen(programNameToPrint);
 	char format[formatLen];
-	snprintf(format, formatLen, LOG_PREAMBLE "%s%s", programNameToPrint, path, line, message, using_terminal ? "\n" : "");
+	snprintf(format, formatLen, LOG_PREAMBLE "%s%s%s", programNameToPrint, msgid, fmt, using_terminal ? "\n" : "");
 
 #if HAVE_VSYSLOG
 	if (LIKELY(!using_terminal)) {
-		vsyslog(priority, format, ap);
+		vsyslog(PmLogLevelToSyslog(level), format, ap);
 	} else {
-		VFPRINTF(priority, stderr, format, ap);
+		VFPRINTF(level, stderr, format, ap);
 	}
 #elif HAVE_VFPRINTF
-	VFPRINTF(priority, stderr, format, ap);
+	VFPRINTF(level, stderr, format, ap);
 #else
 #error Logging mechanism not implemented
 #endif
 
-	free(pathCopy);
-}
-
-void log_info(const char *path, int line, const char *message, ...)
-{
-	va_list ap;
-
-	va_start(ap, message);
-	log_v(LOG_DEBUG, path, line, message, ap);
 	va_end(ap);
-}
-
-void log_warn(const char *path, int line, const char *message, ...)
-{
-	va_list ap;
-
-	va_start(ap, message);
-	log_v(LOG_WARNING, path, line, message, ap);
-	va_end(ap);
-}
-
-void log_fatal(const char *path, int line, const char *message, ...)
-{
-	va_list ap;
-
-	va_start(ap, message);
-	log_v(LOG_CRIT, path, line, message, ap);
-	va_end(ap);
-}
-
-#ifndef NDEBUG
-void __assert_fail_msg (__const char *__assertion, __const char *__file,
-			   unsigned int __line, __const char *__function, const char *format, ...)
-{
-	size_t bufferLen = (strlen(__assertion) + strlen(format)) * 2;
-	if (bufferLen < 4096)
-		bufferLen = 4096;
-
-	char *buffer = (char *)malloc(bufferLen);
-	int printed = snprintf(buffer, bufferLen, "%s: ", __assertion);
-
-	va_list ap;
-	va_start(ap, format);
-
-	vsnprintf(buffer + printed, bufferLen - printed, format, ap);
-
-	va_end(ap);
-
-	__assert_fail(buffer, __file, __line, __function);
-
-	free(buffer);
-}
-#endif
-
 #endif /* HAVE_LOG_TARGET */
+
+	return kPmLogErr_None;
+}

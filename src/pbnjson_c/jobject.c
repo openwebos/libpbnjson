@@ -268,7 +268,7 @@ void j_release (jvalue_ref *val)
 				j_destroy_boolean (*val);
 				break;
 			case JV_NULL:
-				PJ_LOG_ERR("Invalid program state - should've already returned from j_release before this point");
+				PJ_LOG_ERR("PBNJSON_INVALID_STATE", 0, "Invalid program state - should've already returned from j_release before this point");
 				assert(false);
 				break;
 		}
@@ -285,7 +285,7 @@ void j_release (jvalue_ref *val)
 		PJ_LOG_MEM("Freeing %p", *val);
 		free (*val);
 	} else if (UNLIKELY((*val)->m_refCnt < 0)) {
-		PJ_LOG_ERR("reference counter messed up - memory corruption and/or random crashes are possible");
+		PJ_LOG_ERR("PBNJSON_REF_CNT_ERR", 0, "reference counter messed up - memory corruption and/or random crashes are possible");
 		assert(false);
 	} else {
 		(*val)->m_refCnt--;
@@ -431,7 +431,7 @@ static jvalue_ref jobject_put_keyvalue(jvalue_ref obj, jobject_key_value item)
 		j_release(&item.value);
 	}
 	else if (UNLIKELY(!jobject_put(obj, item.key, item.value))) {
-		PJ_LOG_ERR("Failed to insert requested key/value into new object");
+		PJ_LOG_ERR("PBNJSON_OBJ_PUT_KV_ERR", 0, "Failed to insert requested key/value into new object");
 		j_release (&obj);
 		obj = jinvalid();
 	}
@@ -594,7 +594,7 @@ bool jobject_set (jvalue_ref obj, raw_buffer key, jvalue_ref val)
 
 	newKey = jstring_create_copy (key);
 	if (!jis_valid_unsafe (newKey)) {
-		PJ_LOG_ERR("Failed to create a copy of %.*s", (int)key.m_len, key.m_str);
+		PJ_LOG_ERR("PBNJSON_JSTR_COPY_ERR", 0, "Failed to create a copy of %.*s", (int)key.m_len, key.m_str);
 		j_release (&newVal);
 		return false;
 	}
@@ -607,14 +607,14 @@ bool jobject_set2(jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 	jvalue_ref new_key = jvalue_copy (key);
 	if (UNLIKELY(!new_key))
 	{
-		PJ_LOG_ERR("Failed to create a copy of key %p", key);
+		PJ_LOG_ERR("PBNJSON_SET_KEY_COPY_ERR", 0, "Failed to create a copy of key %p", key);
 		return false;
 	}
 
 	jvalue_ref new_val = jvalue_copy (val);
 	if (UNLIKELY(!new_val))
 	{
-		PJ_LOG_ERR("Failed to create a copy of val %p", val);
+		PJ_LOG_ERR("PBNJSON_SET_VAL_COPY_ERR", 0, "Failed to create a copy of val %p", val);
 		j_release(&new_key);
 		return false;
 	}
@@ -632,7 +632,7 @@ bool jobject_put (jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 
 	do {
 		if (UNLIKELY(!jis_object(obj))) {
-			PJ_LOG_ERR("%p is %d not an object (%d)", obj, obj->m_type, JV_OBJECT);
+			PJ_LOG_ERR("PBNJSON_NOT_OBJ", 1, PMLOGKFV("TYPE", "%d", obj->m_type), "%p is %d not an object (%d)", obj, obj->m_type, JV_OBJECT);
 			break;
 		}
 
@@ -641,32 +641,32 @@ bool jobject_put (jvalue_ref obj, jvalue_ref key, jvalue_ref val)
 		}
 
 		if (UNLIKELY(key == NULL)) {
-			PJ_LOG_ERR("Invalid API use: null pointer");
+			PJ_LOG_ERR("PBNJSON_NULL_KEY", 0, "Invalid API use: null pointer");
 			break;
 		}
 
 		if (UNLIKELY(!jis_string(key))) {
-			PJ_LOG_ERR("%p is %d not a string (%d)", key, key->m_type, JV_STR);
+			PJ_LOG_ERR("PBNJSON_NOT_STR_KEY",  1, PMLOGKFV("TYPE", "%d", key->m_type), "%p is %d not a string (%d)", key, key->m_type, JV_STR);
 			break;
 		}
 
 		if (UNLIKELY(jstring_size(key) == 0)) {
-			PJ_LOG_ERR("Object instance name is the empty string");
+			PJ_LOG_ERR("PBNJSON_EMPTY_STR_KEY", 0, "Object instance name is the empty string");
 			break;
 		}
 
 		if (val == NULL) {
-			PJ_LOG_WARN("Please don't pass in NULL - use jnull() instead");
+			PJ_LOG_WARN("PBNJSON_NULL_VALUE", 0, "Please don't pass in NULL - use jnull() instead");
 			val = jnull ();
 		}
 
 		if (!jis_valid(val)) {
-			PJ_LOG_WARN("Passed invalid value converted to jnull()");
+			PJ_LOG_WARN("PBNJSON_INVALID_TO_JNULL_CNV", 0, "Passed invalid value converted to jnull()");
 			val = jnull ();
 		}
 
 		if (!check_insert_sanity(obj, val)) {
-			PJ_LOG_ERR("Error in object hierarchy. Inserting jvalue would create an illegal cyclic dependency");
+			PJ_LOG_ERR("PBNJSON_OBJ_PUT_HIERARCHY_ERR", 0, "Error in object hierarchy. Inserting jvalue would create an illegal cyclic dependency");
 			break;
 		}
 
@@ -789,7 +789,7 @@ jvalue_ref jarray_create_hint (jarray_opts opts, size_t capacityHint)
 {
 	jvalue_ref new_array = jarray_create (opts);
 	if (UNLIKELY(capacityHint == 0)) {
-		PJ_LOG_INFO("Non-recommended use of API providing a hint of 0 elements.  instead, maybe use jarray_create?");
+		PJ_LOG_WARN("PBNJSON_ZERO_ELM_HINT", 0, "Non-recommended use of API providing a hint of 0 elements.  instead, maybe use jarray_create?");
 	} else if (LIKELY(new_array != NULL)) {
 		jarray_expand_capacity_unsafe (new_array, capacityHint);
 	}
@@ -979,12 +979,12 @@ static bool jarray_put_unsafe (jvalue_ref arr, ssize_t index, jvalue_ref val)
 	assert(jis_array(arr));
 
 	if (!check_insert_sanity(arr, val)) {
-		PJ_LOG_ERR("Error in object hierarchy. Inserting jvalue would create an illegal cyclic dependency");
+		PJ_LOG_ERR("PBNJSON_ARR_PUT_HIERARCHY_ERR", 0, "Error in object hierarchy. Inserting jvalue would create an illegal cyclic dependency");
 		return false;
 	}
 
 	if (!jarray_expand_capacity_unsafe (arr, index + 1)) {
-		PJ_LOG_WARN("Failed to expand array to allocate element - memory allocation problem?");
+		PJ_LOG_WARN("PBNJSON_MEM_ERROR", 0, "Failed to expand array to allocate element - memory allocation problem?");
 		return false;
 	}
 
@@ -1005,7 +1005,7 @@ bool jarray_set (jvalue_ref arr, ssize_t index, jvalue_ref val)
 	CHECK_CONDITION_RETURN_VALUE(index < 0, false, "Attempt to set array element for %p with negative index value %zd", arr, index);
 
 	if (UNLIKELY(val == NULL)) {
-		PJ_LOG_WARN("incorrect API use - please pass an actual reference to a JSON null if that's what you want - assuming that's what you meant");
+		PJ_LOG_WARN("PBNJSON_NULL_IN_ARR_SET_FUNC", 0, "incorrect API use - please pass an actual reference to a JSON null if that's what you want - assuming that's what you meant");
 		val = jnull ();
 	}
 
@@ -1019,17 +1019,17 @@ bool jarray_put (jvalue_ref arr, ssize_t index, jvalue_ref val)
 {
 	do {
 		if (!jis_array(arr)) {
-			PJ_LOG_ERR("Attempt to insert into non-array %p", arr);
+			PJ_LOG_ERR("PBNJSON_NOT_ARRAY", 0, "Attempt to insert into non-array %p", arr);
 			break;
 		}
 
 		if (index < 0) {
-			PJ_LOG_ERR("Attempt to insert array element for %p with negative index value %zd", arr, index);
+			PJ_LOG_ERR("PBNJSON_NEG_ARRAY_INDEX", 0, "Attempt to insert array element for %p with negative index value %zd", arr, index);
 			break;
 		}
 
 		if (UNLIKELY(val == NULL)) {
-			PJ_LOG_WARN("incorrect API use - please pass an actual reference to a JSON null if that's what you want - assuming that's the case");
+			PJ_LOG_WARN("PBNJSON_NULL_IN_ARR_PUT_FUNC", 0, "incorrect API use - please pass an actual reference to a JSON null if that's what you want - assuming that's the case");
 			val = jnull ();
 		}
 
@@ -1053,7 +1053,7 @@ bool jarray_append (jvalue_ref arr, jvalue_ref val)
 	CHECK_CONDITION_RETURN_VALUE(!jis_array(arr), false, "Attempt to append into non-array %p", arr);
 
 	if (UNLIKELY(val == NULL)) {
-		PJ_LOG_WARN("incorrect API use - please pass an actual reference to a JSON null if that's what you want - assuming that's the case");
+		PJ_LOG_WARN("PBNJSON_NULL_IN_ARR_APPEND_FUNC", 0, "incorrect API use - please pass an actual reference to a JSON null if that's what you want - assuming that's the case");
 		val = jnull ();
 	}
 
@@ -1082,7 +1082,7 @@ bool jarray_insert(jvalue_ref arr, ssize_t index, jvalue_ref val)
 	CHECK_CONDITION_RETURN_VALUE(index < 0, false, "Invalid index - must be >= 0: %zd", index);
 
 	if (!check_insert_sanity(arr, val)) {
-		PJ_LOG_ERR("Error in object hierarchy. Inserting jvalue would create an illegal cyclic dependency");
+		PJ_LOG_ERR("PBNJSON_ARR_INS_HIERARCHY_ERR", 0, "Error in object hierarchy. Inserting jvalue would create an illegal cyclic dependency");
 		return false;
 	}
 
@@ -1144,7 +1144,7 @@ bool jarray_splice (jvalue_ref array, ssize_t index, ssize_t toRemove, jvalue_re
 	CHECK_CONDITION_RETURN_VALUE(toRemove < 0, false, "Invalid amount %zd to remove during splice", toRemove);
 
 	if (!jarray_splice_check_insert_sanity(array, array2)) {
-		PJ_LOG_ERR("Error in object hierarchy. Splicing array would create an illegal cyclic dependency");
+		PJ_LOG_ERR("PBNJSON_ARR_SPLICE_HIERARCHY_ERR", 0, "Error in object hierarchy. Splicing array would create an illegal cyclic dependency");
 		return false;
 	}
 
@@ -1201,7 +1201,7 @@ bool jarray_splice (jvalue_ref array, ssize_t index, ssize_t toRemove, jvalue_re
 					break;
 			}
 			if (UNLIKELY(!jarray_insert(array, i, valueToInsert))) {
-				PJ_LOG_ERR("How did this happen? Failed to insert %zd from second array into %zd of first array", j, i);
+				PJ_LOG_ERR("PBNJSON_ARR_INSERT_ERR", 0, "How did this happen? Failed to insert %zd from second array into %zd of first array", j, i);
 				return false;
 			}
 		}
@@ -1258,7 +1258,7 @@ static void j_destroy_string (jvalue_ref str)
 	SANITY_CHECK_JSTR_BUFFER(str);
 #ifdef _DEBUG
 	if (str == NULL) {
-		PJ_LOG_ERR("Internal error - string reference to release the string buffer for is NULL");
+		PJ_LOG_ERR("PBNJSON_NULL_STR", 0, "Internal error - string reference to release the string buffer for is NULL");
 		return;
 	}
 #endif
@@ -1299,7 +1299,7 @@ jvalue_ref jstring_create_copy (raw_buffer str)
 	char *copyBuffer;
 	copyBuffer = calloc (str.m_len + SAFE_TERM_NULL_LEN, sizeof(char));
 	if (copyBuffer == NULL) {
-		PJ_LOG_ERR("Failed to allocate space for private string copy");
+		PJ_LOG_ERR("PBNJSON_STR_CALLOC_ERR", 0, "Failed to allocate space for private string copy");
 		return jinvalid();
 	}
 	memcpy(copyBuffer, str.m_str, str.m_len);
@@ -1422,7 +1422,7 @@ bool jstring_equal (jvalue_ref str, jvalue_ref other)
 	SANITY_CHECK_JSTR_BUFFER(other);
 
 	if (UNLIKELY(!jis_string(str) || !jis_string(other))) {
-		PJ_LOG_WARN("attempting to check string equality but not using a JSON string");
+		PJ_LOG_WARN("PBNJSON_NOT_STR_IN_STREQUAL_FUNC", 0, "attempting to check string equality but not using a JSON string");
 		return false;
 	}
 
@@ -1432,7 +1432,7 @@ bool jstring_equal (jvalue_ref str, jvalue_ref other)
 bool jstring_equal2 (jvalue_ref str, raw_buffer other)
 {
 	if (UNLIKELY(!jis_string(str))) {
-		PJ_LOG_WARN("attempting to check string equality but not a JSON string");
+		PJ_LOG_WARN("PBNJSON_NOT_STR_IN_STREQUAL_FUNC", 0, "attempting to check string equality but not a JSON string");
 		return false;
 	}
 
@@ -1564,7 +1564,7 @@ jvalue_ref jnumber_create_converted(raw_buffer raw)
 	if (CONV_OK != jstr_to_i64(&raw, &new_number->value.integer)) {
 		new_number->m_error = jstr_to_double(&raw, &new_number->value.floating);
 		if (new_number->m_error != CONV_OK) {
-			PJ_LOG_ERR("Number '%.*s' doesn't convert perfectly to a native type",
+			PJ_LOG_ERR("PBNJSON_BAD_NUM_CONV", 1, PMLOGKS("STRING", raw.m_str), "Number '%.*s' doesn't convert perfectly to a native type",
 					(int)raw.m_len, raw.m_str);
 			assert(false);
 		}
@@ -1594,13 +1594,16 @@ int jnumber_compare(jvalue_ref number, jvalue_ref toCompare)
 			if (CONV_OK == jstr_to_i64(&jnum_deref(toCompare)->value.raw, &asInt))
 				return jnumber_compare_i64(number, asInt);
 			if (CONV_OK != jstr_to_double(&jnum_deref(toCompare)->value.raw, &asFloat)) {
-				PJ_LOG_ERR("Comparing against something that can't be represented as a float: '%.*s'",
-						(int)jnum_deref(toCompare)->value.raw.m_len, jnum_deref(toCompare)->value.raw.m_str);
+				PJ_LOG_ERR("PBNJSON_BAD_NUM_CMP", 2,
+				           PMLOGKS("NUM", jnum_deref(number)->value.raw.m_str),
+				           PMLOGKS("NUM", jnum_deref(toCompare)->value.raw.m_str),
+				           "Comparing against something that can't be represented as a float: '%.*s'",
+				           (int)jnum_deref(toCompare)->value.raw.m_len, jnum_deref(toCompare)->value.raw.m_str);
 			}
 			return jnumber_compare_f64(number, asFloat);
 		}
 		default:
-			PJ_LOG_ERR("Unknown type for toCompare - corruption?");
+			PJ_LOG_ERR("PBNJSON_NUM_CMP_UNKNOWN_TYPE", 1, PMLOGKFV("TYPE", "%d", jnum_deref(toCompare)->m_type), "Unknown type for toCompare - corruption?");
 			assert(false);
 			return -50;
 	}
@@ -1627,13 +1630,16 @@ int jnumber_compare_i64(jvalue_ref number, int64_t toCompare)
 			}
 			double asFloat;
 			if (CONV_OK != jstr_to_double(&jnum_deref(number)->value.raw, &asFloat)) {
-				PJ_LOG_ERR("Comparing '%"PRId64 "' against something that can't be represented as a float: '%.*s'",
-						toCompare, (int)jnum_deref(number)->value.raw.m_len, jnum_deref(number)->value.raw.m_str);
+				PJ_LOG_ERR("PBNJSON_BAD_NUM_CMP", 2,
+				           PMLOGKFV("NUM", "%"PRId64, toCompare),
+				           PMLOGKS("NUM", jnum_deref(number)->value.raw.m_str),
+				           "Comparing '%"PRId64 "' against something that can't be represented as a float: '%.*s'",
+				           toCompare, (int)jnum_deref(number)->value.raw.m_len, jnum_deref(number)->value.raw.m_str);
 			}
 			return asFloat > toCompare ? 1 : (asFloat < toCompare ? -1 : 0);
 		}
 		default:
-			PJ_LOG_ERR("Unknown type - corruption?");
+			PJ_LOG_ERR("PBNJSON_NUM_CMP_I64_UNKNOWN_TYPE", 1, PMLOGKFV("TYPE", "%d", jnum_deref(number)->m_type), "Unknown type - corruption?");
 			assert(false);
 			return -50;
 	}
@@ -1660,13 +1666,16 @@ int jnumber_compare_f64(jvalue_ref number, double toCompare)
 			}
 			double asFloat;
 			if (CONV_OK != jstr_to_double(&jnum_deref(number)->value.raw, &asFloat)) {
-				PJ_LOG_ERR("Comparing '%lf' against something that can't be represented as a float: '%.*s'",
-						toCompare, (int)jnum_deref(number)->value.raw.m_len, jnum_deref(number)->value.raw.m_str);
+				PJ_LOG_ERR("PBNJSON_BAD_NUM_CMP", 2,
+				           PMLOGKFV("NUM", "%lf", toCompare),
+				           PMLOGKS("NUM", jnum_deref(number)->value.raw.m_str),
+				           "Comparing '%lf' against something that can't be represented as a float: '%.*s'",
+				           toCompare, (int)jnum_deref(number)->value.raw.m_len, jnum_deref(number)->value.raw.m_str);
 			}
 			return asFloat > toCompare ? 1 : (asFloat < toCompare ? -1 : 0);
 		}
 		default:
-			PJ_LOG_ERR("Unknown type - corruption?");
+			PJ_LOG_ERR("PBNJSON_NUM_CMP_F64_UNKNOWN_TYPE", 1, PMLOGKFV("TYPE", "%d", jnum_deref(number)->m_type), "Unknown type - corruption?");
 			assert(false);
 			return -50;
 	}
@@ -1691,7 +1700,7 @@ int64_t jnumber_deref_i64(jvalue_ref num)
 	int64_t result;
 	ConversionResultFlags fail;
 	if (CONV_OK != (fail = jnumber_get_i64(num, &result))) {
-		PJ_LOG_WARN("Converting json value to a 64-bit integer but ignoring the conversion error: %d", fail);
+		PJ_LOG_WARN("PBNJSON_JVAL_TO_INT64_ERR", 1, PMLOGKFV("ERROR", "%d", fail), "Converting json value to a 64-bit integer but ignoring the conversion error: %d", fail);
 	}
 	return result;
 }
@@ -1725,7 +1734,8 @@ ConversionResultFlags jnumber_get_i32 (jvalue_ref num, int32_t *number)
 			assert(jnum_deref(num)->value.raw.m_len > 0);
 			return jstr_to_i32 (&jnum_deref(num)->value.raw, number) | jnum_deref(num)->m_error;
 		default:
-			PJ_LOG_ERR("internal error - numeric type is unrecognized (%d)", (int)jnum_deref(num)->m_type);
+			PJ_LOG_ERR("PBNJSON_NUM_GET_I32_UNKNOWN_TYPE", 1, PMLOGKFV("TYPE", "%d", (int)jnum_deref(num)->m_type),
+			           "internal error - numeric type is unrecognized (%d)", (int)jnum_deref(num)->m_type);
 			assert(false);
 			return CONV_GENERIC_ERROR;
 	}
@@ -1750,7 +1760,8 @@ ConversionResultFlags jnumber_get_i64 (jvalue_ref num, int64_t *number)
 			assert(jnum_deref(num)->value.raw.m_len > 0);
 			return jstr_to_i64 (&jnum_deref(num)->value.raw, number) | jnum_deref(num)->m_error;
 		default:
-			PJ_LOG_ERR("internal error - numeric type is unrecognized (%d)", (int)jnum_deref(num)->m_type);
+			PJ_LOG_ERR("PBNJSON_NUM_GET_I64_UNKNOWN_TYPE", 1, PMLOGKFV("TYPE", "%d", (int)jnum_deref(num)->m_type),
+			           "internal error - numeric type is unrecognized (%d)", (int)jnum_deref(num)->m_type);
 			assert(false);
 			return CONV_GENERIC_ERROR;
 	}
@@ -1775,7 +1786,8 @@ ConversionResultFlags jnumber_get_f64 (jvalue_ref num, double *number)
 			assert(jnum_deref(num)->value.raw.m_len > 0);
 			return jstr_to_double (&jnum_deref(num)->value.raw, number) | jnum_deref(num)->m_error;
 		default:
-			PJ_LOG_ERR("internal error - numeric type is unrecognized (%d)", (int)jnum_deref(num)->m_type);
+			PJ_LOG_ERR("PBNJSON_NUM_GET_F64_UNKNOWN_TYPE", 1, PMLOGKFV("TYPE", "%d", (int)jnum_deref(num)->m_type),
+			           "internal error - numeric type is unrecognized (%d)", (int)jnum_deref(num)->m_type);
 			assert(false);
 			return CONV_GENERIC_ERROR;
 	}
@@ -1799,7 +1811,8 @@ ConversionResultFlags jnumber_get_raw (jvalue_ref num, raw_buffer *result)
 			*result = jnum_deref(num)->value.raw;
 			return CONV_OK;
 		default:
-			PJ_LOG_ERR("internal error - numeric type is unrecognized (%d)", (int)jnum_deref(num)->m_type);
+			PJ_LOG_ERR("PBNJSON_NUM_GET_RAW_UNKNOWN_TYPE", 1, PMLOGKFV("TYPE", "%d", (int)jnum_deref(num)->m_type),
+			           "internal error - numeric type is unrecognized (%d)", (int)jnum_deref(num)->m_type);
 			assert(false);
 			return CONV_GENERIC_ERROR;
 	}
@@ -1865,26 +1878,26 @@ ConversionResultFlags jboolean_get (jvalue_ref val, bool *value)
 			return CONV_OK;
 
 		case JV_NULL:
-			PJ_LOG_INFO("Attempting to convert NULL to boolean");
+			PJ_LOG_WARN("PBNJSON_NULL_TO_BOOL_CNV", 0, "Attempting to convert NULL to boolean");
 			if (value) *value = false;
 			break;
 		case JV_OBJECT:
-			PJ_LOG_WARN("Attempting to convert an object to a boolean - always true");
+			PJ_LOG_WARN("PBNJSON_OBJ_TO_BOOL_CNV", 0, "Attempting to convert an object to a boolean - always true");
 			if (value) *value = true;
 			break;
 		case JV_ARRAY:
-			PJ_LOG_WARN("Attempting to convert an array to a boolean - always true");
+			PJ_LOG_WARN("PBNJSON_ARR_TO_BOOL_CNV", 0, "Attempting to convert an array to a boolean - always true");
 			if (value) *value = true;
 			break;
 		case JV_STR:
-			PJ_LOG_WARN("Attempt to convert a string to a boolean - testing if string is empty");
+			PJ_LOG_WARN("PBNJSON_STR_TO_BOOL_CNV", 0, "Attempt to convert a string to a boolean - testing if string is empty");
 			if (value) *value = jstring_size (val) != 0;
 			break;
 		case JV_NUM:
 		{
 			double result;
 			ConversionResultFlags conv_result;
-			PJ_LOG_WARN("Attempting to convert a number to a boolean - testing if number is 0");
+			PJ_LOG_WARN("PBNJSON_NUM_TO_BOOL_CNV", 0, "Attempting to convert a number to a boolean - testing if number is 0");
 			conv_result = jnumber_get_f64 (val, &result);
 			if (value) *value = (conv_result == CONV_OK && result != 0);
 			break;

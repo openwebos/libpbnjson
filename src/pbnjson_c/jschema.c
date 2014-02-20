@@ -196,13 +196,15 @@ jschema_ref jschema_parse_file(const char *file, JErrorCallbacksRef errorHandler
 	int fd = open(file, O_RDONLY);
 	if (-1 == fd)
 	{
-		PJ_LOG_WARN("Unable to open schema file %s", file);
+		PJ_LOG_WARN("PBNJSON_SCHEMA_OPEN", 1, PMLOGKS("FILE", file),
+		            "Unable to open schema file %s", file);
 		return NULL;
 	}
 
 	if (-1 == fstat(fd, &fileInfo))
 	{
-		PJ_LOG_WARN("Unable to get information for schema file %s", file);
+		PJ_LOG_WARN("PBNJSON_SCHEMA_INFO", 1, PMLOGKS("FILE", file),
+		            "Unable to get information for schema file %s", file);
 		goto map_failure;
 	}
 	mapSize = fileInfo.st_size;
@@ -210,7 +212,8 @@ jschema_ref jschema_parse_file(const char *file, JErrorCallbacksRef errorHandler
 	mapContents = mmap(NULL, mapSize, PROT_READ, MAP_PRIVATE | MAP_NORESERVE, fd, 0);
 	if (mapContents == MAP_FAILED || mapContents == NULL)
 	{
-		PJ_LOG_WARN("Failed to create memory map for schema file %s", file);
+		PJ_LOG_WARN("PBNJSON_SCHEMA_MMAP", 1, PMLOGKS("FILE", file),
+		            "Failed to create memory map for schema file %s", file);
 		mapContents = NULL;
 		goto map_failure;
 	}
@@ -224,7 +227,8 @@ jschema_ref jschema_parse_file(const char *file, JErrorCallbacksRef errorHandler
 	                                                  NULL);
 	if (parsedSchema == NULL)
 	{
-		PJ_LOG_WARN("Failed to parse schema file %s", file);
+		PJ_LOG_WARN("PBNJSON_SCHEMA_PARSE", 1, PMLOGKS("FILE", file),
+		            "Failed to parse schema file %s", file);
 		goto map_failure;
 	}
 

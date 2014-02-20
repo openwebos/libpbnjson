@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,12 +44,12 @@ JSchemaResolutionResult JSchemaResolverWrapper::sax_schema_resolver(JSchemaResol
 JSchemaResolutionResult JSchemaResolverWrapper::resolve(JSchemaResolverRef resolver, jschema_ref *resolvedSchema)
 {
 	if (m_resolver == NULL) {
-		PJ_LOG_ERR("Parser constructed with NULL JResolver. Unable to resolve external refs");
+		PJ_LOG_ERR("PBNJSON_NULL_M_RESOLVER", 0, "Parser constructed with NULL JResolver. Unable to resolve external refs");
 		return SCHEMA_GENERIC_ERROR;
 	}
 
 	if (resolver == NULL) {
-		PJ_LOG_ERR("Parameter resolver is NULL. Unable to resolve external refs");
+		PJ_LOG_ERR("PBNJSON_NULL_RESOLVER", 0, "Parameter resolver is NULL. Unable to resolve external refs");
 		return SCHEMA_GENERIC_ERROR;
 	}
 

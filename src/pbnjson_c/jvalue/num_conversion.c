@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -151,7 +151,8 @@ parse_integer_portion:
 				}
 				break;
 			default:
-				PJ_LOG_WARN("Unexpected character %d('%c') in '%.*s' at %zu", (int)str->m_str[i], str->m_str[i], (int)str->m_len, str->m_str, i);
+				PJ_LOG_WARN("PBNJSON_PNUM_UNXPCTD_CHAR1", 1, PMLOGKFV("CHAR", "%c", str->m_str[i]),
+				            "Unexpected character %d('%c') in '%.*s' at %zu", (int)str->m_str[i], str->m_str[i], (int)str->m_len, str->m_str, i);
 				goto not_a_number;
 		}
 	}
@@ -165,7 +166,8 @@ parse_decimal_portion:
 
 	if (str->m_str[i] != '.') {
 		assert(false);
-		PJ_LOG_WARN("Unexpected character %d('%c') in '%.*s' at %zu", (int)str->m_str[i], str->m_str[i], (int) str->m_len, str->m_str, i);
+		PJ_LOG_WARN("PBNJSON_PNUM_UNXPCTD_CHAR2", 1, PMLOGKFV("CHAR", "%c", str->m_str[i]),
+		            "Unexpected character %d('%c') in '%.*s' at %zu", (int)str->m_str[i], str->m_str[i], (int) str->m_len, str->m_str, i);
 		goto not_a_number;
 	}
 	i++;
@@ -186,7 +188,7 @@ parse_decimal_portion:
 					assert(false);
 					// this will only become an issue if 10^INT64_MAX < (2^((sizeof(fraction)*8) - 1) - 1)
 					// which will never happen
-					PJ_LOG_ERR("Internal error for input: %.*s", (int)str->m_len, str->m_str);
+					PJ_LOG_ERR("PBNJSON_FRACTION_ERR", 1, PMLOGKS("STRING", str->m_str), "Internal error for input: %.*s", (int)str->m_len, str->m_str);
 					return CONV_GENERIC_ERROR;
 				}
 
@@ -211,12 +213,13 @@ parse_decimal_portion:
 				}
 				break;
 			default:
-				PJ_LOG_WARN("Unexpected character %d('%c') in '%.*s' at %zu", (int)str->m_str[i], str->m_str[i], (int)str->m_len, str->m_str, i);
+				PJ_LOG_WARN("PBNJSON_PNUM_UNXPCTD_CHAR3", 1, PMLOGKFV("CHAR", "%c", str->m_str[i]),
+				            "Unexpected character %d('%c') in '%.*s' at %zu", (int)str->m_str[i], str->m_str[i], (int)str->m_len, str->m_str, i);
 				goto not_a_number;
 		}
 	}
 	if (UNLIKELY(!validDecimal)) {
-		PJ_LOG_WARN("Unexpected end of string at %zu in '%.*s'", i, (int)str->m_len, str->m_str);
+		PJ_LOG_WARN("PBNJSON_UNXPCTD_EOS", 0, "Unexpected end of string at %zu in '%.*s'", i, (int)str->m_len, str->m_str);
 		goto not_a_number;
 	}
 	goto finish_parse;
@@ -233,7 +236,8 @@ skip_remaining_decimal:
 		if (str->m_str[i] == 'e' || str->m_str[i] == 'E')
 			goto parse_exponent_portion;
 
-		PJ_LOG_WARN("Unexpected character %d('%c') in '%.*s' at %zu", (int)str->m_str[i], str->m_str[i], (int)str->m_len, str->m_str, i);
+		PJ_LOG_WARN("PBNJSON_PNUM_UNXPCTD_CHAR4", 1, PMLOGKFV("CHAR", "%c", str->m_str[i]),
+		            "Unexpected character %d('%c') in '%.*s' at %zu", (int)str->m_str[i], str->m_str[i], (int)str->m_len, str->m_str, i);
 		goto not_a_number;
 	}
 	assert(i == str->m_len);
@@ -244,7 +248,7 @@ parse_exponent_portion:
 	if (UNLIKELY(str->m_str[i] != 'e' && str->m_str[i] != 'E')) {
 		// problem with the state machine
 		assert(false);
-		PJ_LOG_ERR("Expecting an exponent but didn't get one at %zu in '%.*s'", i, (int)str->m_len, str->m_str);
+		PJ_LOG_ERR("PBNJSON_NO_EXPONENT", 1, PMLOGKS("STRING", str->m_str), "Expecting an exponent but didn't get one at %zu in '%.*s'", i, (int)str->m_len, str->m_str);
 		return CONV_GENERIC_ERROR;
 	}
 	i++;
@@ -260,7 +264,8 @@ parse_exponent_portion:
 		exponentMultiplier = 1;
 		break;
 	default:
-		PJ_LOG_WARN("Unexpected character %d('%c') in '%.*s' at %zu", (int)str->m_str[i], str->m_str[i], (int)str->m_len, str->m_str, i);
+		PJ_LOG_WARN("PBNJSON_PNUM_UNXPCTD_CHAR5", 1, PMLOGKFV("CHAR", "%c", str->m_str[i]),
+		            "Unexpected character %d('%c') in '%.*s' at %zu", (int)str->m_str[i], str->m_str[i], (int)str->m_len, str->m_str, i);
 		goto not_a_number;
 	}
 	assert(exponentMultiplier == 1 || exponentMultiplier == -1);
@@ -282,7 +287,8 @@ parse_exponent_portion:
 				}
 				break;
 			default:
-				PJ_LOG_WARN("Unexpected character %d('%c') in '%.*s' at %zu", (int)str->m_str[i], str->m_str[i], (int)str->m_len, str->m_str, i);
+				PJ_LOG_WARN("PBNJSON_PNUM_UNXPCTD_CHAR6", 1, PMLOGKFV("CHAR", "%c", str->m_str[i]),
+				            "Unexpected character %d('%c') in '%.*s' at %zu", (int)str->m_str[i], str->m_str[i], (int)str->m_len, str->m_str, i);
 				goto not_a_number;
 		}
 	}
@@ -311,7 +317,7 @@ exponent_overflow:
 
 finish_parse:
 	if (trailingZeros) {
-		PJ_LOG_INFO("%"PRId64 " unnecessary 0s in fraction portion of '%.*s'", trailingZeros, (int)str->m_len, str->m_str);
+		PJ_LOG_DBG("PBNJSON_TRAILING_ZERO", 1, PMLOGKS("STRING", str->m_str), "%"PRId64 " unnecessary 0s in fraction portion of '%.*s'", trailingZeros, (int)str->m_len, str->m_str);
 	}
 
 	if (fraction == 0) {
@@ -463,7 +469,7 @@ ConversionResultFlags jstr_to_double(raw_buffer *str, double *result)
 	conv_result = parseJSONNumber(str, &wholeComponent, &exponent, &fraction, &fractionLeadingZeros);
 
 	if (UNLIKELY(CONV_IS_BAD_ARGS(conv_result) || CONV_IS_GENERIC_ERROR(conv_result))) {
-		PJ_LOG_ERR("Some weird problem converting %.*s to a number: %x", (int)str->m_len, str->m_str, conv_result);
+		PJ_LOG_ERR("PBNJSON_STR_TO_NUM_ERR", 1, PMLOGKS("STRING", str->m_str), "Some weird problem converting %.*s to a number: %x", (int)str->m_len, str->m_str, conv_result);
 		assert(false);
 		*result = DBL_QUIET_NAN;
 	} else if (UNLIKELY(CONV_HAS_POSITIVE_INFINITY(conv_result))) {
@@ -495,7 +501,7 @@ ConversionResultFlags jdouble_to_i32(double value, int32_t *result)
 	CHECK_POINTER_RETURN_VALUE(result, CONV_BAD_ARGS);
 	
 	if (isnan(value) != 0) {
-		PJ_LOG_WARN("attempting to convert nan to int");
+		PJ_LOG_WARN("PBNJSON_NAN_TO_INT_WARN", 0, "attempting to convert nan to int");
 		*result = 0;
 		return CONV_NOT_A_NUM;
 	}
@@ -504,26 +510,26 @@ ConversionResultFlags jdouble_to_i32(double value, int32_t *result)
 		case 0:
 			break;
 		case 1:
-			PJ_LOG_WARN("attempting to convert +infinity to int");
+			PJ_LOG_WARN("PBNJSON_+INF_TO_INT_WARN", 0, "attempting to convert +infinity to int");
 			*result = PJSON_MAX_INT;
 			return CONV_POSITIVE_INFINITY;
 		case -1:
-			PJ_LOG_WARN("attempting to convert -infinity to int");
+			PJ_LOG_WARN("PBNJSON_-INF_TO_INT_WARN", 0, "attempting to convert -infinity to int");
 			*result = PJSON_MIN_INT;
 			return CONV_NEGATIVE_INFINITY;
 		default:
-			PJ_LOG_ERR("unknown result from isinf for %lf", value);
+			PJ_LOG_ERR("PBNJSON_ISINF_ERR", 1, PMLOGKFV("VALUE", "%lf", value), "unknown result from isinf for %lf", value);
 			return CONV_GENERIC_ERROR;
 	}
 
 	if (value > PJSON_MAX_INT) {
-		PJ_LOG_WARN("attempting to convert double %lf outside of int range", value);
+		PJ_LOG_WARN("PBNJSON_DBL_OO_INT_RANGE", 1, PMLOGKFV("VALUE", "%lf", value), "attempting to convert double %lf outside of int range", value);
 		*result = PJSON_MAX_INT;
 		return CONV_POSITIVE_OVERFLOW;
 	}
 
 	if (value < PJSON_MIN_INT) {
-		PJ_LOG_WARN("attempting to convert double %lf outside of int range", value);
+		PJ_LOG_WARN("PBNJSON_DBL_OO_INT_RANGE", 1, PMLOGKFV("VALUE", "%lf", value), "attempting to convert double %lf outside of int range", value);
 		*result = PJSON_MIN_INT;
 		return CONV_NEGATIVE_OVERFLOW;
 	}
@@ -532,7 +538,7 @@ ConversionResultFlags jdouble_to_i32(double value, int32_t *result)
 	// unnecessary for 32-bits because they will always fit in a double
 	// with no precision loss
 	if (value > PJSON_MAX_INT_IN_DBL || value < PJSON_MIN_INT_IN_DBL) {
-		PJ_LOG_INFO("conversion of double %lf to integer potentially has precision loss");
+		PJ_LOG_WARN("PBNJSON_DBL_TO_INT_CONV_WARN", 1, PMLOGKFV("VALUE", "%lf", value), "conversion of double %lf to integer potentially has precision loss", value);
 		*result = (int64_t)value;
 		return CONV_PRECISION_LOSS;
 	}
@@ -540,7 +546,7 @@ ConversionResultFlags jdouble_to_i32(double value, int32_t *result)
 
 	*result = (int32_t) value;
 	if (*result != value) {
-		PJ_LOG_INFO("conversion of double %lf results in integer with different value", value);
+		PJ_LOG_WARN("PBNJSON_DBL_TO_INT_CONV_LOSS", 1, PMLOGKFV("VALUE", "%lf", value), "conversion of double %lf results in integer with different value", value);
 		return CONV_PRECISION_LOSS;
 	}
 
@@ -552,7 +558,7 @@ ConversionResultFlags jdouble_to_i64(double value, int64_t *result)
 	CHECK_POINTER_RETURN_VALUE(result, CONV_BAD_ARGS);
 	
 	if (isnan(value) != 0) {
-		PJ_LOG_WARN("attempting to convert nan to int64");
+		PJ_LOG_WARN("PBNJSON_NAN_TO_INT64_WARN", 0, "attempting to convert nan to int64");
 		*result = 0;
 		return CONV_NOT_A_NUM;
 	}
@@ -561,39 +567,39 @@ ConversionResultFlags jdouble_to_i64(double value, int64_t *result)
 		case 0:
 			break;
 		case 1:
-			PJ_LOG_WARN("attempting to convert +infinity to int");
+			PJ_LOG_WARN("PBNJSON_+INF_TO_INT64_WARN", 0, "attempting to convert +infinity to int64");
 			*result = PJSON_MAX_INT64;
 			return CONV_POSITIVE_INFINITY;
 		case -1:
-			PJ_LOG_WARN("attempting to convert -infinity to int");
+			PJ_LOG_WARN("PBNJSON_-INF_TO_INT64_WARN", 0, "attempting to convert -infinity to int");
 			*result = PJSON_MIN_INT64;
 			return CONV_NEGATIVE_INFINITY;
 		default:
-			PJ_LOG_ERR("unknown result from isinf for %lf", value);
+			PJ_LOG_ERR("PBNJSON_ISINF_ERR", 1, PMLOGKFV("VALUE", "%lf", value), "unknown result from isinf for %lf", value);
 			return CONV_GENERIC_ERROR;
 	}
 
 	if (value > PJSON_MAX_INT64) {
-		PJ_LOG_WARN("attempting to convert double %lf outside of int64 range", value);
+		PJ_LOG_WARN("PBNJSON_DBL_OO_INT64_RANGE", 1, PMLOGKFV("VALUE", "%lf", value), "attempting to convert double %lf outside of int64 range", value);
 		*result = PJSON_MAX_INT64;
 		return CONV_POSITIVE_OVERFLOW;
 	}
 
 	if (value < PJSON_MIN_INT64) {
-		PJ_LOG_WARN("attempting to convert double %lf outside of int64 range", value);
+		PJ_LOG_WARN("PBNJSON_DBL_OO_INT64_RANGE", 1, PMLOGKFV("VALUE", "%lf", value), "attempting to convert double %lf outside of int64 range", value);
 		*result = PJSON_MIN_INT64;
 		return CONV_NEGATIVE_OVERFLOW;
 	}
 
 	if (value > PJSON_MAX_INT_IN_DBL || value < PJSON_MIN_INT_IN_DBL) {
-		PJ_LOG_INFO("conversion of double %lf to integer potentially has precision loss", value);
+		PJ_LOG_WARN("PBNJSON_DBL_TO_INT_CONV_WARN", 1, PMLOGKFV("VALUE", "%lf", value), "conversion of double %lf to integer potentially has precision loss", value);
 		*result = (int64_t)value;
 		return CONV_PRECISION_LOSS;
 	}
 
 	*result = (int64_t) value;
 	if (*result != value) {
-		PJ_LOG_INFO("conversion of double %lf results in integer with different value", value);
+		PJ_LOG_WARN("PBNJSON_DBL_TO_INT_CONV_LOSS", 1, PMLOGKFV("VALUE", "%lf", value), "conversion of double %lf results in integer with different value", value);
 		return CONV_PRECISION_LOSS;
 	}
 	return CONV_OK;
@@ -616,12 +622,12 @@ ConversionResultFlags ji32_to_double(int32_t value, double *result)
 ConversionResultFlags ji64_to_i32(int64_t value, int32_t *result)
 {
 	if (value > PJSON_MAX_INT) {
-		PJ_LOG_WARN("overflow converting %"PRId64 " to int32", value);
+		PJ_LOG_WARN("PBNJSON_INT64_OO_INT32_RANGE", 1, PMLOGKFV("VALUE", "%"PRId64, value), "overflow converting %"PRId64 " to int32", value);
 		*result = PJSON_MAX_INT;
 		return CONV_POSITIVE_OVERFLOW;
 	}
 	if (value < PJSON_MIN_INT) {
-		PJ_LOG_WARN("overflow converting %"PRId64 " to int32", value);
+		PJ_LOG_WARN("PBNJSON_INT64_OO_INT32_RANGE", 1, PMLOGKFV("VALUE", "%"PRId64, value), "overflow converting %"PRId64 " to int32", value);
 		*result = PJSON_MIN_INT;
 		return CONV_NEGATIVE_OVERFLOW;
 	}
@@ -633,7 +639,7 @@ ConversionResultFlags ji64_to_double(int64_t value, double *result)
 {
 	CHECK_POINTER_RETURN_VALUE(result, CONV_BAD_ARGS);
 	if (value > PJSON_MAX_INT_IN_DBL || value < PJSON_MIN_INT_IN_DBL) {
-		PJ_LOG_INFO("conversion of integer %"PRId64 " to a double will result in precision loss when doing reverse", value);
+		PJ_LOG_WARN("PBNJSON_INT_TO_DBL_CONV_WARN", 1, PMLOGKFV("VALUE", "%"PRId64, value), "conversion of integer %"PRId64 " to a double will result in precision loss when doing reverse", value);
 		*result = (double)value;
 		return CONV_PRECISION_LOSS;
 	}

@@ -24,9 +24,15 @@ Below are the tools and libraries (and their minimum versions) required to build
 - lemon 3.7.9
 - make (any version)
 - openwebos/cmake-modules-webos 1.0.0 RC3
+- openwebos/PmLogLib-headers 3.0.0
 - pkg-config 0.26
 - uriparser 0.7.5
 - yajl 1.0.12 or 2.0.4
+
+Below is the component (and its minimum version) required to use key-value logging:
+
+- openwebos/PmLogLib 3.0.0
+
 
 How to Build on Linux
 =====================
@@ -67,6 +73,9 @@ To see a list of the make targets that `cmake` has generated, enter:
 
     $ make help
 
+Please note, to build library, you need to have PmLogLib headers. To
+install them, use corresponding cmake flags for PmlogLib.
+
 ## Uninstalling
 
 From the directory where you originally ran `make install`, enter:
@@ -90,6 +99,11 @@ command line and make the `docs` target:
 
 To view the generated HTML documentation, point your browser to
 `Documentation/pbnjson/html/*/index.html`
+
+## Logging
+
+To enable key-value logging with PmLogLib, user application can be linked
+with PmLogLib library.
 
 # Copyright and License Information
 

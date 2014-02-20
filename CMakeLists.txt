@@ -32,6 +32,10 @@ pkg_check_modules(GLIB2 REQUIRED glib-2.0)
 include_directories(${GLIB2_INCLUDE_DIRS})
 webos_add_compiler_flags(ALL -Wall -D__STRICT_ANSI__ ${GLIB2_CFLAGS_OTHER} -pthread)
 
+pkg_check_modules(PMLOGLIB REQUIRED PmLogLib-headers)
+include_directories(${PMLOGLIB_INCLUDE_DIRS})
+webos_add_compiler_flags(ALL ${PMLOGLIB_CFLAGS_OTHER})
+
 # YAJL-1 doesn't ship any pkg-check module
 pkg_check_modules(YAJL yajl)
 if("${YAJL_VERSION}" STREQUAL "")

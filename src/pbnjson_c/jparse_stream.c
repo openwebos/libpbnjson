@@ -113,7 +113,7 @@ int dom_null(JSAXContextRef ctxt)
 		jobject_put(data->m_prev->m_value, data->m_value, jnull());
 		data->m_value = NULL;
 	} else {
-		PJ_LOG_ERR("value portion of key-value pair but not a key");
+		PJ_LOG_ERR("PBNJSON_NULL_VALUE_WO_KEY", 0, "value portion of key-value pair without a key");
 		return 0;
 	}
 
@@ -134,7 +134,7 @@ int dom_boolean(JSAXContextRef ctxt, bool value)
 		jobject_put(data->m_prev->m_value, data->m_value, jboolean_create(value));
 		data->m_value = NULL;
 	} else {
-		PJ_LOG_ERR("value portion of key-value pair but not a key");
+		PJ_LOG_ERR("PBNJSON_BOOL_VALUE_WO_KEY", 0, "value portion of key-value pair without a key");
 		return 0;
 	}
 
@@ -155,21 +155,21 @@ int dom_number(JSAXContextRef ctxt, const char *number, size_t numberLen)
 
 	if (data->m_value == NULL) {
 		if (UNLIKELY(!jis_array(data->m_prev->m_value))) {
-			PJ_LOG_ERR("Improper place for number");
+			PJ_LOG_ERR("PBNJSON_ARR_MISPLACED_NUM", 1, PMLOGKS("NUM", number), "Improper place for number");
 			j_release(&jnum);
 			return 0;
 		}
 		jarray_append(data->m_prev->m_value, jnum);
 	} else if (jis_string(data->m_value)) {
 		if (UNLIKELY(!jis_object(data->m_prev->m_value))) {
-			PJ_LOG_ERR("Improper place for number");
+			PJ_LOG_ERR("PBNJSON_OBJ_MISPLACED_NUM", 1, PMLOGKS("NUM", number), "Improper place for number");
 			j_release(&jnum);
 			return 0;
 		}
 		jobject_put(data->m_prev->m_value, data->m_value, jnum);
 		data->m_value = NULL;
 	} else {
-		PJ_LOG_ERR("value portion of key-value pair but not a key");
+		PJ_LOG_ERR("PBNJSON_NUM_VALUE_WO_KEY", 1, PMLOGKS("NUM", number), "value portion of key-value pair without a key");
 		return 0;
 	}
 
@@ -186,21 +186,21 @@ int dom_string(JSAXContextRef ctxt, const char *string, size_t stringLen)
 
 	if (data->m_value == NULL) {
 		if (UNLIKELY(!jis_array(data->m_prev->m_value))) {
-			PJ_LOG_ERR("Improper place for string");
+			PJ_LOG_ERR("PBNJSON_ARR_MISPLACED_STR", 1, PMLOGKS("STRING", string), "Improper place for string");
 			j_release(&jstr);
 			return 0;
 		}
 		jarray_append(data->m_prev->m_value, jstr);
 	} else if (jis_string(data->m_value)) {
 		if (UNLIKELY(!jis_object(data->m_prev->m_value))) {
-			PJ_LOG_ERR("Improper place for string");
+			PJ_LOG_ERR("PBNJSON_OBJ_MISPLACED_STR", 1, PMLOGKS("STRING", string), "Improper place for string");
 			j_release(&jstr);
 			return 0;
 		}
 		jobject_put(data->m_prev->m_value, data->m_value, jstr);
 		data->m_value = NULL;
 	} else {
-		PJ_LOG_ERR("value portion of key-value pair but not a key");
+		PJ_LOG_ERR("PBNJSON_STR_VALUE_WO_KEY", 1, PMLOGKS("STRING", string), "value portion of key-value pair without a key");
 		return 0;
 	}
 
@@ -219,7 +219,7 @@ int dom_object_start(JSAXContextRef ctxt)
 	newChild = calloc(1, sizeof(DomInfo));
 
 	if (UNLIKELY(newChild == NULL || !jis_valid(newParent))) {
-		PJ_LOG_ERR("Failed to allocate space for new object");
+		PJ_LOG_ERR("PBNJSON_OBJ_CALLOC_ERR", 0, "Failed to allocate space for new object");
 		j_release(&newParent);
 		free(newChild);
 		return 0;
@@ -236,7 +236,7 @@ int dom_object_start(JSAXContextRef ctxt)
 			assert(jis_object(data->m_prev->m_value));
 			if (UNLIKELY(!jis_string(data->m_value)))
 			{
-				PJ_LOG_ERR("improper place for a child object");
+				PJ_LOG_ERR("PBNJSON_OBJ_MISPLACED_CHILD", 0, "improper place for a child object");
 				j_release(&newParent);
 				return 0;
 			}
@@ -298,7 +298,7 @@ int dom_array_start(JSAXContextRef ctxt)
 	newParent = jarray_create(NULL);
 	newChild = calloc(1, sizeof(DomInfo));
 	if (UNLIKELY(newChild == NULL || !jis_valid(newParent))) {
-		PJ_LOG_ERR("Failed to allocate space for new array node");
+		PJ_LOG_ERR("PBNJSON_ARR_CALLOC_ERR", 0, "Failed to allocate space for new array node");
 		j_release(&newParent);
 		free(newChild);
 		return 0;
@@ -314,7 +314,7 @@ int dom_array_start(JSAXContextRef ctxt)
 		} else {
 			assert(jis_object(data->m_prev->m_value));
 			if (UNLIKELY(!jis_string(data->m_value))) {
-				PJ_LOG_ERR("improper place for a child object");
+				PJ_LOG_ERR("PBNJSON_ARR_MISPLACED_CHILD", 0, "improper place for a child object");
 				j_release(&newParent);
 				return 0;
 			}
@@ -401,7 +401,7 @@ jvalue_ref jdom_parse_file(const char *file, JSchemaInfoRef schemaInfo, JFileOpt
 
 	input.m_len = fileSize;
 	if (input.m_len != fileSize) {
-		PJ_LOG_ERR("File too big - currently unsupported by this API");
+		PJ_LOG_ERR("PBNJSON_BIG_FILE", 1, PMLOGKS("FILE", file), "File too big - currently unsupported by this API");
 		close(fd);
 	}
 
@@ -441,7 +441,11 @@ return_result:
 
 errno_parse_failure:
 	err_msg = strdup(strerror(errno));
-	PJ_LOG_WARN("Attempt to parse json document '%s' failed (%d) : %s", file, errno, err_msg);
+	PJ_LOG_WARN("PBNJSON_PARCE_ERR", 3,
+	            PMLOGKS("FILE", file),
+	            PMLOGKFV("ERRNO", "%d", errno),
+	            PMLOGKS("ERROR", err_msg),
+	            "Attempt to parse json document '%s' failed (%d) : %s", file, errno, err_msg);
 	free(err_msg);
 
 	result = jinvalid();
@@ -725,7 +729,7 @@ static bool handle_yajl_error(yajl_status parseResult,
 		{
 			return false;
 		}
-		PJ_LOG_WARN("Client claims they handled an unknown error in '%.*s'", (int)buf_len, buf);
+		PJ_LOG_WARN("PBNJSON_YAJL_CLIENT_CANC", 0, "Client claims they handled an unknown error in '%.*s'", (int)buf_len, buf);
 		return true;
 #if YAJL_VERSION < 20000
 	case yajl_status_insufficient_data:
@@ -734,7 +738,7 @@ static bool handle_yajl_error(yajl_status parseResult,
 		{
 			return false;
 		}
-		PJ_LOG_WARN("Client claims they handled incomplete JSON input provided '%.*s'", (int)buf_len, buf);
+		PJ_LOG_WARN("PBNJSON_YAJL_INSUFF_DATA", 0, "Client claims they handled incomplete JSON input provided '%.*s'", (int)buf_len, buf);
 		return true;
 #endif
 	case yajl_status_error:
@@ -748,7 +752,7 @@ static bool handle_yajl_error(yajl_status parseResult,
 		}
 		yajl_free_error(handle, (unsigned char*)internalCtxt->errorDescription);
 
-		PJ_LOG_WARN("Client claims they handled an unknown error in '%.*s'", (int)buf_len, buf);
+		PJ_LOG_WARN("PBNJSON_YAJL_ERR", 0, "Client claims they handled an unknown error in '%.*s'", (int)buf_len, buf);
 		return true;
 	}
 }

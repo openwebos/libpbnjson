@@ -100,7 +100,7 @@ static int __number(JSAXContextRef ctxt, const char *number, size_t len)
 			return SaxBounce::n(p, asFloat, toFloatErrors);
 		}
 		default:
-			PJ_LOG_ERR("Actual parser hasn't told us a valid type for how it wants numbers presented to it");
+			PJ_LOG_ERR("PBNJSON_NO_NUMS_TYPE", 0, "Actual parser hasn't told us a valid type for how it wants numbers presented to it");
 			return 0;
 	}
 }

@@ -56,7 +56,7 @@ add_subdirectory(validation)
 add_library(
 	jvalue
 	STATIC
-	debugging.c
+	liblog.c
 	jobject.c
 	jvalue/num_conversion.c
 	)
