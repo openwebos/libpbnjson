@@ -184,11 +184,12 @@ PmLogErr _PmLogMsgKV(PmLogContext context, PmLogLevel level, unsigned int flags,
 	va_start(ap, fmt);
 
 	// TODO: memoize the program name string length
-	size_t messageLen = strlen(fmt) + strlen(msgid) + 4 /* line number */ + 100 /* chars for message */;
+	const bool isDebug = (kPmLogLevel_Debug == level);
+	size_t messageLen = strlen(fmt) + (isDebug ? 0 : strlen(msgid)) + 4 /* line number */ + 100 /* chars for message */;
 	const char *programNameToPrint = getConsumerName_internal();
 	size_t formatLen = messageLen + sizeof(LOG_PREAMBLE) + (using_terminal ? 1 : 0) + strlen(programNameToPrint);
 	char format[formatLen];
-	snprintf(format, formatLen, LOG_PREAMBLE "%s%s%s", programNameToPrint, msgid, fmt, using_terminal ? "\n" : "");
+	snprintf(format, formatLen, LOG_PREAMBLE "%s%s%s", programNameToPrint, isDebug ? "" : msgid, fmt, using_terminal ? "\n" : "");
 
 #if HAVE_VSYSLOG
 	if (LIKELY(!using_terminal)) {

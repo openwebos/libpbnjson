@@ -81,7 +81,7 @@ extern "C" {
 #endif
 
 #if PJSON_LOG_DBG
-#define PJ_LOG_DBG(format, ...) PmLogDebug(PmLogGetLibContext(), ##__VA_ARGS__)
+#define PJ_LOG_DBG(format, ...) PmLogDebug(PmLogGetLibContext(), format, ##__VA_ARGS__)
 #else
 #define PJ_LOG_DBG(format, ...) PJSON_NOOP
 #endif

@@ -56,7 +56,6 @@ add_subdirectory(validation)
 add_library(
 	jvalue
 	STATIC
-	liblog.c
 	jobject.c
 	jvalue/num_conversion.c
 	)
@@ -65,6 +64,7 @@ set_target_properties(jvalue PROPERTIES DEFINE_SYMBOL PJSON_SHARED)
 add_library(
 	pbnjson_c
 	SHARED
+	liblog.c
 	jgen_stream.c
 	jvalue_tostring.c
 	jparse_stream.c

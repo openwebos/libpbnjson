@@ -317,7 +317,7 @@ exponent_overflow:
 
 finish_parse:
 	if (trailingZeros) {
-		PJ_LOG_DBG("PBNJSON_TRAILING_ZERO", 1, PMLOGKS("STRING", str->m_str), "%"PRId64 " unnecessary 0s in fraction portion of '%.*s'", trailingZeros, (int)str->m_len, str->m_str);
+		PJ_LOG_DBG("%"PRId64 " unnecessary 0s in fraction portion of '%.*s'", trailingZeros, (int)str->m_len, str->m_str);
 	}
 
 	if (fraction == 0) {
