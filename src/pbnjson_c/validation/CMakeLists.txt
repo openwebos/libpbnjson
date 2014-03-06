@@ -34,6 +34,7 @@ add_custom_command(
 	OUTPUTS ${CMAKE_CURRENT_BINARY_DIR}/json_schema_grammar.c
 	        ${CMAKE_CURRENT_BINARY_DIR}/json_schema_grammar.h
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/json_schema_grammar.y
+	        ${CMAKE_CURRENT_SOURCE_DIR}/apply_lemon.sh
 	)
 
 set(grammar_c ${CMAKE_CURRENT_BINARY_DIR}/json_schema_grammar.c)

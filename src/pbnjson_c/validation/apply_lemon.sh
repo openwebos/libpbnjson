@@ -2,7 +2,7 @@
 
 # @@@LICENSE
 #
-#      Copyright (c) 2009-2013 LG Electronics, Inc.
+#      Copyright (c) 2009-2014 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@
 # LICENSE@@@
 
 lemon=$1
-binary_dir=$2
-source_dir=$3
+binary_dir=$(readlink -f "$2")
+source_dir=$(readlink -f "$3")
 file=$4
 
 keyword_pattern="KEY_[0-9A-Za-z_]*"
@@ -44,7 +44,9 @@ if [ "$expected_tokens" != "$token_keywords" ]; then
 	exit 1
 fi
 
-$lemon $source_dir/$file || exit 1
 if [ "$source_dir" != "$binary_dir" ]; then
-	mv -f $source_dir/${file%.y}.{c,h,out} $binary_dir || exit 1
+	ln -sf "$source_dir/$file" "$binary_dir/" || \
+		cp -af "$source_dir/$file" "$binary_dir/" || \
+		exit 1
 fi
+"$lemon" "$binary_dir/$file" || exit 1
