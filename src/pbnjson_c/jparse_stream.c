@@ -928,16 +928,20 @@ bool jsaxparser_init(jsaxparser_ref parser, JSchemaInfoRef schemaInfo, PJSAXCall
 	};
 	parser->internalCtxt = __internalCtxt;
 
+	const bool allow_comments = true;
+
 #if YAJL_VERSION < 20000
 	yajl_parser_config yajl_opts =
 	{
-		false,
+		allow_comments,
 		0, // currently only UTF-8 will be supported for input.
 	};
 
 	parser->handle = yajl_alloc(&my_bounce, &yajl_opts, NULL, &parser->internalCtxt);
 #else
 	parser->handle = yajl_alloc(&my_bounce, NULL, &parser->internalCtxt);
+
+	yajl_config(parser->handle, yajl_allow_comments, allow_comments ? 1 : 0);
 
 	// currently only UTF-8 will be supported for input.
 	yajl_config(parser->handle, yajl_dont_validate_strings, 0);
