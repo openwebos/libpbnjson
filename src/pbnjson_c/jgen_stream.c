@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -142,11 +142,10 @@ static ActualStream* val_num(ActualStream* stream, raw_buffer numstr)
 
 static ActualStream* val_int(ActualStream* stream, int64_t number)
 {
-	char buf[24];
-	int printed;
 	SANITY_CHECK_POINTER(stream);
 	CHECK_HANDLE(stream);
-	printed = snprintf(buf, sizeof(buf), "%" PRId64, number);
+	char buf[24];
+	int printed = snprintf(buf, sizeof(buf), "%" PRId64, number);
 	yajl_gen_number(stream->handle, buf, printed);
 	return stream;
 }
@@ -155,12 +154,12 @@ static ActualStream* val_dbl(ActualStream* stream, double number)
 {
 	SANITY_CHECK_POINTER(stream);
 	CHECK_HANDLE(stream);
-	// yajl doesn't print properly (%g doesn't seem to do what it claims to
+	// yajl_gen_double doesn't print properly (%g doesn't seem to do what it claims to
 	// do or something - fails for 42323.0234234)
-	// let's work around it with the  raw interface by 
-	char f[32];
-	int len = snprintf(f, sizeof(f) - 1, "%.14lg", number);
-	yajl_gen_number(stream->handle, f, len);
+	// let's work around it with the raw interface by
+	char buf[24];
+	int len = snprintf(buf, sizeof(buf), "%.14lg", number);
+	yajl_gen_number(stream->handle, buf, len);
 	return stream;
 }
 

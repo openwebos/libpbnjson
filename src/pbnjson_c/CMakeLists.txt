@@ -70,6 +70,7 @@ add_library(
 	jparse_stream.c
 	jschema.c
 	jvalidation.c
+	jtraverse.c
 	)
 target_link_libraries(
 	pbnjson_c

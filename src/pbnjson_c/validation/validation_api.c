@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -145,7 +145,9 @@ bool validate_json_n(char const *json, size_t json_len, Validator *v,
 		.error_set = false,
 	};
 
-	ctxt.s = validation_state_new(v, u, &ctxt.notify);
+	ValidationState validation_state = { 0 };
+	validation_state_init(&validation_state, v, u, &ctxt.notify);
+	ctxt.s = &validation_state;
 
 	const bool allow_comments = true;
 
@@ -158,39 +160,23 @@ bool validate_json_n(char const *json, size_t json_len, Validator *v,
 	ctxt.yh = yajl_alloc(&callbacks, &yajl_opts, NULL, &ctxt);
 #else
 	ctxt.yh = yajl_alloc(&callbacks, NULL, &ctxt);
-	if (ctxt.yh)
-		yajl_config(ctxt.yh, yajl_allow_comments, allow_comments ? 1 : 0);
+
+	yajl_config(ctxt.yh, yajl_allow_comments, allow_comments ? 1 : 0);
+	yajl_config(ctxt.yh, yajl_dont_validate_strings, 1);
 #endif // YAJL_VERSION
 
 	if (!ctxt.yh)
 	{
-		validation_state_free(ctxt.s);
+		validation_state_clear(&validation_state);
 		return false;
 	}
 
 	yajl_status result = yajl_parse(ctxt.yh, (const unsigned char *) json, json_len);
-	if (yajl_status_ok != result
 #if YAJL_VERSION < 20000
-	    && yajl_status_insufficient_data != result
-#endif
-	    )
-	{
-		if (error && !ctxt.error_set)
-		{
-			error->error = VEC_SYNTAX;
-			error->offset = yajl_get_bytes_consumed(ctxt.yh);
-			ctxt.error_set = true;
-		}
-		yajl_free(ctxt.yh);
-		validation_state_free(ctxt.s);
-		return NULL;
-	}
-
-#if YAJL_VERSION < 20000
-	if (yajl_status_ok != yajl_parse_complete(ctxt.yh))
+	if ((yajl_status_ok != result && yajl_status_insufficient_data != result) || yajl_status_ok != yajl_parse_complete(ctxt.yh))
 #else
-	if (yajl_status_ok != yajl_complete_parse(ctxt.yh))
-#endif // YAJL_VERSION
+	if (yajl_status_ok != result || yajl_status_ok != yajl_complete_parse(ctxt.yh))
+#endif
 	{
 		if (error && !ctxt.error_set)
 		{
@@ -199,12 +185,12 @@ bool validate_json_n(char const *json, size_t json_len, Validator *v,
 			ctxt.error_set = true;
 		}
 		yajl_free(ctxt.yh);
-		validation_state_free(ctxt.s);
-		return NULL;
+		validation_state_clear(&validation_state);
+		return false;
 	}
 
 	yajl_free(ctxt.yh);
-	validation_state_free(ctxt.s);
+	validation_state_clear(&validation_state);
 	return true;
 }
 

@@ -115,8 +115,8 @@ TEST(JGenerator, serialize_without_schema_validation)
 		EXPECT_EQ("test", pj::JGenerator::serialize(json, false));
 	}
 	{
-		pj::JValue json = pj::JValue(1.1);
-		EXPECT_EQ("1.1", pj::JGenerator::serialize(json, true));
+		pj::JValue json = pj::JValue(42323.0234234);
+		EXPECT_EQ("42323.0234234", pj::JGenerator::serialize(json, true));
 	}
 	{
 		pj::JValue json = pj::JValue(int64_t(4292496729600));

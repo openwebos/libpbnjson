@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -206,8 +206,9 @@ Validator* parse_schema_n(char const *str, size_t len,
 	yajl_handle yh = yajl_alloc(&callbacks, &yajl_opts, NULL, &yajl_context);
 #else
 	yajl_handle yh = yajl_alloc(&callbacks, NULL, &yajl_context);
-	if (yh)
-		yajl_config(yh, yajl_allow_comments, allow_comments ? 1 : 0);
+
+	yajl_config(yh, yajl_allow_comments, allow_comments ? 1 : 0);
+	yajl_config(yh, yajl_dont_validate_strings, 1);
 #endif // YAJL_VERSION
 	if (!yh)
 	{

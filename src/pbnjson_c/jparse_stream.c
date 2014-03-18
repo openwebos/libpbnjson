@@ -24,6 +24,7 @@
 #include "liblog.h"
 #include "jobject_internal.h"
 #include "jparse_stream_internal.h"
+#include "jtraverse.h"
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
@@ -583,109 +584,93 @@ static yajl_callbacks my_bounce =
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Default property injection
 
-static bool inject_default_jnull(jvalue_ref jref, JSAXContextRef context)
+static bool inject_default_jnull(void *ctxt)
 {
+	JSAXContextRef context = (JSAXContextRef)ctxt;
 	return context->m_handlers->yajl_null(context);
 }
 
-static bool inject_default_jvalue(jvalue_ref jref, JSAXContextRef context);
-
 //Helper function for jobject_to_string_append()
-static bool inject_default_jkeyvalue(jobject_key_value jref, JSAXContextRef context)
+static bool inject_default_jkeyvalue(void *ctxt, const unsigned char *key, size_t len)
 {
-	raw_buffer buf = jstring_deref(jref.key)->m_data;
-	if (!context->m_handlers->yajl_map_key(context, (unsigned char const *) buf.m_str, buf.m_len))
-		return false;
-
-	return inject_default_jvalue(jref.value, context);
+	JSAXContextRef context = (JSAXContextRef)ctxt;
+	return context->m_handlers->yajl_map_key(context, key, len);
 }
 
-static bool inject_default_jobject(jvalue_ref jref, JSAXContextRef context)
+static bool inject_default_jobject_start(void *ctxt)
 {
-	if (!context->m_handlers->yajl_start_map(context))
-		return false;
+	JSAXContextRef context = (JSAXContextRef)ctxt;
+	return context->m_handlers->yajl_start_map(context);
+}
 
-	jobject_iter it;
-	jobject_iter_init(&it, jref);
-	jobject_key_value key_value;
-	while (jobject_iter_next(&it, &key_value))
-	{
-		if (!inject_default_jkeyvalue(key_value, context))
-			return false;
-	}
-
+static bool inject_default_jobject_end(void *ctxt)
+{
+	JSAXContextRef context = (JSAXContextRef)ctxt;
 	return context->m_handlers->yajl_end_map(context);
 }
 
-static bool inject_default_jarray(jvalue_ref jref, JSAXContextRef context)
+static bool inject_default_jarray_start(void *ctxt)
 {
-	if (!context->m_handlers->yajl_start_array(context))
-		return false;
+	JSAXContextRef context = (JSAXContextRef)ctxt;
+	return context->m_handlers->yajl_start_array(context);
+}
 
-	for (int i = 0; i < jarray_size(jref); i++)
-	{
-		jvalue_ref element = jarray_get(jref, i);
-		if (!inject_default_jvalue(element, context))
-		{
-			return false;
-		}
-	}
-
+static bool inject_default_jarray_end(void *ctxt)
+{
+	JSAXContextRef context = (JSAXContextRef)ctxt;
 	return context->m_handlers->yajl_end_array(context);
 }
 
-static bool inject_default_jnumber(jvalue_ref jref, JSAXContextRef context)
+static bool inject_default_jnumber_raw(void *ctxt, const char *num, size_t len)
+{
+	JSAXContextRef context = (JSAXContextRef)ctxt;
+	return context->m_handlers->yajl_number(context, num, len);
+}
+
+static bool inject_default_jnumber_double(void *ctxt, double num)
 {
 	char buf[24];
-	int printed;
-
-	switch (jnum_deref(jref)->m_type)
-	{
-		case NUM_RAW:
-			{
-				raw_buffer n = jnum_deref(jref)->value.raw;
-				return context->m_handlers->yajl_number(context, n.m_str, n.m_len);
-			}
-		case NUM_FLOAT:
-			printed = snprintf(buf, sizeof(buf) - 1, "%.14lg", jnum_deref(jref)->value.floating);
-			break;
-		case NUM_INT:
-			printed = snprintf(buf, sizeof(buf), "%" PRId64,  jnum_deref(jref)->value.integer);
-			break;
-		default:
-			return false;
-	}
-
-	return context->m_handlers->yajl_number(context, buf, printed);
+	int len = snprintf(buf, sizeof(buf), "%.14lg", num);
+	JSAXContextRef context = (JSAXContextRef)ctxt;
+	return context->m_handlers->yajl_number(context, buf, len);
 }
 
-static bool inject_default_jstring(jvalue_ref jref, JSAXContextRef context)
+static bool inject_default_jnumber_int(void *ctxt, int64_t num)
 {
-	raw_buffer s = jstring_deref(jref)->m_data;
-	return context->m_handlers->yajl_string(context, (unsigned char const *) s.m_str, s.m_len);
+	char buf[24];
+	int len = snprintf(buf, sizeof(buf), "%" PRId64, num);
+	JSAXContextRef context = (JSAXContextRef)ctxt;
+	return context->m_handlers->yajl_number(context, buf, len);
 }
 
-static bool inject_default_jbool(jvalue_ref jref, JSAXContextRef context)
+static bool inject_default_jstring(void *ctxt, const unsigned char *str, size_t len)
 {
-	return context->m_handlers->yajl_boolean(context, jboolean_deref(jref)->value);
+	JSAXContextRef context = (JSAXContextRef)ctxt;
+	return context->m_handlers->yajl_string(context, str, len);
 }
 
-static bool inject_default_jvalue(jvalue_ref jref, JSAXContextRef context)
+static bool inject_default_jbool(void *ctxt, bool value)
 {
-	assert( jis_valid(jref) );
-
-	switch (jref->m_type)
-	{
-	case JV_NULL   : return inject_default_jnull(jref, context);
-	case JV_OBJECT : return inject_default_jobject(jref, context);
-	case JV_ARRAY  : return inject_default_jarray(jref, context);
-	case JV_NUM    : return inject_default_jnumber(jref, context);
-	case JV_STR    : return inject_default_jstring(jref, context);
-	case JV_BOOL   : return inject_default_jbool(jref, context);
-	}
-
-	return false;
+	JSAXContextRef context = (JSAXContextRef)ctxt;
+	return context->m_handlers->yajl_boolean(context, value);
 }
+
+static void dummy_jarray(void *ctxt, jvalue_ref jref){}
+
+static struct TraverseCallbacks traverse = {
+	inject_default_jnull,
+	inject_default_jbool,
+	inject_default_jnumber_int,
+	inject_default_jnumber_double,
+	inject_default_jnumber_raw,
+	inject_default_jstring,
+	inject_default_jobject_start,
+	inject_default_jkeyvalue,
+	inject_default_jobject_end,
+	inject_default_jarray_start,
+	inject_default_jarray_end,
+	dummy_jarray,
+};
 
 static bool on_default_property(ValidationState *s, char const *key, jvalue_ref value, void *ctxt)
 {
@@ -694,7 +679,7 @@ static bool on_default_property(ValidationState *s, char const *key, jvalue_ref 
 	if (!spring->m_handlers->yajl_map_key(ctxt, (unsigned char const *) key, strlen(key)))
 		return false;
 
-	return inject_default_jvalue(value, spring);
+	return jvalue_traverse(value, &traverse, spring);
 }
 
 static bool has_array_duplicates(ValidationState *s, void *ctxt)

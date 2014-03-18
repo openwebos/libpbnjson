@@ -36,6 +36,7 @@
 #include "liblog.h"
 #include "jvalue/num_conversion.h"
 #include "jparse_stream_internal.h"
+#include "jtraverse.h"
 #include "validation/validation_state.h"
 #include "validation/validation_event.h"
 #include "validation/validation_api.h"
@@ -45,134 +46,101 @@
 typedef struct {
 	JErrorCallbacksRef callbacks;
 	jvalue_ref jvalue;
-} InnerContext;
+	ValidationState *validation_state;
+} ValidationContext;
 
-static bool check_schema_jvalue_internal(jvalue_ref jref, ValidationState *validation_state, InnerContext *ctxt);
-
-static bool check_schema_jnull(jvalue_ref jref, ValidationState *validation_state, InnerContext *ctxt)
+static bool check_schema_jnull(void *ctxt)
 {
+	ValidationContext *context = (ValidationContext*)ctxt;
 	ValidationEvent e = validation_event_null();
-	return validation_check(&e, validation_state, ctxt);
+	return validation_check(&e, context->validation_state, context);
 }
 
 //Helper function for jobject_to_string_append()
-static bool check_schema_jkeyvalue(jobject_key_value jref, ValidationState *validation_state, InnerContext *ctxt)
+static bool check_schema_jkeyvalue(void *ctxt, const unsigned char *key, size_t len)
 {
-	raw_buffer buf = jstring_deref(jref.key)->m_data;
-	ValidationEvent e = validation_event_obj_key(buf.m_str, buf.m_len);
-	if (!validation_check(&e, validation_state, ctxt))
-		return false;
-
-	return check_schema_jvalue_internal(jref.value, validation_state, ctxt);
+	ValidationContext *context = (ValidationContext*)ctxt;
+	ValidationEvent e = validation_event_obj_key((const char*)key, len);
+	return validation_check(&e, context->validation_state, context);
 }
 
-static bool check_schema_jobject(jvalue_ref jref, ValidationState *validation_state, InnerContext *ctxt)
+static bool check_schema_jobject_start(void *ctxt)
 {
+	ValidationContext *context = (ValidationContext*)ctxt;
 	ValidationEvent e = validation_event_obj_start();
-	if (!validation_check(&e, validation_state, ctxt))
-		return false;
-
-	jobject_iter it;
-	jobject_iter_init(&it, jref);
-	jobject_key_value key_value;
-	while (jobject_iter_next(&it, &key_value))
-	{
-		if (!check_schema_jkeyvalue(key_value, validation_state, ctxt))
-			return false;
-	}
-
-	e = validation_event_obj_end();
-	if (!validation_check(&e, validation_state, ctxt))
-		return false;
-
-	return true;
+	return validation_check(&e, context->validation_state, context);
 }
 
-static bool check_schema_jarray(jvalue_ref jref, ValidationState *validation_state, InnerContext *ctxt)
+static bool check_schema_jobject_end(void *ctxt)
 {
-	int i = 0;
-
-	ValidationEvent e = validation_event_arr_start();
-	if (!validation_check(&e, validation_state, ctxt))
-		return false;
-
-	for (i = 0; i < jarray_size(jref); i++)
-	{
-		jvalue_ref element = jarray_get(jref, i);
-		if (!check_schema_jvalue_internal(element, validation_state, ctxt))
-		{
-			return false;
-		}
-	}
-
-	e = validation_event_arr_end();
-	// jvalue needed only for has_array_dublicates callback
-	ctxt->jvalue = jref;
-	if (!validation_check(&e, validation_state, ctxt))
-		return false;
-
-	return true;
+	ValidationContext *context = (ValidationContext*)ctxt;
+	ValidationEvent e = validation_event_obj_end();
+	return validation_check(&e, context->validation_state, context);
 }
 
-static bool check_schema_jnumber(jvalue_ref jref, ValidationState *validation_state, InnerContext *ctxt)
+static bool check_schema_jarray_start(void *ctxt)
+{
+	ValidationContext *context = (ValidationContext*)ctxt;
+	ValidationEvent e = validation_event_arr_start();
+	return validation_check(&e, context->validation_state, context);
+}
+
+static void check_schema_jarray(void *ctxt, jvalue_ref jref)
+{
+	ValidationContext *context = (ValidationContext*)ctxt;
+	// jvalue needed only for has_array_dublicates callback
+	context->jvalue = jref;
+}
+
+static bool check_schema_jarray_end(void *ctxt)
+{
+	ValidationContext *context = (ValidationContext*)ctxt;
+	ValidationEvent e = validation_event_arr_end();
+	return validation_check(&e, context->validation_state, context);
+}
+
+static bool check_schema_jnumber_raw(void *ctxt, const char *num, size_t len)
+{
+	ValidationContext *context = (ValidationContext*)ctxt;
+	ValidationEvent e = validation_event_number(num, len);
+	return validation_check(&e, context->validation_state, context);
+}
+
+static bool check_schema_jnumber_double(void *ctxt, double num)
 {
 	char buf[24];
-	int printed;
-
-	switch (jnum_deref(jref)->m_type)
-	{
-		case NUM_RAW:
-			{
-				raw_buffer n = jnum_deref(jref)->value.raw;
-				ValidationEvent e = validation_event_number(n.m_str, n.m_len);
-				return validation_check(&e, validation_state, ctxt);
-			}
-		case NUM_FLOAT:
-			printed = snprintf(buf, sizeof(buf) - 1, "%.14lg", jnum_deref(jref)->value.floating);
-			break;
-		case NUM_INT:
-			printed = snprintf(buf, sizeof(buf), "%" PRId64,  jnum_deref(jref)->value.integer);
-			break;
-		default:
-			return false;
-	}
-
-	ValidationEvent e = validation_event_number(buf, printed);
-	return validation_check(&e, validation_state, ctxt);
+	int len = snprintf(buf, sizeof(buf), "%.14lg", num);
+	ValidationContext *context = (ValidationContext*)ctxt;
+	ValidationEvent e = validation_event_number(buf, len);
+	return validation_check(&e, context->validation_state, context);
 }
 
-static bool check_schema_jstring(jvalue_ref jref, ValidationState *validation_state, InnerContext *ctxt)
+static bool check_schema_jnumber_int(void *ctxt, int64_t num)
 {
-	raw_buffer s = jstring_deref(jref)->m_data;
-	ValidationEvent e = validation_event_string(s.m_str, s.m_len);
-	return validation_check(&e, validation_state, ctxt);
+	char buf[24];
+	int len = snprintf(buf, sizeof(buf), "%" PRId64, num);
+	ValidationContext *context = (ValidationContext*)ctxt;
+	ValidationEvent e = validation_event_number(buf, len);
+	return validation_check(&e, context->validation_state, context);
 }
 
-static bool check_schema_jbool(jvalue_ref jref, ValidationState *validation_state, InnerContext *ctxt)
+static bool check_schema_jstring(void *ctxt, const unsigned char *str, size_t len)
 {
-	ValidationEvent e = validation_event_boolean(jboolean_deref(jref)->value);
-	return validation_check(&e, validation_state, ctxt);
+	ValidationContext *context = (ValidationContext*)ctxt;
+	ValidationEvent e = validation_event_string((const char*)str, len);
+	return validation_check(&e, context->validation_state, context);
 }
 
-static bool check_schema_jvalue_internal(jvalue_ref jref, ValidationState *validation_state, InnerContext *ctxt)
+static bool check_schema_jbool(void *ctxt, bool value)
 {
-	if (UNLIKELY(!jis_valid(jref))) return false; /* errors never validates */
-	switch (jref->m_type)
-	{
-	case JV_NULL   : return check_schema_jnull(jref, validation_state, ctxt);
-	case JV_OBJECT : return check_schema_jobject(jref, validation_state, ctxt);
-	case JV_ARRAY  : return check_schema_jarray(jref, validation_state, ctxt);
-	case JV_NUM    : return check_schema_jnumber(jref, validation_state, ctxt);
-	case JV_STR    : return check_schema_jstring(jref, validation_state, ctxt);
-	case JV_BOOL   : return check_schema_jbool(jref, validation_state, ctxt);
-	}
-
-	return false;
+	ValidationContext *context = (ValidationContext*)ctxt;
+	ValidationEvent e = validation_event_boolean(value);
+	return validation_check(&e, context->validation_state, context);
 }
 
-void error_callback(ValidationState *s, ValidationErrorCode error, void *ctxt)
+static void error_callback(ValidationState *s, ValidationErrorCode error, void *ctxt)
 {
-	JErrorCallbacksRef callbacks = ((InnerContext *) ctxt)->callbacks;
+	JErrorCallbacksRef callbacks = ((ValidationContext *) ctxt)->callbacks;
 	if (!callbacks)
 		return;
 	if (callbacks && callbacks->m_schema)
@@ -188,13 +156,28 @@ void error_callback(ValidationState *s, ValidationErrorCode error, void *ctxt)
 
 static bool has_array_duplicates(ValidationState *s, void *ctxt)
 {
-	return jarray_has_duplicates(((InnerContext *) ctxt)->jvalue);
+	return jarray_has_duplicates(((ValidationContext *) ctxt)->jvalue);
 }
 
 static Notification jvalue_check_notification =
 {
 	.error_func = &error_callback,
 	.has_array_duplicates = &has_array_duplicates,
+};
+
+static struct TraverseCallbacks traverse = {
+	check_schema_jnull,
+	check_schema_jbool,
+	check_schema_jnumber_int,
+	check_schema_jnumber_double,
+	check_schema_jnumber_raw,
+	check_schema_jstring,
+	check_schema_jobject_start,
+	check_schema_jkeyvalue,
+	check_schema_jobject_end,
+	check_schema_jarray_start,
+	check_schema_jarray_end,
+	check_schema_jarray
 };
 
 bool jvalue_check_schema(jvalue_ref jref, const JSchemaInfoRef schema_info)
@@ -230,12 +213,13 @@ bool jvalue_check_schema(jvalue_ref jref, const JSchemaInfoRef schema_info)
 	                      uri_resolver,
 	                      &jvalue_check_notification);
 
-	InnerContext ctxt = {
+	ValidationContext ctxt = {
 		.callbacks = schema_info->m_errHandler,
 		.jvalue = jref,
+		.validation_state = &validation_state,
 	};
 
-	bool retVal = check_schema_jvalue_internal(jref, &validation_state, &ctxt);
+	bool retVal = jvalue_traverse(jref, &traverse, &ctxt);
 
 	validation_state_clear(&validation_state);
 
