@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -117,6 +117,19 @@ PJSON_API jschema_ref jschema_parse_ex(raw_buffer input, JSchemaOptimizationFlag
  * @see jschema_parse_ex
  */
 PJSON_API jschema_ref jschema_parse_file(const char *file, JErrorCallbacksRef errorHandler);
+
+/**
+ * Returns the "DOM" structure of the schema that is ready for validation
+ * by the parser layer.
+ *
+ * @param input - The input to generate a schema from - must be a valid JSON object schema.
+ * @param errorHandler - The error handlers to use when parsing the schema dom.
+ * @param root_scope - base URI for relative references
+ * @return A reference to a schema that can be used, or NULL if there was an error.
+ *
+ * @see jschema_parse_ex
+ */
+PJSON_API jschema_ref jschema_parse_jvalue(jvalue_ref input, JErrorCallbacksRef errorHandler, const char *root_scope);
 
 /**
  * Returns the "DOM" structure of the schema that is ready for validation

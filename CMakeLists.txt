@@ -21,12 +21,15 @@ project(pbnjson)
 
 include(webOS/webOS)
 webos_modules_init(1 0 0 QUALIFIER RC3)
-webos_component(2 5 0)
+webos_component(2 6 0)
 
 include(FindPkgConfig)
 
 find_library(GMP_LIBRARY gmp ${LIB_INSTALL_DIR})
 find_package(Threads)
+
+# prefer local headers
+include_directories(include/public)
 
 pkg_check_modules(GLIB2 REQUIRED glib-2.0)
 include_directories(${GLIB2_INCLUDE_DIRS})

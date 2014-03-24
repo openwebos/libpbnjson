@@ -69,6 +69,7 @@ add_library(
 	jvalue_tostring.c
 	jparse_stream.c
 	jschema.c
+	jschema_jvalue.c
 	jvalidation.c
 	jtraverse.c
 	parser_memory_pool.c

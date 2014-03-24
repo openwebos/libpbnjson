@@ -67,6 +67,7 @@ SET(UnitTest
 	TestSchemaUniqueItems
 	TestSchemaParsingErrorReporting
 	TestSchemaValidationErrorReporting
+	TestSchemaFromJvalue
 	)
 
 FOREACH(TEST ${UnitTest})

@@ -60,7 +60,7 @@ typedef struct
 } jschema_builder;
 
 /* schema builder manipulation functions interface */
-static void jschema_builder_init(jschema_builder *builder)
+static inline void jschema_builder_init(jschema_builder *builder)
 {
 	*builder = (jschema_builder)
 	{
@@ -72,7 +72,7 @@ static void jschema_builder_init(jschema_builder *builder)
 	};
 }
 
-static void jschema_builder_destroy(jschema_builder *builder)
+static inline void jschema_builder_destroy(jschema_builder *builder)
 {
 	// Forget about SchemaParsing then.
 	validator_unref(builder->parser_ctxt.validator);
@@ -80,13 +80,13 @@ static void jschema_builder_destroy(jschema_builder *builder)
 	JsonSchemaParserFree(builder->parser, free);
 }
 
-static bool jschema_builder_is_ok(jschema_builder *builder)
+static inline bool jschema_builder_is_ok(jschema_builder *builder)
 { return (builder->parser_ctxt.error == SEC_OK); }
 
-static int jschema_builder_error_code(jschema_builder *builder)
+static inline int jschema_builder_error_code(jschema_builder *builder)
 { return builder->parser_ctxt.error; }
 
-static const char *jschema_builder_error_str(jschema_builder *builder)
+static inline const char *jschema_builder_error_str(jschema_builder *builder)
 { return SchemaGetErrorMessage(builder->parser_ctxt.error); }
 
 jschema_builder *jschema_builder_create();
@@ -96,15 +96,15 @@ Validator* jschema_builder_finish(jschema_builder *builder, UriResolver *uri_res
 
 /* schema builder methods (tokens) */
 
-static bool jschema_builder_token(jschema_builder *builder, int token)
+static inline bool jschema_builder_token(jschema_builder *builder, int token)
 {
 	static TokenParam token_param;
 	JsonSchemaParser(builder->parser, token, token_param, &builder->parser_ctxt);
 	return builder->parser_ctxt.error == SEC_OK;
 }
 
-static bool jschema_builder_token_str(jschema_builder *builder, int token,
-                                      const char *str, size_t len)
+static inline bool jschema_builder_token_str(jschema_builder *builder, int token,
+                                             const char *str, size_t len)
 {
 	TokenParam token_param =
 	{
@@ -117,7 +117,7 @@ static bool jschema_builder_token_str(jschema_builder *builder, int token,
 	return builder->parser_ctxt.error == SEC_OK;
 }
 
-static bool jschema_builder_bool(jschema_builder *builder, bool boolean)
+static inline bool jschema_builder_bool(jschema_builder *builder, bool boolean)
 {
 	TokenParam token_param =
 	{
@@ -127,12 +127,12 @@ static bool jschema_builder_bool(jschema_builder *builder, bool boolean)
 	return builder->parser_ctxt.error == SEC_OK;
 }
 
-static bool jschema_builder_str(jschema_builder *builder,
-                                const char *str, size_t len)
+static inline bool jschema_builder_str(jschema_builder *builder,
+                                       const char *str, size_t len)
 { return jschema_builder_token_str(builder, TOKEN_STRING, str, len); }
 
-static bool jschema_builder_number(jschema_builder *builder,
-                                   const char *str, size_t len)
+static inline bool jschema_builder_number(jschema_builder *builder,
+                                          const char *str, size_t len)
 { return jschema_builder_token_str(builder, TOKEN_NUMBER, str, len); }
 
 bool jschema_builder_key(jschema_builder *builder,

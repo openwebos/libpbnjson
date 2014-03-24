@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,5 +48,9 @@ struct __JSAXContext
 	char *errorDescription;
 	ValidationState *validation_state;
 };
+
+jschema_ref jschema_new(void);
+jschema_ref jschema_copy(jschema_ref schema);
+void jschema_release(jschema_ref *schema);
 
 #endif /* JSCHEMA_TYPES_INTERNAL_H_ */
