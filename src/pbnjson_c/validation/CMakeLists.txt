@@ -1,6 +1,6 @@
 # @@@LICENSE
 #
-#      Copyright (c) 2009-2013 LG Electronics, Inc.
+#      Copyright (c) 2009-2014 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -98,6 +98,7 @@ add_library(
 	parser_context.c
 	pattern.c
 	reference.c
+	schema_builder.c
 	schema_parsing.c
 	type_parser.c
 	uri_scope.c

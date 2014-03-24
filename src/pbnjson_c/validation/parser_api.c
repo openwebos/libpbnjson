@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "schema_builder.h"
 
 // YAJL and gperf are used to produce lexical tokens.
 // The parser is generated from a EBNF source with LEMON LALR(1) parser (see
@@ -42,29 +43,6 @@
 //    into UriResolver.
 //  * Finalize parse: Substitute all the SchemaParsing in the tree by their
 //    type validators.
-
-// Prototypes of the interface to the generated parser.
-void *JsonSchemaParserAlloc(void *(*mallocProc)(size_t));
-void JsonSchemaParserFree(
-	void *p,                    /* The parser to be deleted */
-	void (*freeProc)(void*)     /* Function used to reclaim memory */
-);
-void JsonSchemaParser(
-	void *yyp,                   /* The parser */
-	int yymajor,                 /* The major token code number */
-	TokenParam yyminor,          /* The value for the token */
-	ParserContext *
-);
-#ifndef NDEBUG
-void JsonSchemaParserTrace(FILE *f, char *p);
-#endif // NDEBUG
-
-
-typedef struct _YajlContext
-{
-	void *parser;
-	ParserContext parser_ctxt;
-} YajlContext;
 
 // Every YAJL callback means a token for the parser.
 static int on_null(void *ctx)
@@ -185,15 +163,8 @@ Validator* parse_schema_n(char const *str, size_t len,
                           JschemaErrorFunc error_func, void *error_ctxt)
 {
 	//JsonSchemaParserTrace(stdout, ">>> ");
-	void *parser = JsonSchemaParserAlloc(malloc);
-	YajlContext yajl_context =
-	{
-		.parser = parser,
-		.parser_ctxt = {
-			.validator = NULL,
-			.error = SEC_OK,
-		},
-	};
+	jschema_builder yajl_context;
+	jschema_builder_init(&yajl_context);
 
 	const bool allow_comments = true;
 
@@ -212,13 +183,13 @@ Validator* parse_schema_n(char const *str, size_t len,
 #endif // YAJL_VERSION
 	if (!yh)
 	{
-		JsonSchemaParserFree(parser, free);
+		jschema_builder_destroy(&yajl_context);
 		return NULL;
 	}
 
 	if (yajl_status_ok != yajl_parse(yh, (const unsigned char *)str, len))
 	{
-		if (yajl_context.parser_ctxt.error == SEC_OK)
+		if (jschema_builder_is_ok(&yajl_context))
 		{
 			unsigned char *err = yajl_get_error(yh, 0/*verbose*/, (const unsigned char *)str, len);
 			if (error_func)
@@ -228,11 +199,11 @@ Validator* parse_schema_n(char const *str, size_t len,
 		else
 		{
 			if (error_func)
-				error_func(yajl_get_bytes_consumed(yh), yajl_context.parser_ctxt.error,
-				           SchemaGetErrorMessage(yajl_context.parser_ctxt.error), error_ctxt);
+				error_func(yajl_get_bytes_consumed(yh), jschema_builder_error_code(&yajl_context),
+				           jschema_builder_error_str(&yajl_context), error_ctxt);
 		}
 		yajl_free(yh);
-		JsonSchemaParserFree(parser, free);
+		jschema_builder_destroy(&yajl_context);
 		return NULL;
 	}
 
@@ -242,7 +213,7 @@ Validator* parse_schema_n(char const *str, size_t len,
 	if (yajl_status_ok != yajl_complete_parse(yh))
 #endif
 	{
-		if (yajl_context.parser_ctxt.error == SEC_OK)
+		if (jschema_builder_is_ok(&yajl_context))
 		{
 			unsigned char *err = yajl_get_error(yh, 0, (const unsigned char *)str, len);
 			if (error_func)
@@ -252,47 +223,28 @@ Validator* parse_schema_n(char const *str, size_t len,
 		else
 		{
 			if (error_func)
-				error_func(yajl_get_bytes_consumed(yh), yajl_context.parser_ctxt.error,
-				           SchemaGetErrorMessage(yajl_context.parser_ctxt.error), error_ctxt);
+				error_func(yajl_get_bytes_consumed(yh), jschema_builder_error_code(&yajl_context),
+				           jschema_builder_error_str(&yajl_context), error_ctxt);
 		}
 		yajl_free(yh);
-		JsonSchemaParserFree(parser, free);
+		jschema_builder_destroy(&yajl_context);
 		return NULL;
 	}
 
-	// Let the parser finish its job.
-	static TokenParam token_param;
-	JsonSchemaParser(parser, 0, token_param, &yajl_context.parser_ctxt);
-
-	// Even if parsing was completed there can be an error
-	if (!yajl_context.parser_ctxt.error == SEC_OK)
+	Validator *v = jschema_builder_finish(&yajl_context, uri_resolver, root_scope);
+	if (v == NULL) /* some error happened? */
 	{
 		if (error_func)
-			error_func(yajl_get_bytes_consumed(yh), yajl_context.parser_ctxt.error,
-			           SchemaGetErrorMessage(yajl_context.parser_ctxt.error), error_ctxt);
-		validator_unref(yajl_context.parser_ctxt.validator);
+			error_func(yajl_get_bytes_consumed(yh), jschema_builder_error_code(&yajl_context),
+			           jschema_builder_error_str(&yajl_context), error_ctxt);
 		yajl_free(yh);
-		JsonSchemaParserFree(parser, free);
+		jschema_builder_destroy(&yajl_context);
 		return NULL;
 	}
-
 	yajl_free(yh);
-	JsonSchemaParserFree(parser, free);
 
-	// Post-parse processing
-	Validator *v = yajl_context.parser_ctxt.validator;
-	// Move parsed features to the validators
-	validator_apply_features(v);
-	// Combine type validator and other validators contaiters (allOf, anyOf, etc.)
-	validator_combine(v);
-	if (uri_resolver)
-		validator_collect_uri(v, root_scope, uri_resolver);
-	// Substitute every SchemaParsing by its type validator for every node
-	// in the AST.
-	Validator *result = validator_finalize_parse(v);
-	// Forget about SchemaParsing then.
-	validator_unref(v);
-	return result;
+	jschema_builder_destroy(&yajl_context);
+	return v;
 }
 
 Validator* parse_schema(char const *str,
