@@ -25,6 +25,8 @@
 #include <glib.h>
 
 #include "schema_builder.h"
+#include "schema_keywords.h"
+#include "json_schema_grammar.h"
 
 jschema_builder *jschema_builder_create()
 {
@@ -63,4 +65,22 @@ Validator* jschema_builder_finish(jschema_builder *builder, UriResolver *uri_res
 	// Substitute every SchemaParsing by its type validator for every node
 	// in the AST.
 	return validator_finalize_parse(v);
+}
+
+bool jschema_builder_key(jschema_builder *builder, const char *str, size_t len)
+{
+	TokenParam token_param =
+	{
+		.string = {
+			.str = (char const *) str,
+			.str_len = len,
+		},
+	};
+	// Object key may mean different tokens for the parser, each schema keyword
+	// is a distinct token for the parser.
+	const struct JsonSchemaKeyword *k = json_schema_keyword_lookup(str, len);
+	JsonSchemaParser(builder->parser,
+	                 k ? k->token : TOKEN_KEY_NOT_KEYWORD, token_param,
+	                 &builder->parser_ctxt);
+	return builder->parser_ctxt.error == SEC_OK;
 }

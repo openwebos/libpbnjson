@@ -33,6 +33,7 @@
 #include "parser_api.h"
 #include "parser_context.h"
 #include "validator.h"
+#include "validation/json_schema_grammar.h"
 
 /* Prototypes of the interface to the generated parser. */
 void *JsonSchemaParserAlloc(void *(*mallocProc)(size_t));
@@ -51,16 +52,14 @@ void JsonSchemaParserTrace(FILE *f, char *p);
 #endif // NDEBUG
 
 
-/* context passed to all builder functions
- * TODO: remove YajlContext name
- */
+/** context passed to all builder functions */
 typedef struct
 {
 	void *parser;
 	ParserContext parser_ctxt;
-} YajlContext, jschema_builder;
+} jschema_builder;
 
-/* builder functions interface */
+/* schema builder manipulation functions interface */
 static void jschema_builder_init(jschema_builder *builder)
 {
 	*builder = (jschema_builder)
@@ -94,5 +93,49 @@ jschema_builder *jschema_builder_create();
 void jschema_builder_free(jschema_builder *builder);
 
 Validator* jschema_builder_finish(jschema_builder *builder, UriResolver *uri_resolveri, char const *root_scope);
+
+/* schema builder methods (tokens) */
+
+static bool jschema_builder_token(jschema_builder *builder, int token)
+{
+	static TokenParam token_param;
+	JsonSchemaParser(builder->parser, token, token_param, &builder->parser_ctxt);
+	return builder->parser_ctxt.error == SEC_OK;
+}
+
+static bool jschema_builder_token_str(jschema_builder *builder, int token,
+                                      const char *str, size_t len)
+{
+	TokenParam token_param =
+	{
+		.string = {
+			.str = (char const *) str,
+			.str_len = len,
+		},
+	};
+	JsonSchemaParser(builder->parser, token, token_param, &builder->parser_ctxt);
+	return builder->parser_ctxt.error == SEC_OK;
+}
+
+static bool jschema_builder_bool(jschema_builder *builder, bool boolean)
+{
+	TokenParam token_param =
+	{
+		.boolean = boolean,
+	};
+	JsonSchemaParser(builder->parser, TOKEN_BOOLEAN, token_param, &builder->parser_ctxt);
+	return builder->parser_ctxt.error == SEC_OK;
+}
+
+static bool jschema_builder_str(jschema_builder *builder,
+                                const char *str, size_t len)
+{ return jschema_builder_token_str(builder, TOKEN_STRING, str, len); }
+
+static bool jschema_builder_number(jschema_builder *builder,
+                                   const char *str, size_t len)
+{ return jschema_builder_token_str(builder, TOKEN_NUMBER, str, len); }
+
+bool jschema_builder_key(jschema_builder *builder,
+                         const char *str, size_t len);
 
 #endif

@@ -17,9 +17,6 @@
 // LICENSE@@@
 
 #include "parser_api.h"
-#include "parser_context.h"
-#include "json_schema_grammar.h"
-#include "schema_keywords.h"
 #include "validator.h"
 #include "../yajl_compat.h"
 #include <yajl/yajl_parse.h>
@@ -45,117 +42,46 @@
 //    type validators.
 
 // Every YAJL callback means a token for the parser.
-static int on_null(void *ctx)
-{
-	YajlContext *yajl_context = (YajlContext *) ctx;
-	TokenParam token_param = { };
-	JsonSchemaParser(yajl_context->parser, TOKEN_NULL, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.error == SEC_OK;
-}
+static int schema_null(void *ctx)
+{ return jschema_builder_token((jschema_builder *)ctx, TOKEN_NULL); }
 
-static int on_boolean(void *ctx, int boolean)
-{
-	YajlContext *yajl_context = (YajlContext *) ctx;
-	TokenParam token_param =
-	{
-		.boolean = boolean,
-	};
-	JsonSchemaParser(yajl_context->parser, TOKEN_BOOLEAN, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.error == SEC_OK;
-}
+static int schema_start_map(void *ctx)
+{ return jschema_builder_token((jschema_builder *)ctx, TOKEN_OBJ_START); }
 
-static int on_number(void *ctx, const char *str, yajl_size_t len)
-{
-	YajlContext *yajl_context = (YajlContext *) ctx;
-	TokenParam token_param =
-	{
-		.string = {
-			.str = (char const *) str,
-			.str_len = len,
-		},
-	};
-	JsonSchemaParser(yajl_context->parser, TOKEN_NUMBER, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.error == SEC_OK;
-}
+static int schema_end_map(void *ctx)
+{ return jschema_builder_token((jschema_builder *)ctx, TOKEN_OBJ_END); }
 
-static int on_string(void *ctx, const unsigned char *str, yajl_size_t len)
-{
-	YajlContext *yajl_context = (YajlContext *) ctx;
-	TokenParam token_param =
-	{
-		.string = {
-			.str = (char const *) str,
-			.str_len = len,
-		},
-	};
-	JsonSchemaParser(yajl_context->parser, TOKEN_STRING, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.error == SEC_OK;
-}
+static int schema_start_arr(void *ctx)
+{ return jschema_builder_token((jschema_builder *)ctx, TOKEN_ARR_START); }
 
-static int on_map_key(void *ctx, const unsigned char *str, yajl_size_t len)
-{
-	YajlContext *yajl_context = (YajlContext *) ctx;
-	TokenParam token_param =
-	{
-		.string = {
-			.str = (char const *) str,
-			.str_len = len,
-		},
-	};
-	// Object key may mean different tokens for the parser, each schema keyword
-	// is a distinct token for the parser.
-	const struct JsonSchemaKeyword *k = json_schema_keyword_lookup(str, len);
-	JsonSchemaParser(yajl_context->parser,
-	                 k ? k->token : TOKEN_KEY_NOT_KEYWORD, token_param,
-	                 &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.error == SEC_OK;
-}
+static int schema_end_arr(void *ctx)
+{ return jschema_builder_token((jschema_builder *)ctx, TOKEN_ARR_END); }
 
-static int on_start_map(void *ctx)
-{
-	YajlContext *yajl_context = (YajlContext *) ctx;
-	static TokenParam token_param;
-	JsonSchemaParser(yajl_context->parser, TOKEN_OBJ_START, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.error == SEC_OK;
-}
+static int schema_bool(void *ctx, int boolean)
+{ return jschema_builder_bool((jschema_builder *)ctx, boolean); }
 
-static int on_end_map(void *ctx)
-{
-	YajlContext *yajl_context = (YajlContext *) ctx;
-	static TokenParam token_param;
-	JsonSchemaParser(yajl_context->parser, TOKEN_OBJ_END, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.error == SEC_OK;
-}
+static int schema_str(void *ctx, const unsigned char *str, size_t len)
+{ return jschema_builder_str((jschema_builder *)ctx, (const char *)str, len); }
 
-static int on_start_array(void *ctx)
-{
-	YajlContext *yajl_context = (YajlContext *) ctx;
-	static TokenParam token_param;
-	JsonSchemaParser(yajl_context->parser, TOKEN_ARR_START, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.error == SEC_OK;
-}
+static int schema_number(void *ctx, const char *str, size_t len)
+{ return jschema_builder_number((jschema_builder *)ctx, str, len); }
 
-static int on_end_array(void *ctx)
-{
-	YajlContext *yajl_context = (YajlContext *) ctx;
-	static TokenParam token_param;
-	JsonSchemaParser(yajl_context->parser, TOKEN_ARR_END, token_param, &yajl_context->parser_ctxt);
-	return yajl_context->parser_ctxt.error == SEC_OK;
-}
+static int schema_key(void *ctx, const unsigned char *str, size_t len)
+{ return jschema_builder_key((jschema_builder *)ctx, (const char *)str, len); }
 
 static yajl_callbacks callbacks =
 {
-	.yajl_null          = on_null,
-	.yajl_boolean       = on_boolean,
+	.yajl_null          = schema_null,
+	.yajl_boolean       = schema_bool,
 	.yajl_integer       = NULL,
 	.yajl_double        = NULL,
-	.yajl_number        = on_number,
-	.yajl_string        = on_string,
-	.yajl_start_map     = on_start_map,
-	.yajl_map_key       = on_map_key,
-	.yajl_end_map       = on_end_map,
-	.yajl_start_array   = on_start_array,
-	.yajl_end_array     = on_end_array
+	.yajl_number        = schema_number,
+	.yajl_string        = schema_str,
+	.yajl_start_map     = schema_start_map,
+	.yajl_map_key       = schema_key,
+	.yajl_end_map       = schema_end_map,
+	.yajl_start_array   = schema_start_arr,
+	.yajl_end_array     = schema_end_arr
 };
 
 Validator* parse_schema_n(char const *str, size_t len,
