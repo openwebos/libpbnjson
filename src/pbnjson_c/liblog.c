@@ -34,6 +34,9 @@
 
 #include "liblog.h"
 
+#ifndef PJSON_NO_LOGGING
+
+#if HAVE_VFPRINTF
 #if LOG_INFO < LOG_ERR
 	// increasing numbers indicate higher priority
 	#define IS_HIGHER_PRIORITY(actual, base) ((actual) > (base))
@@ -42,7 +45,6 @@
 	#define IS_HIGHER_PRIORITY(actual, base) ((actual) < (base))
 #endif
 
-#if HAVE_VFPRINTF
 #define VFPRINTF(priority, file, format, ap)                        \
 	do {                                                            \
 		vfprintf(file, format, ap);                                 \
@@ -52,9 +54,6 @@
 #else
 #define VFPRINTF(priority, file, format, ap) PJSON_NOOP
 #endif
-
-static const char *program_name = NULL;
-static bool default_program_name = true;
 
 #if GCC_VERSION >= __PJ_APP_VERSION(2, 96, 0)
 #define PURE_FUNCTION __attribute__((pure))
@@ -84,22 +83,6 @@ static int PmLogLevelToSyslog(PmLogLevel level)
 }
 #endif
 
-void setConsumerName(const char *name)
-{
-	PJ_LOG_DBG("PBNJSON_CHANGE_NAME", 1, PMLOGKS("APPID", program_name), "changing program name to %s", SAFE_STRING_PRINT(program_name));
-	if (default_program_name)
-		free((char *)program_name);
-	program_name = name;
-	default_program_name = name != NULL;
-}
-
-const char *getConsumerName()
-{
-	if (default_program_name)
-		return NULL;
-	return program_name;
-}
-
 static size_t setProgNameUnknown(char *buffer, size_t bufferSize) PURE_FUNC;
 static size_t setProgNameUnknown(char *buffer, size_t bufferSize)
 {
@@ -118,12 +101,7 @@ static const char *getConsumerName_internal()
 	size_t cmdline_size;
 	size_t prog_name_size;
 	FILE *cmdline_file;
-	char *dyn_program_name;
-
-	if (program_name)
-		return program_name;
-
-	assert (default_program_name);
+	char *program_name;
 
 	proc_pid = getpid();
 	snprintf(path, sizeof(path), "/proc/%d/cmdline", (int)proc_pid);
@@ -144,12 +122,12 @@ static const char *getConsumerName_internal()
 	}
 
 	prog_name_size = cmdline_size + 10;	// 10 characters for pid & null character just in case
-	dyn_program_name = (char *)malloc(prog_name_size);
-	if (dyn_program_name) {
-		snprintf((char *)dyn_program_name, prog_name_size, "%d (%s)", (int) proc_pid, program);
+	program_name = (char *)malloc(prog_name_size);
+	if (program_name) {
+		snprintf((char *)program_name, prog_name_size, "%d (%s)", (int) proc_pid, program);
 	}
 
-	return (program_name = dyn_program_name);
+	return program_name;
 }
 
 PmLogContext PmLogGetLibContext()
@@ -208,3 +186,5 @@ PmLogErr _PmLogMsgKV(PmLogContext context, PmLogLevel level, unsigned int flags,
 
 	return kPmLogErr_None;
 }
+
+#endif /* PJSON_NO_LOGGING */

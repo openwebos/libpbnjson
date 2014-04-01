@@ -27,10 +27,12 @@
 #include <compiler/noreturn_attribute.h>
 #include <compiler/builtins.h>
 
-#pragma weak _PmLogMsgKV
+#ifndef PJSON_NO_LOGGING
 #pragma weak PmLogGetLibContext
+#pragma weak _PmLogMsgKV
 
 #include <PmLogLib.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,7 +82,7 @@ extern "C" {
 #define PJ_SCHEMA_TRACIEST(format, ...) PJSON_NOOP
 #endif
 
-#if PJSON_LOG_DBG
+#if PJSON_LOG_DBG && !PJSON_NO_LOGGING
 #define PJ_LOG_DBG(format, ...) PmLogDebug(PmLogGetLibContext(), format, ##__VA_ARGS__)
 #else
 #define PJ_LOG_DBG(format, ...) PJSON_NOOP
