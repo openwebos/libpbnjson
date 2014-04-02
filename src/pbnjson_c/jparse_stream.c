@@ -851,57 +851,9 @@ void jsaxparser_release(jsaxparser_ref *parser)
 	jsaxparser_free_memory(*parser);
 }
 
-void mempool_init(mem_pool *m)
-{
-	m->end = m->begin + sizeof(m->begin);
-	m->prev = m->begin;
-	m->current = m->begin;
-}
-
-void mempool_free(void *ctx, void *p)
-{
-	mem_pool *m = (mem_pool*)ctx;
-	if (p && ((char*)p < m->begin || p >= m->end))
-		free(p);
-}
-
-void* mempool_malloc(void *ctx, yajl_size_t size)
-{
-	mem_pool *m = (mem_pool*)ctx;
-
-	if ((char*)m->end >= (char*)m->current + size) {
-		m->prev = m->current;
-		m->current = (char*)m->prev + size;
-		return m->prev;
-	}
-	return malloc(size); // can not allocate from pool
-}
-
-void* mempool_realloc(void *ctx, void *p, yajl_size_t size)
-{
-	mem_pool *m = (mem_pool*)ctx;
-
-	if (p && ((char*)p < m->begin || p >= m->end)) // p from heap
-		return realloc(p, size);
-
-	if (p == m->prev && (char*)m->end >= (char*)p + size) { // p last chunk in pool
-		m->current = (char*)p + size;
-		return p;
-	}
-	// p inside pool or null pointer
-	char *top = m->current;
-	void *newp = mempool_malloc(ctx, size);
-	if (p) {
-		size_t diff = top - (char*)p;
-		size_t sz = (diff < size) ? diff : size;
-		memcpy(newp, p, sz);
-	}
-	return newp;
-}
-
 bool jsaxparser_init(jsaxparser_ref parser, JSchemaInfoRef schemaInfo, PJSAXCallbacks *callback, void *callback_ctxt)
 {
-	memset(parser, 0, sizeof(struct jsaxparser));
+	memset(parser, 0, sizeof(struct jsaxparser) - sizeof(mem_pool_t));
 
 	parser->validator = NOTHING_VALIDATOR;
 	parser->uri_resolver = NULL;
@@ -953,12 +905,12 @@ bool jsaxparser_init(jsaxparser_ref parser, JSchemaInfoRef schemaInfo, PJSAXCall
 	};
 	parser->internalCtxt = __internalCtxt;
 
-	mempool_init(&parser->mpool);
+	mempool_init(&parser->memory_pool);
 	yajl_alloc_funcs allocFuncs = {
 		mempool_malloc,
 		mempool_realloc,
 		mempool_free,
-		&parser->mpool
+		&parser->memory_pool
 	};
 	const bool allow_comments = true;
 

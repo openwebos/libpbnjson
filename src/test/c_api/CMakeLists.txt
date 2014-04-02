@@ -58,6 +58,7 @@ endforeach()
 SET(UnitTest
 	SmokeTestMemLeakBadInput
 	TestParse
+	TestParserMemPool
 	TestDOM
 	TestJvalue
 	TestJobject
