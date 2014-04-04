@@ -311,6 +311,13 @@ bool jis_valid (jvalue_ref val)
 	return jis_valid_unsafe(val);
 }
 
+JValueType jget_type(jvalue_ref val)
+{
+	SANITY_CHECK_POINTER(val);
+	assert(val);
+	return val->m_type;
+}
+
 bool jis_null (jvalue_ref val)
 {
 	SANITY_CHECK_POINTER(val);

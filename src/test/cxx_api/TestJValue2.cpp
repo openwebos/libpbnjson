@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2013 LG Electronics, Inc.
+//      Copyright (c) 2013-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -365,4 +365,14 @@ TEST(TestJValue, NonIterable)
 	ASSERT_THROW(JValue("hello").begin(), JValue::InvalidType);
 	ASSERT_THROW(JValue(13).begin(), JValue::InvalidType);
 	ASSERT_NO_THROW(Object().begin());
+}
+
+TEST(TestJValue, GetType)
+{
+	EXPECT_EQ(JV_NULL, JValue().getType());
+	EXPECT_EQ(JV_NUM, JValue(1).getType());
+	EXPECT_EQ(JV_STR, JValue("1").getType());
+	EXPECT_EQ(JV_BOOL, JValue(true).getType());
+	EXPECT_EQ(JV_OBJECT, Object().getType());
+	EXPECT_EQ(JV_ARRAY, Array().getType());
 }

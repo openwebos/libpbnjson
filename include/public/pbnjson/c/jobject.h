@@ -141,6 +141,11 @@ PJSON_API bool jis_valid(jvalue_ref val);
 PJSON_API jvalue_ref jnull() PURE_FUNC;
 
 /**
+ * Return type of JSON value (null, bool, str, etc.)
+ */
+PJSON_API JValueType jget_type(jvalue_ref val);
+
+/**
  * Lets the caller determine whether or not the reference is
  * @param val A reference to a JSON value
  * @return true if val is a reference to a JSON null value.  false otherwise

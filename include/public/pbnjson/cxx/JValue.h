@@ -468,6 +468,13 @@ public:
 	bool isValid() const;
 
 	/**
+	 * Get JSON value type.
+	 *
+	 * @return Type of JSON value
+	 */
+	JValueType getType() const;
+
+	/**
 	 * Determines whether or not this JSON value represents a NULL
 	 * @return True if this is a JSON null, false otherwise
 	 */

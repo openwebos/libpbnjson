@@ -27,6 +27,15 @@
 extern "C" {
 #endif
 
+typedef enum _JValueType {
+	JV_NULL = 0,
+	JV_BOOL,
+	JV_NUM,
+	JV_STR,
+	JV_ARRAY,
+	JV_OBJECT,
+} JValueType;
+
 typedef struct jvalue* jvalue_ref;
 
 typedef struct jsaxparser *jsaxparser_ref;

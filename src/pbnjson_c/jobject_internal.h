@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,15 +26,6 @@
 #define ARRAY_BUCKET_SIZE (1 << 4)
 #define OUTSIDE_ARR_BUCKET_RANGE(value) ((value) & (~(ARRAY_BUCKET_SIZE - 1)))
 
-
-typedef enum {
-	JV_NULL = 0,
-	JV_BOOL,
-	JV_NUM,
-	JV_STR,
-	JV_ARRAY,
-	JV_OBJECT,
-} JValueType;
 
 struct jvalue {
 	JValueType m_type;

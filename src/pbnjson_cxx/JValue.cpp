@@ -383,6 +383,11 @@ bool JValue::isValid() const
 	return jis_valid(m_jval);
 }
 
+JValueType JValue::getType() const
+{
+	return jget_type(m_jval);
+}
+
 bool JValue::isNull() const
 {
 	return jis_null(m_jval);
