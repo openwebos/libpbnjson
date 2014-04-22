@@ -25,7 +25,7 @@ using namespace pbnjson;
 
 TEST(TestDOM, ParserObjectSimple)
 {
-	JDomParser parser(nullptr);
+	JDomParser parser;
 	JSchemaFragment schema("{}");
 
 	ASSERT_TRUE(parser.parse("{}", schema));
@@ -39,7 +39,7 @@ TEST(TestDOM, ParserObjectSimple)
 
 TEST(TestDOM, ParserObjectComplex)
 {
-	JDomParser parser(NULL);
+	JDomParser parser;
 	JSchemaFragment schema("{}");
 
 	std::string dom1Str = "{\"key1\" : null, \"key2\" : \"str\", \"key3\" : 506 }";
@@ -63,7 +63,7 @@ TEST(TestDOM, ParserObjectComplex)
 
 TEST(TestDOM, ParserObjectComplex2)
 {
-	JDomParser parser(NULL);
+	JDomParser parser;
 	JSchemaFragment schema("{}");
 
 	std::string dom2Str =
@@ -111,7 +111,7 @@ TEST(TestDOM, ParserObjectComplex2)
 
 TEST(TestDOM, ParserObjectCommaMemLeak)
 {
-	JDomParser parser(NULL);
+	JDomParser parser;
 	JSchemaFragment schema("{}");
 
 	// this test was causing a memory leak (otherwise it is a duplicate of above)

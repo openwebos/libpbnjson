@@ -23,12 +23,13 @@
 #include <cassert>
 
 #include "../pbnjson_c/liblog.h"
+#include "JSchemaResolverWrapper.h"
 
 namespace pbnjson {
 
-JSchema::Resource* JSchemaFile::createSchemaMap(const std::string &path)
+JSchema::Resource* JSchemaFile::createSchemaMap(const std::string &path, JSchemaResolverRef resolver)
 {
-	jschema_ref schema = jschema_parse_file(path.c_str(), NULL);
+	jschema_ref schema = jschema_parse_file_resolve(path.c_str(), NULL, resolver);
 	if (schema == NULL)
 		return NULL;
 
@@ -36,8 +37,18 @@ JSchema::Resource* JSchemaFile::createSchemaMap(const std::string &path)
 }
 
 JSchemaFile::JSchemaFile(const std::string& path)
-	: JSchema(createSchemaMap(path))
+	: JSchema(createSchemaMap(path, NULL))
 {
+}
+
+JSchemaFile::JSchemaFile(const std::string& path, JResolver *resolver)
+{
+	JSchemaResolverWrapper resolverWrapper(resolver);
+	JSchemaResolver schemaresolver;
+	schemaresolver.m_resolve = &(resolverWrapper.sax_schema_resolver);
+	schemaresolver.m_userCtxt = &resolverWrapper;
+
+	m_resource = createSchemaMap(path, &schemaresolver);
 }
 
 JSchemaFile::JSchemaFile(const JSchemaFile& other)

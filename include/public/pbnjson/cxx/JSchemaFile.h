@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 
 #include "japi.h"
 #include "JSchema.h"
+#include "JResolver.h"
 
 namespace pbnjson {
 
@@ -48,7 +49,7 @@ class PJSONCXX_API JSchemaFile
 	: public JSchema
 {
 private:
-	static JSchema::Resource* createSchemaMap(const std::string &path);
+	static JSchema::Resource* createSchemaMap(const std::string &path, JSchemaResolverRef resolver);
 
 public:
 	/**
@@ -61,9 +62,20 @@ public:
 	JSchemaFile(const std::string& path);
 
 	/**
+	 * @brief Create a schema representation from the file with external references.
+	 *
+	 * @param path     Path to the file
+	 * @param resolver The resolver to use for the schema
+	 *                 (necessary if it contains external references).
+	 *
+	 * @see JResolver
+	 */
+	JSchemaFile(const std::string& path, JResolver *resolver);
+
+	/**
 	 * Copy the schema file.
 	 *
-	 * Behaviour is undefined if the object to copy was not initialized succesfully.
+	 * Behaviour is undefined if the object to copy was not initialized successfully.
 	 */
 	JSchemaFile(const JSchemaFile& other);
 

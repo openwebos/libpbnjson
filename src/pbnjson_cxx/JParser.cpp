@@ -155,11 +155,20 @@ static inline raw_buffer strToRawBuffer(const std::string& str)
 	return j_str_to_buffer(str.c_str(), str.length());
 }
 
+JParser::JParser()
+	: schema(JSchema::AllSchema())
+	, m_errors(NULL)
+	, parser(NULL)
+	, oldInterface(0)
+{
+}
+
 JParser::JParser(JResolver* schemaResolver)
 	: m_resolverWrapper(new JSchemaResolverWrapper(schemaResolver))
 	, schema(JSchema::AllSchema())
 	, m_errors(NULL)
 	, parser(NULL)
+	, oldInterface(1)
 {
 }
 
@@ -168,6 +177,7 @@ JParser::JParser(const JParser& other)
 	, schema(JSchema::AllSchema())
 	, m_errors(other.m_errors)
 	, parser(NULL)
+	, oldInterface(1)
 {
 }
 
@@ -228,6 +238,11 @@ bool JParser::begin(const JSchema &_schema, JErrorHandler *errors)
 	externalRefResolver = prepareResolver();
 	errorHandler = prepareCErrorCallbacks();
 	schemaInfo = prepare(schema, externalRefResolver, errorHandler, errors);
+
+	//TODO remove in 3.0 version
+	if (oldInterface && schemaInfo.m_schema->uri_resolver && !jschema_resolve_ex(schemaInfo.m_schema, &externalRefResolver))
+		return false;
+
 	jschema_info_init(&schemaInfo, schema.peek(), &externalRefResolver, &errorHandler);
 
 	return jsaxparser_init(parser, &schemaInfo, &callbacks, this);

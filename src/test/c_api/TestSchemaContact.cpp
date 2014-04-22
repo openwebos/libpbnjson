@@ -36,13 +36,13 @@ protected:
 
 	static void SetUpTestCase()
 	{
-		schema = jschema_parse_file((resolution_dir + "Contact.schema").c_str(), NULL);
+		resolver.m_resolve = &SimpleResolver;
+		schema = jschema_parse_file_resolve((resolution_dir + "Contact.schema").c_str(), NULL, &resolver);
 		ASSERT_TRUE(schema != NULL);
 
-		resolver.m_resolve = &SimpleResolver;
 
 		jschema_info_init(&schema_info, schema, &resolver, NULL);
-		ASSERT_TRUE(jschema_resolve(&schema_info));
+		ASSERT_TRUE(jschema_resolve_ex(schema, &resolver));
 	}
 
 	static void TearDownTestCase()

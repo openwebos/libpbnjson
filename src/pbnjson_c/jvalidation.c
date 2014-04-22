@@ -201,12 +201,6 @@ bool jvalue_check_schema(jvalue_ref jref, const JSchemaInfoRef schema_info)
 		uri_resolver = schema_info->m_schema->uri_resolver;
 	}
 
-	if (uri_resolver)
-	{
-		if (!jschema_resolve(schema_info))
-			return false;
-	}
-
 	ValidationState validation_state = { 0 };
 	validation_state_init(&validation_state,
 	                      validator,

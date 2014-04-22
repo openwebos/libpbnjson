@@ -36,6 +36,9 @@ public:
 		std::string m_resource;	/// the resource name that needs resolution
 	};
 
+	//TODO Nikolay Orliuk: consider possibility to provide JSchemaResolverRef as
+	//                     an implicit cast from JResolver
+
 	JResolver();
 	virtual ~JResolver();
 
@@ -44,6 +47,7 @@ public:
 	 * of the library is responsible for converting this abstract concept
 	 * of a reference to an actual schema.
 	 */
+	//TODO add simple default resolve method
 	virtual JSchema resolve(const ResolutionRequest &request, JSchemaResolutionResult &resolutionResult) = 0;
 };
 

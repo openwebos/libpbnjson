@@ -40,11 +40,20 @@ public:
 	/**
  	 * Initialize a JSON parser that will generate a DOM.
  	 *
- 	 * @param resolver The object to use when resolving external references within a schema.
- 	 *
- 	 * @see JResolver
  	 */
-	JDomParser(JResolver *resolver = NULL);
+	JDomParser();
+
+	/**
+	* Initialize a JSON parser that will generate a DOM.
+	*
+	* @param resolver The object to use when resolving external references within a schema.
+	*
+	* @deprecated Will be removed in 3.0. External references resolving happens once during schema parsing with JSchemaFile
+	* @see JResolver
+	* @see JSchemaFile
+	*/
+	JDomParser(JResolver *resolver);
+
 	virtual ~JDomParser();
 
 	/**
@@ -136,16 +145,11 @@ protected:
 	JParser::NumberType conversionToUse() const { return JParser::JNUM_CONV_RAW; }
 
 private:
-	bool jsonPrimitive(const JValue& created);
-	JSchemaResolutionResult resolve(void *resolver, jschema_ref *resolvedSchema);
 	JErrorCallbacks prepareCErrorCallbacks();
 
 	JValue m_dom;
 	JDOMOptimization m_optimization;
-	JResolver *m_resolver;
 	jdomparser_ref parser;
-
-	friend JSchemaResolutionResult dom_bounce_resolver(JSchemaResolverRef, jschema_ref *);
 };
 
 }

@@ -56,6 +56,12 @@ public:
 		int m_column;
 	};
 
+	JParser();
+	/**
+	 * @deprecated Will be removed in 3.0. Resolve schema with JSchemaFile
+	 *
+	 * @see JSchemaFile
+	 */
 	JParser(JResolver *schemaResolver);
 	JParser(const JParser& other);
 	virtual ~JParser();
@@ -219,7 +225,8 @@ private:
 
 	friend class SaxBounce;
 	jsaxparser_ref parser;
-
+	//TODO remove in 3.0
+	bool oldInterface;
 	JErrorCallbacks prepareCErrorCallbacks();
 };
 

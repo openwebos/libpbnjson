@@ -75,10 +75,25 @@ PJSON_API jschema_ref jschema_duplicate(jschema_ref schema) NON_NULL(1);
  * NOTE: For now, this API is unexposed - please discuss with the maintainer about exposing.
  *
  * @param schema_info The schema to resolve.
- * @return True if the schema resolved fully, false if some error occured.
+ * @return True if the schema resolved fully, false if some error occurred.
  *         If some error occurred, you will typically want to remember to free the reference before-hand.
+ * @deprecated Will be removed in 3.0
  */
 PJSON_API bool jschema_resolve(JSchemaInfoRef schema_info) NON_NULL(1);
+
+/**
+ * Resolves any and all external references.  This is an expensive operation and you should consider carefully
+ * whether or not you need it.  After a successful call to this method, the schema is guaranteed to be
+ * immutable & thus the same reference will be thread-safe.
+ *
+ * NOTE: For now, this API is unexposed - please discuss with the maintainer about exposing.
+ *
+ * @param schema The schema to resolve.
+ * @param resolver Schema resolver.
+ * @return True if the schema resolved fully, false if some error occurred.
+ *         If some error occurred, you will typically want to remember to free the reference before-hand.
+ */
+PJSON_API bool jschema_resolve_ex(jschema_ref schema, JSchemaResolverRef resolver) NON_NULL(1, 2);
 
 /**
  * NOTE: you should only release those schema you parsed or are sure that you have gotten ownership over.
@@ -99,6 +114,7 @@ PJSON_API void jschema_release(jschema_ref *schema) NON_NULL(1);
  *                   validated
  * @return
  *
+ * @note Be carefully while using x-references in files
  * @see jschema_parse
  */
 PJSON_API jschema_ref jschema_parse_ex(raw_buffer input, JSchemaOptimizationFlags inputOpt, JSchemaInfoRef schemaInfo) NON_NULL(3);
@@ -117,6 +133,22 @@ PJSON_API jschema_ref jschema_parse_ex(raw_buffer input, JSchemaOptimizationFlag
  * @see jschema_parse_ex
  */
 PJSON_API jschema_ref jschema_parse_file(const char *file, JErrorCallbacksRef errorHandler);
+
+/**
+ * Returns the "DOM" structure of the schema that is ready for validation
+ * by the parser layer. With URI resolving.
+ *
+ * Javascript-style comments are allowed within schemas.
+ *
+ * @param file - The file path to the schema to use for validation.
+ * @param errorHandler - The error handlers to use when parsing the schema dom.
+ * @param resolver - External URI resolver.
+ * @return A reference to a schema that can be used, or NULL if there was an error.
+ *
+ * @note Be carefully while using x-references in files
+ * @see jschema_parse_ex
+ */
+PJSON_API jschema_ref jschema_parse_file_resolve(const char *file, JErrorCallbacksRef errorHandler, JSchemaResolverRef resolver);
 
 /**
  * Returns the "DOM" structure of the schema that is ready for validation

@@ -199,7 +199,7 @@ void TestParse_testParseFile(const std::string &fileNameSignature)
 	std::string jsonInput = fileNameSignature + ".json";
 	std::string jsonSchema = fileNameSignature + ".schema";
 
-	jptr_schema schema = jschema_parse_file(jsonSchema.c_str(), NULL);
+	jptr_schema schema = jschema_parse_file_resolve(jsonSchema.c_str(), NULL, NULL);
 	ASSERT_TRUE (schema != NULL);
 
 	JSchemaInfo schemaInfo;
@@ -321,11 +321,10 @@ TEST(TestParse, saxparser)
 	std::string json_str;
 	ReadFileToString("../schemas/parse/test_stream_parser.json", json_str);
 
-	jschema_ref schema = jschema_parse_file("../schemas/parse/test_stream_parser.schema", NULL);
-	ASSERT_FALSE(NULL == schema);
-
 	JSchemaInfo schemaInfo;
-	jschema_info_init(&schemaInfo, schema, NULL, NULL);
+
+	schemaInfo.m_schema = jschema_parse_file_resolve("../schemas/parse/test_stream_parser.schema", NULL, NULL);
+	ASSERT_TRUE(schemaInfo.m_schema);
 
 	jsaxparser_ref parser = jsaxparser_create(&schemaInfo, &context.callbacks, &context);
 
@@ -348,7 +347,7 @@ TEST(TestParse, saxparser)
 
 	jsaxparser_release(&parser);
 
-	jschema_release(&schema);
+	jschema_release(&schemaInfo.m_schema);
 
 	EXPECT_EQ(1, context.null_counter);
 	EXPECT_EQ(1, context.boolean_counter);
@@ -376,7 +375,7 @@ TEST(TestParse, domparser)
 	std::string json_str;
 	ReadFileToString("../schemas/parse/test_stream_parser.json", json_str);
 
-	jschema_ref schema = jschema_parse_file("../schemas/parse/test_stream_parser.schema", NULL);
+	jschema_ref schema = jschema_parse_file_resolve("../schemas/parse/test_stream_parser.schema", NULL, NULL);
 	ASSERT_FALSE(NULL == schema);
 
 	JSchemaInfo schemaInfo;

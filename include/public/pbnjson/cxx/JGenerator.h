@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,13 @@ class JResolver;
 
 class PJSONCXX_API JGenerator {
 public:
-	JGenerator(JResolver *resolver = NULL);
+	JGenerator();
+	/**
+	 * @deprecated Will be removed in 3.0. Resolve schema with JSchemaFile
+	 *
+	 * @see JSchemaFile
+	 */
+	JGenerator(JResolver *resolver);
 	~JGenerator();
 
 	/**
@@ -53,10 +59,19 @@ public:
 	 *
 	 * @param val
 	 * @param schema
-	 * @param resolver The resolver to use for the schema (only necessary if it contains external references
 	 * @return The JSON string serialized to a string or the empty string on error (violated schema).
 	 */
-	static std::string serialize(const JValue &val, const JSchema &schema, JResolver *resolver = NULL);
+	static std::string serialize(const JValue &val, const JSchema &schema);
+
+	/**
+	 * Convenience function to wrap call to toString for JSON objects/arrays.
+	 * Any other type will return an empty string.
+	 *
+	 * @deprecated Will be removed in 3.0. Resolve schema with JSchemaFile during schema creation.
+	 *
+	 * @see JSchemaFile
+	 */
+	static std::string serialize(const JValue &val, const JSchema &schema, JResolver *resolver);
 
 	/**
 	 * Convenience function to wrap call to toString for any JValue, without schema validation
@@ -66,7 +81,9 @@ public:
 	 * @return The JSON string serialized to a string or the empty string on error.
 	 */
 	static std::string serialize(const JValue &val, bool quoteSingleString);
+
 private:
+	//TODO remove in 3.0
 	JResolver *m_resolver;
 };
 

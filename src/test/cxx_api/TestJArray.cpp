@@ -58,7 +58,7 @@ TEST(TestJArray, TestEqual2)
 		"\"appId\":\"com.yourdomain.helloworld\",\"streamable\":true,\"index\":1,"
 		"\"exampleVerb\":\"42\",\"verbs\":{}}]}}";
 
-	JDomParser parser(NULL);
+	JDomParser parser;
 	ASSERT_TRUE(parser.parse(input1, JSchema::AllSchema(), NULL));
 	pbnjson::JValue val1 = parser.getDom();
 	ASSERT_TRUE(parser.parse(input2, JSchema::AllSchema(), NULL));

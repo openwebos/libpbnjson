@@ -157,8 +157,8 @@ TEST(TestParse, domparser)
 
 	JValue jval;
 	for (int  j = 0 ; j < 2 ; j++) {
-		JDomParser parser(NULL);
-		for (int k = 0 ; k < 2 ; k++)  {
+		JDomParser parser;
+		for (int k = 0 ; k < 2 ; k++) {
 			ASSERT_TRUE(parser.begin(schema));
 			for (std::string::const_iterator i = json_str.begin() ; i != json_str.end() ; ++i) {
 				ASSERT_TRUE(parser.feed(&(*i), 1));
@@ -181,7 +181,7 @@ TEST(TestParse, invalid_json) {
 	std::string input("{\"number\"\":1, \"str\":\"asd\"}");
 
 	// Create a new parser, use default schema
-	pbnjson::JDomParser parser(NULL);
+	pbnjson::JDomParser parser;
 
 	// Start stream parsing
 	if (!parser.begin(JSchema::AllSchema())) {

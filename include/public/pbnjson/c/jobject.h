@@ -201,6 +201,7 @@ PJSON_API const char *jvalue_tostring_simple(jvalue_ref val) NON_NULL(1);
  * @param schemainfo This is used to carry useful information to the parser.
  *          m_schema is expected to contain the schema
  *          m_resolver should contain a proper schema resolver
+ * @deprecated Will be removed in 3.0. Use already resolved schema
  * @see JSchemaInfo
  * @see jvalue_tostring()
  */

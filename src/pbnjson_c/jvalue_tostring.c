@@ -141,6 +141,7 @@ static struct TraverseCallbacks traverse = {
 	dummy_jarray
 };
 
+//TODO inline this function to layer1
 static const char *jvalue_tostring_internal_layer2(jvalue_ref val, JSchemaInfoRef schemainfo, bool schemaNecessary)
 {
 	SANITY_CHECK_POINTER(val);
@@ -182,19 +183,19 @@ static const char *jvalue_tostring_internal_layer1(jvalue_ref val, JSchemaInfoRe
 	return result;
 }
 
-//if schemainfo->m_schema is null, schema_info_all() is used
 const char *jvalue_tostring_schemainfo(jvalue_ref val, const JSchemaInfoRef schemainfo)
 {
+	if (!jschema_resolve_ex(schemainfo->m_schema, schemainfo->m_resolver))
+		return NULL;
+
 	return jvalue_tostring_internal_layer1(val, schemainfo, true);
 }
 
 const char *jvalue_tostring_simple(jvalue_ref val)
 {
 	JSchemaInfo schemainfo;
-	JSchemaResolverRef resolver = NULL;
-	JErrorCallbacksRef errors = NULL;
 
-	jschema_info_init(&schemainfo, jschema_all(), resolver, errors);
+	jschema_info_init(&schemainfo, jschema_all(), NULL, NULL);
 
 	return jvalue_tostring_internal_layer1(val, &schemainfo, false);
 }
@@ -202,10 +203,8 @@ const char *jvalue_tostring_simple(jvalue_ref val)
 const char *jvalue_tostring(jvalue_ref val, const jschema_ref schema)
 {
 	JSchemaInfo schemainfo;
-	JSchemaResolverRef resolver = NULL;
-	JErrorCallbacksRef errors = NULL;
 
-	jschema_info_init(&schemainfo, schema, resolver, errors);
+	jschema_info_init(&schemainfo, schema, NULL, NULL);
 
 	return jvalue_tostring_internal_layer1(val, &schemainfo, true);
 }

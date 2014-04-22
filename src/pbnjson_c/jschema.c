@@ -133,7 +133,8 @@ static jschema_ref jschema_parse_internal(raw_buffer input,
 	schema->validator = parse_schema_n(input.m_str, input.m_len,
 	                                   schema->uri_resolver, root_scope,
 	                                   &OnError, errorHandler);
-	if (!schema->validator)
+
+	if (!schema->validator || (resolver && !jschema_resolve_ex(schema, resolver)))
 	{
 		jschema_release(&schema);
 		return NULL;
@@ -144,13 +145,19 @@ static jschema_ref jschema_parse_internal(raw_buffer input,
 
 bool jschema_resolve(JSchemaInfoRef schema_info)
 {
-	jschema_ref schema = schema_info->m_schema;
-	JSchemaResolverRef resolver = schema_info->m_resolver;
+	return jschema_resolve_ex(schema_info->m_schema, schema_info->m_resolver);
+}
 
+bool jschema_resolve_ex(jschema_ref schema, JSchemaResolverRef resolver)
+{
 	assert(schema->uri_resolver);
+
+	if (!resolver || !resolver->m_resolve)
+		return false;
 
 	char const *document_to_resolve = NULL;
 	char const *prev_document_to_resolve = NULL;
+
 	while ((document_to_resolve = uri_resolver_get_unresolved(schema->uri_resolver)))
 	{
 		// It may happen, that the schema can't be parsed, so don't try to process
@@ -159,14 +166,9 @@ bool jschema_resolve(JSchemaInfoRef schema_info)
 			return false;
 		prev_document_to_resolve = document_to_resolve;
 
-		if (!resolver || !resolver->m_resolve)
+		if (!resolve_document(schema, document_to_resolve, resolver))
+			// We weren't able to resolve referenced document either way.
 			return false;
-
-		if (resolve_document(schema, document_to_resolve, resolver))
-			continue;
-
-		// We weren't able to resolve referenced document either way.
-		return false;
 	}
 
 	return true;
@@ -187,6 +189,11 @@ jschema_ref jschema_parse(raw_buffer input,
 }
 
 jschema_ref jschema_parse_file(const char *file, JErrorCallbacksRef errorHandler)
+{
+	return jschema_parse_file_resolve(file, errorHandler, NULL);
+}
+
+jschema_ref jschema_parse_file_resolve(const char *file, JErrorCallbacksRef errorHandler, JSchemaResolverRef resolver)
 {
 	// mmap the file
 	const char *mapContents = NULL;
@@ -224,7 +231,7 @@ jschema_ref jschema_parse_file(const char *file, JErrorCallbacksRef errorHandler
 	                                                  file,
 	                                                  DOMOPT_INPUT_OUTLIVES_WITH_NOCHANGE,
 	                                                  errorHandler,
-	                                                  NULL);
+	                                                  resolver);
 	if (parsedSchema == NULL)
 	{
 		PJ_LOG_WARN("PBNJSON_SCHEMA_PARSE", 1, PMLOGKS("FILE", file),

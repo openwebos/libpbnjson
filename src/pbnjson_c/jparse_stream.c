@@ -857,16 +857,12 @@ bool jsaxparser_init(jsaxparser_ref parser, JSchemaInfoRef schemaInfo, PJSAXCall
 
 	parser->validator = NOTHING_VALIDATOR;
 	parser->uri_resolver = NULL;
+	parser->schemaInfo = schemaInfo;
 	if (schemaInfo && schemaInfo->m_schema)
 	{
 		parser->validator = schemaInfo->m_schema->validator;
 		parser->uri_resolver = schemaInfo->m_schema->uri_resolver;
 	}
-
-	if (parser->uri_resolver && !jschema_resolve(schemaInfo)) {
-		return false;
-	}
-	parser->schemaInfo = schemaInfo;
 
 	if (callback == NULL) {
 		parser->yajl_cb = no_callbacks;

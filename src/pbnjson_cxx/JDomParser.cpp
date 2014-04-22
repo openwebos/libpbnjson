@@ -21,12 +21,9 @@
 #include "JErrorHandler.h"
 #include "JErrorHandlerUtils.h"
 #include <JSchema.h>
-#include "JSchemaResolverWrapper.h"
 #include "../pbnjson_c/jschema_types_internal.h"
 #include "../pbnjson_c/validation/error_code.h"
 #include "../pbnjson_c/jparse_stream_internal.h"
-
-#include <JResolver.h>
 
 namespace pbnjson {
 
@@ -67,6 +64,13 @@ bool ErrorCallbackUnkown(void *ctxt, JSAXContextRef parseCtxt)
 }
 
 } //anonymous namespace
+
+JDomParser::JDomParser()
+	: JParser()
+	, m_optimization(DOMOPT_NOOPT)
+	, parser(NULL)
+{
+}
 
 JDomParser::JDomParser(JResolver *resolver)
 	: JParser(resolver)

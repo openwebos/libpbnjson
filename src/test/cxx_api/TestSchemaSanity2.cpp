@@ -128,7 +128,7 @@ TEST_F(TestNumberSanity, Valid4)
 
 TEST(GF40819, Test)
 {
-	 pbnjson::JSchemaFile schema("this_file_should_never_exist");
-	 EXPECT_FALSE(schema.isInitialized());
+	pbnjson::JSchemaFile schema("this_file_should_never_exist");
+	EXPECT_FALSE(schema.isInitialized());
 }
 // vim: set noet ts=4 sw=4 tw=80:

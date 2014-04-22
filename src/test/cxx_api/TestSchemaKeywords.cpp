@@ -49,19 +49,18 @@ public:
 
 TEST(Schemakeywords, extends)
 {
-	pj::JSchemaFile schema(DATA_DIR "TestSchemaKeywords/extends/extended.json");
-	ASSERT_TRUE(schema.isInitialized());
-
 	myJResolver resolver;
+	pj::JSchemaFile schema(DATA_DIR "TestSchemaKeywords/extends/extended.json", &resolver);
+	ASSERT_TRUE(schema.isInitialized());
 
 	{
 		pj::JValue json = pj::Object() << pj::JValue::KeyValue("iField", "text");
-		EXPECT_FALSE(pj::JValidator::isValid(json, schema, resolver));
+		EXPECT_FALSE(pj::JValidator::isValid(json, schema));
 	}
 
 	{
 		pj::JValue json = pj::Object() << pj::JValue::KeyValue("iField", 1);
-		EXPECT_TRUE(pj::JValidator::isValid(json, schema, resolver));
+		EXPECT_TRUE(pj::JValidator::isValid(json, schema));
 	}
 }
 
@@ -92,19 +91,19 @@ private:
 
 TEST(Schemakeywords, reuse_schema_in_resolver)
 {
-	pj::JSchemaFile schema(DATA_DIR "TestSchemaKeywords/reuse_schema_in_resolver/parent.schema");
+	ChildResolver resolver;
+	pj::JSchemaFile schema(DATA_DIR "TestSchemaKeywords/reuse_schema_in_resolver/parent.schema", &resolver);
 	ASSERT_TRUE(schema.isInitialized());
 
-	ChildResolver resolver;
 
 	std::string data = "{\n";
 	data += "\"mychild\" : {\n";
 	data += "\"name\" : \"Jone Doe\"\n";
 	data += "}\n}";
 
-	pbnjson::JDomParser parser1(&resolver);
+	pbnjson::JDomParser parser1;
 	EXPECT_TRUE(parser1.parse(data.c_str(), schema, NULL));
-	pbnjson::JDomParser parser2(&resolver);
+	pbnjson::JDomParser parser2;
 	EXPECT_TRUE(parser2.parse(data.c_str(), schema, NULL));
 }
 

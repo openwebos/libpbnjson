@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,6 +68,11 @@ JSchema& JSchema::operator=(const JSchema& other)
 		m_resource = other.m_resource;
 	}
 	return *this;
+}
+
+JSchema::JSchema()
+	: m_resource(NULL)
+{
 }
 
 JSchema::JSchema(Resource *resource)

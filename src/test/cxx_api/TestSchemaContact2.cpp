@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,21 +27,8 @@ namespace {
 
 static const string resolution_dir = string{SCHEMA_DIR} + "contact/";
 
-class TestSchemaContact
-	: public ::testing::Test
-	, public JResolver
+class TestResolver : public JResolver
 {
-protected:
-	static unique_ptr<JSchema> schema;
-	static JSchemaInfo schema_info;
-	jvalue_ref parsed;
-
-	static void SetUpTestCase()
-	{
-		schema.reset(new JSchemaFile(resolution_dir + "Contact.schema"));
-		ASSERT_TRUE(schema->isInitialized());
-	}
-
 	virtual JSchema resolve(const ResolutionRequest &request,
 	                        JSchemaResolutionResult &result)
 	{
@@ -64,19 +51,45 @@ protected:
 	}
 };
 
+class TestSchemaContact
+	: public ::testing::Test
+{
+protected:
+	static unique_ptr<JSchema> schema;
+	static JSchemaInfo schema_info;
+	jvalue_ref parsed;
+
+	static void SetUpTestCase()
+	{
+		resolver = new TestResolver;
+		schema.reset(new JSchemaFile(resolution_dir + "Contact.schema", resolver));
+		ASSERT_TRUE(schema->isInitialized());
+	}
+
+	static void TearDownTestCase()
+	{
+		delete resolver;
+		resolver = NULL;
+	}
+
+	static TestResolver *resolver;
+};
+
+TestResolver* TestSchemaContact::resolver = NULL;
+
 unique_ptr<JSchema> TestSchemaContact::schema;
 
 } // namespace
 
 TEST_F(TestSchemaContact, Invalid1)
 {
-	JDomParser parser(this);
+	JDomParser parser;
 	EXPECT_FALSE(parser.parse("", *schema.get()));
 }
 
 TEST_F(TestSchemaContact, Valid1)
 {
-	JDomParser parser(this);
+	JDomParser parser;
 	ASSERT_TRUE(parser.parse(
 		"{"
 			"\"contactIds\": [ \"1\" ],"
@@ -85,21 +98,21 @@ TEST_F(TestSchemaContact, Valid1)
 		*schema.get()));
 	auto parsed = parser.getDom();
 	EXPECT_TRUE(parsed.isObject());
-	EXPECT_TRUE(JValidator::isValid(parsed, *schema.get(), *this));
+	EXPECT_TRUE(JValidator::isValid(parsed, *schema.get()));
 }
 
 TEST_F(TestSchemaContact, Valid2)
 {
-	JDomParser parser(this);
+	JDomParser parser;
 	ASSERT_TRUE(parser.parse("{}", *schema.get()));
 	auto parsed = parser.getDom();
 	EXPECT_TRUE(parsed.isObject());
-	EXPECT_TRUE(JValidator::isValid(parsed, *schema.get(), *this));
+	EXPECT_TRUE(JValidator::isValid(parsed, *schema.get()));
 }
 
 TEST_F(TestSchemaContact, Valid3)
 {
-	JDomParser parser(this);
+	JDomParser parser;
 	ASSERT_TRUE(parser.parse(
 		"{"
 			"\"displayName\": \"\","
@@ -112,7 +125,7 @@ TEST_F(TestSchemaContact, Valid3)
 		);
 	auto parsed = parser.getDom();
 	EXPECT_TRUE(parsed.isObject());
-	EXPECT_TRUE(JValidator::isValid(parsed, *schema.get(), *this));
+	EXPECT_TRUE(JValidator::isValid(parsed, *schema.get()));
 }
 
 // vim: set noet ts=4 sw=4 tw=80:

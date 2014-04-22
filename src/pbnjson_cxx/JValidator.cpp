@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -66,8 +66,8 @@ bool JValidator::isValid(const JValue &jVal, const JSchema &schema, JResolver &r
 	JSchemaInfo schemainfo;
 	jschema_info_init(&schemainfo, schema.peek(), &schemaresolver, &errorHandler);
 
-	return jvalue_check_schema(jVal.peekRaw(), &schemainfo);
-
+	return jschema_resolve_ex(schemainfo.m_schema, &schemaresolver) &&
+	       jvalue_check_schema(jVal.peekRaw(), &schemainfo);
 }
 
 bool JValidator::isValid(const JValue &jVal, const JSchema &schema, JErrorHandler *errors) {

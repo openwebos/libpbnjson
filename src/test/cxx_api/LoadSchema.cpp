@@ -44,15 +44,15 @@ int main(int argc, char *argv[])
 	directory = argv[1];
 	string schema_name = argv[2];
 
-	JSchemaFile schema{directory + "/" + schema_name};
+	MyResolver resolver;
+	JSchemaFile schema{directory + "/" + schema_name, &resolver};
 	if (!schema.isInitialized())
 	{
 		cerr << "Failed to initialize schema" << endl;
 		return 1;
 	}
 
-	MyResolver resolver;
-	JDomParser parser{&resolver};
+	JDomParser parser{};
 	parser.parse("{}", schema);
 
 	return 0;

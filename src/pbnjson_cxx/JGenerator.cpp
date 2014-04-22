@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,11 @@
 
 namespace pbnjson {
 
+JGenerator::JGenerator()
+	: m_resolver(NULL)
+{
+}
+
 JGenerator::JGenerator(JResolver *resolver)
 	: m_resolver(resolver)
 {
@@ -35,33 +40,32 @@ JGenerator::~JGenerator()
 
 bool JGenerator::toString(const JValue &obj, const JSchema& schema, std::string &asStr)
 {
-	const char *str;
-
-	if(m_resolver == NULL)
-	{
-		str = jvalue_tostring(obj.peekRaw(), schema.peek());
-	}
-	else
-	{
+	if (m_resolver) {
 		JSchemaResolverWrapper resolverWrapper(m_resolver);
-
 		JSchemaResolver schemaresolver;
 		schemaresolver.m_resolve = &(resolverWrapper.sax_schema_resolver);
 		schemaresolver.m_userCtxt = &resolverWrapper;
-
-		JSchemaInfo schemainfo;
-		jschema_info_init(&schemainfo, schema.peek(), &schemaresolver, NULL);
-
-		str = jvalue_tostring_schemainfo(obj.peekRaw(), &schemainfo);
+		if (!jschema_resolve_ex(schema.peek(), &schemaresolver)) {
+			asStr = "";
+			return false;
+		}
 	}
+	const char *str = jvalue_tostring(obj.peekRaw(), schema.peek());
 
-
-	if (UNLIKELY(str == NULL)) {
+	if (str == NULL) {
 		asStr = "";
 		return false;
 	}
 	asStr = str;
 	return true;
+}
+
+std::string JGenerator::serialize(const JValue &val, const JSchema &schema)
+{
+	JGenerator serializer;
+	std::string serialized;
+	serializer.toString(val, schema, serialized);
+	return serialized;
 }
 
 std::string JGenerator::serialize(const JValue &val, const JSchema &schema, JResolver *resolver)
