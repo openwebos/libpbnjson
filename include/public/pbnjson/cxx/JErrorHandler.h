@@ -42,29 +42,12 @@ public:
 		ERR_SCHEMA_UNEXPECTED_TYPE,
 	};
 
-	enum BadObject {
-		ERR_BAD_OBJECT_OPEN = 60,
-		ERR_BAD_OBJECT_KEY,
-		ERR_BAD_OBJECT_CLOSE,
-	};
-
-	enum BadArray {
-		ERR_BAD_ARRAY_OPEN = 80,
-		ERR_BAD_ARRAY_CLOSE,
-	};
-
 	JErrorHandler(const JErrorHandler& handler);
 	virtual ~JErrorHandler();
 
 	virtual void syntax(JParser *ctxt, SyntaxError code, const std::string& reason) = 0;
 	virtual void schema(JParser *ctxt, SchemaError code, const std::string& reason) = 0;
 	virtual void misc(JParser *ctxt, const std::string& reason) = 0;
-	virtual void badObject(JParser *ctxt, BadObject code) = 0;
-	virtual void badArray(JParser *ctxt, BadArray code) = 0;
-	virtual void badString(JParser *ctxt, const std::string& str) = 0;
-	virtual void badNumber(JParser *ctxt, const std::string& number) = 0;
-	virtual void badBoolean(JParser *ctxt) = 0;
-	virtual void badNull(JParser *ctxt) = 0;
 	virtual void parseFailed(JParser *ctxt, const std::string& reason) = 0;
 
 protected:
