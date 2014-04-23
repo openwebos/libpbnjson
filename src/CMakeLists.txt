@@ -48,6 +48,7 @@ set(WITH_VERBOSE_TRACE FALSE CACHE BOOL "Enable tracing debug logging")
 # build the language bindings
 add_subdirectory(pbnjson_c)
 add_subdirectory(pbnjson_cxx)
+add_subdirectory(pbnjson_validate)
 
 if(WITH_TESTS)
 	set(WITH_QTCREATOR FALSE CACHE BOOL "Enable better Qt Creator integration")
