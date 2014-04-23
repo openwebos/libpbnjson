@@ -19,9 +19,11 @@
 
 #include <iostream>
 #include <sys/ioctl.h>
+#include <pbnjson.hpp>
 #include <boost/program_options.hpp>
 
 using namespace std;
+using namespace pbnjson;
 
 namespace {
 
@@ -38,6 +40,31 @@ int DetectTerminalWidth()
 	return w.ws_col;
 }
 
+class SchemaErrorHandler
+	: public JErrorHandler
+{
+private:
+	virtual void syntax(JParser *, SyntaxError code, const string &reason)
+	{
+		cerr << "Syntax error " << code << ": " << reason << endl;
+	}
+
+	virtual void schema(JParser *, SchemaError code, const string &reason)
+	{
+		cerr << "Schema error " << code << ": " << reason << endl;
+	}
+
+	virtual void misc(JParser *, const string &reason)
+	{
+		cerr << "Unknown error: " << reason << endl;
+	}
+
+	virtual void parseFailed(JParser *, const string &reason)
+	{
+		cerr << "Parse failed: " << reason << endl;
+	}
+};
+
 } //namespace;
 
 int main(int argc, char *argv[])
@@ -45,8 +72,8 @@ int main(int argc, char *argv[])
 	const char *program_name = Basename(argv[0]);
 	int line_length = DetectTerminalWidth();
 
-	string file_name = "-";
-	string schema_file = "";
+	string file_name;
+	string schema_file;
 
 	try
 	{
@@ -56,7 +83,7 @@ int main(int argc, char *argv[])
 			("version,V", "Print program version")
 			("help,h", "Print usage summary")
 			("file,f", value<string>(&file_name)->default_value(file_name),
-			 "JSON file to validate (- for stdin)")
+			 "JSON file to validate (skip for stdin)")
 			("schema,s", value<string>(&schema_file)->default_value(schema_file),
 			 "File with JSON schema")
 			;
@@ -86,7 +113,57 @@ int main(int argc, char *argv[])
 			return 0;
 		}
 
-		cout << "Verify " << file_name << " against " << schema_file << endl;
+		SchemaErrorHandler error_handler;
+
+		// Prepare JSON schema
+		unique_ptr<JSchema> schema;
+		if (schema_file.empty())
+			schema.reset(new JSchemaFragment("{}"));
+		else
+		{
+			schema.reset(new JSchemaFile(schema_file, &error_handler));
+			if (!schema->isInitialized())
+			{
+				cerr << "Failed to open JSON schema " << schema_file << endl;
+				return 1;
+			}
+		}
+
+		// Try to parse the file to validate
+		JDomParser parser;
+		if (file_name.empty())
+		{
+			if (!parser.begin(*schema.get(), &error_handler))
+			{
+				cerr << "Failed to parse JSON stdin" << endl;
+				return 1;
+			}
+
+			string buf;
+			while (getline(cin, buf))
+			{
+				if (!parser.feed(buf))
+				{
+					cerr << "Failed to parse JSON stdin" << endl;
+					return 1;
+				}
+			}
+
+			if (!parser.end())
+			{
+				cerr << "Failed to finalyze parse" << endl;
+				return 1;
+			}
+		}
+		else
+		{
+			// Try to parse the file
+			if (!parser.parseFile(file_name, *schema.get(), JFileOptNoOpt, &error_handler))
+			{
+				cerr << "Failed to parse JSON file " << file_name << endl;
+				return 1;
+			}
+		}
 	}
 	catch (const std::exception &e)
 	{

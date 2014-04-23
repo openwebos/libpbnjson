@@ -17,10 +17,14 @@
 # LICENSE@@@
 
 
+include_directories(${API_HEADERS})
+webos_add_compiler_flags(ALL -Wall "-std=gnu++0x")
+
 find_package(Boost 1.48 REQUIRED COMPONENTS program_options)
 
 add_executable(pbnjson_validate
                pbnjson_validate.cpp)
 
 target_link_libraries(pbnjson_validate
+                      pbnjson_cpp
                       ${Boost_PROGRAM_OPTIONS_LIBRARIES})
