@@ -15,6 +15,7 @@ Dependencies
 
 Below are the tools and libraries (and their minimum versions) required to build _libpbnjson_:
 
+- boost-program-options 1.48
 - cmake (version required by cmake-modules-webos)
 - gcc 4.6.3
 - g++ 4.6.3

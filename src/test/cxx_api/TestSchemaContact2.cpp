@@ -62,7 +62,7 @@ protected:
 	static void SetUpTestCase()
 	{
 		resolver = new TestResolver;
-		schema.reset(new JSchemaFile(resolution_dir + "Contact.schema", resolver));
+		schema.reset(new JSchemaFile(resolution_dir + "Contact.schema", NULL, resolver));
 		ASSERT_TRUE(schema->isInitialized());
 	}
 

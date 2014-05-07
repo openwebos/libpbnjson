@@ -25,6 +25,8 @@
 
 namespace pbnjson {
 
+class JErrorHandler;
+
 /**
  * Javascript-style comments are allowed within schemas.
  *
@@ -49,7 +51,9 @@ class PJSONCXX_API JSchemaFile
 	: public JSchema
 {
 private:
-	static JSchema::Resource* createSchemaMap(const std::string &path, JSchemaResolverRef resolver);
+	static JSchema::Resource* createSchemaMap(const std::string &path,
+	                                          JErrorHandler *errorHandler,
+	                                          JSchemaResolverRef resolver);
 
 public:
 	/**
@@ -70,7 +74,7 @@ public:
 	 *
 	 * @see JResolver
 	 */
-	JSchemaFile(const std::string& path, JResolver *resolver);
+	JSchemaFile(const std::string& path, JErrorHandler *errorHandler, JResolver *resolver);
 
 	/**
 	 * Copy the schema file.

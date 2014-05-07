@@ -50,7 +50,7 @@ public:
 TEST(Schemakeywords, extends)
 {
 	myJResolver resolver;
-	pj::JSchemaFile schema(DATA_DIR "TestSchemaKeywords/extends/extended.json", &resolver);
+	pj::JSchemaFile schema(DATA_DIR "TestSchemaKeywords/extends/extended.json", NULL, &resolver);
 	ASSERT_TRUE(schema.isInitialized());
 
 	{
@@ -92,7 +92,7 @@ private:
 TEST(Schemakeywords, reuse_schema_in_resolver)
 {
 	ChildResolver resolver;
-	pj::JSchemaFile schema(DATA_DIR "TestSchemaKeywords/reuse_schema_in_resolver/parent.schema", &resolver);
+	pj::JSchemaFile schema(DATA_DIR "TestSchemaKeywords/reuse_schema_in_resolver/parent.schema", NULL, &resolver);
 	ASSERT_TRUE(schema.isInitialized());
 
 

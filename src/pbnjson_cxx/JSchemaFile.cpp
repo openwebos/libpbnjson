@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,13 +23,51 @@
 #include <cassert>
 
 #include "../pbnjson_c/liblog.h"
+#include "JErrorHandlerUtils.h"
+#include "../pbnjson_c/jschema_types_internal.h"
+#include "../pbnjson_c/validation/error_code.h"
 #include "JSchemaResolverWrapper.h"
 
 namespace pbnjson {
 
-JSchema::Resource* JSchemaFile::createSchemaMap(const std::string &path, JSchemaResolverRef resolver)
+namespace {
+
+bool OnErrorParser(void *ctxt, JSAXContextRef parseCtxt)
 {
-	jschema_ref schema = jschema_parse_file_resolve(path.c_str(), NULL, resolver);
+	JErrorHandler *errorHandler = static_cast<JErrorHandler *>(ctxt);
+	if (errorHandler)
+		errorHandler->syntax(NULL, JErrorHandler::ERR_SYNTAX_GENERIC, "error parsing");
+	return false;
+}
+
+bool OnErrorSchema(void *ctxt, JSAXContextRef parseCtxt)
+{
+	JErrorHandler *errorHandler = static_cast<JErrorHandler *>(ctxt);
+	if (errorHandler)
+		errorHandler->schema(NULL, ErrorToSchemaError(parseCtxt->m_error_code), ValidationGetErrorMessage(parseCtxt->m_error_code));
+	return false;
+}
+
+bool OnErrorUnknown(void *ctxt, JSAXContextRef parseCtxt)
+{
+	JErrorHandler *errorHandler = static_cast<JErrorHandler *>(ctxt);
+	if (errorHandler)
+		errorHandler->misc(NULL, "unknown error parsing");
+	return false;
+}
+
+} //namespace;
+
+JSchema::Resource*
+JSchemaFile::createSchemaMap(const std::string &path, JErrorHandler *errorHandler, JSchemaResolverRef resolver)
+{
+	JErrorCallbacks error_callbacks = { 0 };
+	error_callbacks.m_parser = OnErrorParser;
+	error_callbacks.m_schema = OnErrorSchema;
+	error_callbacks.m_unknown = OnErrorUnknown;
+	error_callbacks.m_ctxt = errorHandler;
+
+	jschema_ref schema = jschema_parse_file_resolve(path.c_str(), &error_callbacks, resolver);
 	if (schema == NULL)
 		return NULL;
 
@@ -37,18 +75,18 @@ JSchema::Resource* JSchemaFile::createSchemaMap(const std::string &path, JSchema
 }
 
 JSchemaFile::JSchemaFile(const std::string& path)
-	: JSchema(createSchemaMap(path, NULL))
+	: JSchema(createSchemaMap(path, NULL, NULL))
 {
 }
 
-JSchemaFile::JSchemaFile(const std::string& path, JResolver *resolver)
+JSchemaFile::JSchemaFile(const std::string& path, JErrorHandler *errorHandler, JResolver *resolver)
 {
 	JSchemaResolverWrapper resolverWrapper(resolver);
 	JSchemaResolver schemaresolver;
 	schemaresolver.m_resolve = &(resolverWrapper.sax_schema_resolver);
 	schemaresolver.m_userCtxt = &resolverWrapper;
 
-	m_resource = createSchemaMap(path, &schemaresolver);
+	m_resource = createSchemaMap(path, errorHandler, &schemaresolver);
 }
 
 JSchemaFile::JSchemaFile(const JSchemaFile& other)

@@ -27,12 +27,6 @@ struct ErrorHandlerCounter : pbnjson::JErrorHandler
 	int syntaxCounter;
 	int schemaCounter;
 	int miscCounter;
-	int badObjectCounter;
-	int badArrayCounter;
-	int badStringCounter;
-	int badNumberCounter;
-	int badBooleanCounter;
-	int badNullCounter;
 	int parseFailedCounter;
 	string errorDescription;
 
@@ -40,12 +34,6 @@ struct ErrorHandlerCounter : pbnjson::JErrorHandler
 		: syntaxCounter(0)
 		, schemaCounter(0)
 		, miscCounter(0)
-		, badObjectCounter(0)
-		, badArrayCounter(0)
-		, badStringCounter(0)
-		, badNumberCounter(0)
-		, badBooleanCounter(0)
-		, badNullCounter(0)
 		, parseFailedCounter(0)
 	{
 	}
@@ -64,36 +52,6 @@ struct ErrorHandlerCounter : pbnjson::JErrorHandler
 	{
 		++miscCounter;
 		errorDescription = reason;
-	}
-
-	virtual void badObject(pbnjson::JParser *, BadObject)
-	{
-		++badObjectCounter;
-	}
-
-	virtual void badArray(pbnjson::JParser *, BadArray)
-	{
-		++badArrayCounter;
-	}
-
-	virtual void badString(pbnjson::JParser *, const std::string &)
-	{
-		++badStringCounter;
-	}
-
-	virtual void badNumber(pbnjson::JParser *, const std::string &)
-	{
-		++badNumberCounter;
-	}
-
-	virtual void badBoolean(pbnjson::JParser *)
-	{
-		++badBooleanCounter;
-	}
-
-	virtual void badNull(pbnjson::JParser *)
-	{
-		++badNullCounter;
 	}
 
 	virtual void parseFailed(pbnjson::JParser *, const std::string &)
