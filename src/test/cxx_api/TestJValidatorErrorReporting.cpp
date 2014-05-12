@@ -43,6 +43,12 @@ protected:
 
 	virtual void syntax(JParser *, SyntaxError, const string &) {};
 	virtual void misc(JParser *, const string &reason) {};
+	virtual void badObject(JParser *, BadObject) {};
+	virtual void badArray(JParser *, BadArray) {};
+	virtual void badString(JParser *, const string &) {};
+	virtual void badNumber(JParser *, const string &) {};
+	virtual void badBoolean(JParser *) {};
+	virtual void badNull(JParser *) {};
 	virtual void parseFailed(JParser *, const string &) {};
 };
 

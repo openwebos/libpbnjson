@@ -63,6 +63,13 @@ private:
 	{
 		cerr << "Parse failed: " << reason << endl;
 	}
+
+	virtual void badObject(pbnjson::JParser*, JErrorHandler::BadObject){}
+	virtual void badArray(pbnjson::JParser*, pbnjson::JErrorHandler::BadArray){}
+	virtual void badString(pbnjson::JParser*, const string &str){}
+	virtual void badNumber(pbnjson::JParser*, const string& num){}
+	virtual void badBoolean(pbnjson::JParser*){}
+	virtual void badNull(pbnjson::JParser*){}
 };
 
 } //namespace;

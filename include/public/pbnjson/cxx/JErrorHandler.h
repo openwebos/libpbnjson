@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,6 +42,27 @@ public:
 		ERR_SCHEMA_UNEXPECTED_TYPE,
 	};
 
+	/**
+	 * @deprecated will be removed in 3.0
+	 *
+	 * @see SchemaError
+	 */
+	enum BadObject {
+		ERR_BAD_OBJECT_OPEN = 60,
+		ERR_BAD_OBJECT_KEY,
+		ERR_BAD_OBJECT_CLOSE,
+	};
+
+	/**
+	 * @deprecated will be removed in 3.0
+	 *
+	 * @see SchemaError
+	 */
+	enum BadArray {
+		ERR_BAD_ARRAY_OPEN = 80,
+		ERR_BAD_ARRAY_CLOSE,
+	};
+
 	JErrorHandler(const JErrorHandler& handler);
 	virtual ~JErrorHandler();
 
@@ -49,6 +70,22 @@ public:
 	virtual void schema(JParser *ctxt, SchemaError code, const std::string& reason) = 0;
 	virtual void misc(JParser *ctxt, const std::string& reason) = 0;
 	virtual void parseFailed(JParser *ctxt, const std::string& reason) = 0;
+
+	/**
+	 * @deprecated Next methods will be removed in 3.0. All errors will be handled by
+	 *             parseFailed, syntax, schema, misc.
+	 *
+	 * @see syntax
+	 * @see schema
+	 * @see misc
+	 * @see parseFailed
+	 */
+	virtual void badObject(JParser *ctxt, BadObject code) = 0;
+	virtual void badArray(JParser *ctxt, BadArray code) = 0;
+	virtual void badString(JParser *ctxt, const std::string& str) = 0;
+	virtual void badNumber(JParser *ctxt, const std::string& number) = 0;
+	virtual void badBoolean(JParser *ctxt) = 0;
+	virtual void badNull(JParser *ctxt) = 0;
 
 protected:
 	JErrorHandler();
