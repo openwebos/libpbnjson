@@ -163,12 +163,8 @@ Validator* parse_schema_n(char const *str, size_t len,
 		if (error_func)
 			error_func(yajl_get_bytes_consumed(yh), jschema_builder_error_code(&yajl_context),
 			           jschema_builder_error_str(&yajl_context), error_ctxt);
-		yajl_free(yh);
-		jschema_builder_destroy(&yajl_context);
-		return NULL;
 	}
 	yajl_free(yh);
-
 	jschema_builder_destroy(&yajl_context);
 	return v;
 }

@@ -219,14 +219,13 @@ protected:
 
 	JSchemaInfo prepare(const JSchema &schema, JSchemaResolver &resolver, JErrorCallbacks &cErrCbs, JErrorHandler *errors);
 	JSchemaResolver prepareResolver() const;
+	//TODO remove in 3.0
+	bool oldInterface;
 
 private:
 	JErrorHandler* m_errors;
-
 	friend class SaxBounce;
 	jsaxparser_ref parser;
-	//TODO remove in 3.0
-	bool oldInterface;
 	JErrorCallbacks prepareCErrorCallbacks();
 };
 

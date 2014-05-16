@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -155,7 +155,7 @@ char const *unescape_json_pointer(char const *fragment, char *buffer)
 	}
 }
 
-char const *uri_scope_push_fragment(UriScope *u, char const *fragment)
+static char const *uri_scope_push_fragment(UriScope *u, char const *fragment)
 {
 	char const *hash = strchr(fragment, '#');
 	fragment = hash ? hash : "#";
@@ -164,7 +164,7 @@ char const *uri_scope_push_fragment(UriScope *u, char const *fragment)
 	return uri_scope_get_fragment(u);
 }
 
-char const *uri_scope_pop_fragment(UriScope *u)
+static char const *uri_scope_pop_fragment(UriScope *u)
 {
 	if (!u->fragment_stack)
 		return NULL;
@@ -178,17 +178,16 @@ char const *uri_scope_pop_fragment(UriScope *u)
 bool uri_scope_push_uri(UriScope *u, char const *uri)
 {
 	UriParserStateA state;
-	UriUriA *result = g_new0(UriUriA, 1);
 	UriUriA a;
 
 	state.uri = &a;
 	if (URI_SUCCESS != uriParseUriA(&state, uri))
 	{
 		uriFreeUriMembersA(&a);
-		_free_uri(result);
 		return false;
 	}
 
+	UriUriA *result = g_new0(UriUriA, 1);
 	UriUriA *base = uri_scope_get_uri(u);
 	if (!base)
 	{

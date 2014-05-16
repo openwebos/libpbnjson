@@ -134,6 +134,10 @@ bool JDomParser::begin(const JSchema &_schema, JErrorHandler *errors)
 	errorHandler = prepareCErrorCallbacks();
 	schemaInfo = prepare(schema, externalRefResolver, errorHandler, errors);
 
+	//TODO remove in 3.0 version
+	if (oldInterface && schemaInfo.m_schema->uri_resolver && !jschema_resolve_ex(schemaInfo.m_schema, &externalRefResolver))
+		return false;
+
 	return jdomparser_init(parser, &schemaInfo, m_optimization);
 }
 
