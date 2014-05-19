@@ -588,78 +588,79 @@ static yajl_callbacks my_bounce =
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Default property injection
 
-static bool inject_default_jnull(void *ctxt)
+static bool inject_default_jnull(void *ctxt, jvalue_ref ref)
 {
 	JSAXContextRef context = (JSAXContextRef)ctxt;
 	return context->m_handlers->yajl_null(context);
 }
 
 //Helper function for jobject_to_string_append()
-static bool inject_default_jkeyvalue(void *ctxt, const unsigned char *key, size_t len)
+static bool inject_default_jkeyvalue(void *ctxt, jvalue_ref ref)
 {
 	JSAXContextRef context = (JSAXContextRef)ctxt;
-	return context->m_handlers->yajl_map_key(context, key, len);
+	raw_buffer raw = jstring_deref(ref)->m_data;
+	return context->m_handlers->yajl_map_key(context, (unsigned char*)raw.m_str, raw.m_len);
 }
 
-static bool inject_default_jobject_start(void *ctxt)
+static bool inject_default_jobject_start(void *ctxt, jvalue_ref ref)
 {
 	JSAXContextRef context = (JSAXContextRef)ctxt;
 	return context->m_handlers->yajl_start_map(context);
 }
 
-static bool inject_default_jobject_end(void *ctxt)
+static bool inject_default_jobject_end(void *ctxt, jvalue_ref ref)
 {
 	JSAXContextRef context = (JSAXContextRef)ctxt;
 	return context->m_handlers->yajl_end_map(context);
 }
 
-static bool inject_default_jarray_start(void *ctxt)
+static bool inject_default_jarray_start(void *ctxt, jvalue_ref ref)
 {
 	JSAXContextRef context = (JSAXContextRef)ctxt;
 	return context->m_handlers->yajl_start_array(context);
 }
 
-static bool inject_default_jarray_end(void *ctxt)
+static bool inject_default_jarray_end(void *ctxt, jvalue_ref ref)
 {
 	JSAXContextRef context = (JSAXContextRef)ctxt;
 	return context->m_handlers->yajl_end_array(context);
 }
 
-static bool inject_default_jnumber_raw(void *ctxt, const char *num, size_t len)
+static bool inject_default_jnumber_raw(void *ctxt, jvalue_ref ref)
 {
 	JSAXContextRef context = (JSAXContextRef)ctxt;
-	return context->m_handlers->yajl_number(context, num, len);
+	raw_buffer raw = jnum_deref(ref)->value.raw;
+	return context->m_handlers->yajl_number(context, raw.m_str, raw.m_len);
 }
 
-static bool inject_default_jnumber_double(void *ctxt, double num)
+static bool inject_default_jnumber_double(void *ctxt, jvalue_ref ref)
 {
 	char buf[24];
-	int len = snprintf(buf, sizeof(buf), "%.14lg", num);
+	int len = snprintf(buf, sizeof(buf), "%.14lg", jnum_deref(ref)->value.floating);
 	JSAXContextRef context = (JSAXContextRef)ctxt;
 	return context->m_handlers->yajl_number(context, buf, len);
 }
 
-static bool inject_default_jnumber_int(void *ctxt, int64_t num)
+static bool inject_default_jnumber_int(void *ctxt, jvalue_ref ref)
 {
 	char buf[24];
-	int len = snprintf(buf, sizeof(buf), "%" PRId64, num);
+	int len = snprintf(buf, sizeof(buf), "%" PRId64, jnum_deref(ref)->value.integer);
 	JSAXContextRef context = (JSAXContextRef)ctxt;
 	return context->m_handlers->yajl_number(context, buf, len);
 }
 
-static bool inject_default_jstring(void *ctxt, const unsigned char *str, size_t len)
+static bool inject_default_jstring(void *ctxt, jvalue_ref ref)
 {
 	JSAXContextRef context = (JSAXContextRef)ctxt;
-	return context->m_handlers->yajl_string(context, str, len);
+	raw_buffer raw = jstring_deref(ref)->m_data;
+	return context->m_handlers->yajl_string(context, (unsigned char*)raw.m_str, raw.m_len);
 }
 
-static bool inject_default_jbool(void *ctxt, bool value)
+static bool inject_default_jbool(void *ctxt, jvalue_ref ref)
 {
 	JSAXContextRef context = (JSAXContextRef)ctxt;
-	return context->m_handlers->yajl_boolean(context, value);
+	return context->m_handlers->yajl_boolean(context, jboolean_deref(ref)->value);
 }
-
-static void dummy_jarray(void *ctxt, jvalue_ref jref){}
 
 static struct TraverseCallbacks traverse = {
 	inject_default_jnull,
@@ -673,7 +674,6 @@ static struct TraverseCallbacks traverse = {
 	inject_default_jobject_end,
 	inject_default_jarray_start,
 	inject_default_jarray_end,
-	dummy_jarray,
 };
 
 static bool on_default_property(ValidationState *s, char const *key, jvalue_ref value, void *ctxt)

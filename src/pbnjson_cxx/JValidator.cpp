@@ -84,4 +84,31 @@ bool JValidator::isValid(const JValue &jVal, const JSchema &schema, JErrorHandle
 	return jvalue_check_schema(jVal.peekRaw(), &schemainfo);
 }
 
+
+bool JValidator::apply(const JValue &jVal, const JSchema &schema, JResolver *jResolver, JErrorHandler *errors)
+{
+	JErrorCallbacks errorHandler;
+	errorHandler.m_parser = err_parser;
+	errorHandler.m_schema = err_schema;
+	errorHandler.m_unknown = err_unknown;
+	errorHandler.m_ctxt = errors;
+
+	if (jResolver)
+	{
+		JSchemaResolverWrapper resolverWrapper(jResolver);
+		JSchemaResolver schemaresolver;
+		schemaresolver.m_resolve = &(resolverWrapper.sax_schema_resolver);
+		schemaresolver.m_userCtxt = &resolverWrapper;
+
+		JSchemaInfo schemainfo;
+		jschema_info_init(&schemainfo, schema.peek(), &schemaresolver, &errorHandler);
+
+		return jvalue_apply_schema(jVal.peekRaw(), &schemainfo);
+	}
+
+	JSchemaInfo schemainfo;
+	jschema_info_init(&schemainfo, schema.peek(), NULL, &errorHandler);
+	return jvalue_apply_schema(jVal.peekRaw(), &schemainfo);
+}
+
 }

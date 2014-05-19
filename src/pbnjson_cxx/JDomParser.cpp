@@ -103,22 +103,7 @@ JErrorCallbacks JDomParser::prepareCErrorCallbacks()
 
 bool JDomParser::parse(const std::string& input, const JSchema& schema, JErrorHandler *errors)
 {
-	jdomparser_ref prev = parser;
-
-	jdomparser parser_memory;
-	memset(&parser_memory, 0, sizeof(jdomparser));
-	parser = &parser_memory;
-
-	if (begin(schema, errors) && feed(input) && end()) {
-		jdomparser_deinit(parser);
-		parser = prev;
-		return true;
-	}
-
-	jdomparser_deinit(parser);
-	parser = prev;
-
-	return false;
+	return begin(schema, errors) && feed(input) && end();
 }
 
 bool JDomParser::begin(const JSchema &_schema, JErrorHandler *errors)

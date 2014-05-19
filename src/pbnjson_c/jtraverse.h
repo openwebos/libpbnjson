@@ -24,18 +24,17 @@
 #include <stdbool.h>
 
 typedef struct TraverseCallbacks {
-	bool (*jnull)(void *ctxt);
-	bool (*jbool)(void *ctxt, bool value);
-	bool (*jnumber_int)(void *ctxt, int64_t num);
-	bool (*jnumber_double)(void *ctxt, double num);
-	bool (*jnumber_raw)(void *ctxt, const char *num, size_t len);
-	bool (*jstring)(void *ctxt, const unsigned char *str, size_t len);
-	bool (*jobj_start)(void *ctxt);
-	bool (*jobj_key)(void *ctxt, const unsigned char *key, size_t len);
-	bool (*jobj_end)(void *ctxt);
-	bool (*jarr_start)(void *ctxt);
-	bool (*jarr_end)(void *ctxt);
-	void (*jarray)(void *ctxt, jvalue_ref jref);
+	bool (*jnull)(void *ctxt, jvalue_ref jref);
+	bool (*jbool)(void *ctxt, jvalue_ref jref);
+	bool (*jnumber_int)(void *ctxt, jvalue_ref jref);
+	bool (*jnumber_double)(void *ctxt, jvalue_ref jref);
+	bool (*jnumber_raw)(void *ctxt, jvalue_ref jref);
+	bool (*jstring)(void *ctxt, jvalue_ref jref);
+	bool (*jobj_start)(void *ctxt, jvalue_ref jref);
+	bool (*jobj_key)(void *ctxt, jvalue_ref jref);
+	bool (*jobj_end)(void *ctxt, jvalue_ref jref);
+	bool (*jarr_start)(void *ctxt, jvalue_ref jref);
+	bool (*jarr_end)(void *ctxt, jvalue_ref jref);
 } *TraverseCallbacksRef;
 
 bool jvalue_traverse(jvalue_ref jref, TraverseCallbacksRef tc, void *context);

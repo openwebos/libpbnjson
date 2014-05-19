@@ -60,6 +60,22 @@ public:
 	 * @see JErrorHandler
 	 */
 	static bool isValid(const JValue &jValue, const JSchema &jSchema, JErrorHandler *errors = NULL);
+
+	/**
+	 * Check validity of JValue against JSchema, and modifies JValue by inserting default values(specified by schema).
+	 * The function is able to resovle external references in the schema.
+	 *
+	 * @param jValue A reference to the JSON object to check
+	 * @param jSchema A reference to schema
+	 * @param jResolver A pointer to resolver of externals
+	 * @param errors The error handler to use if you want more detailed information if parsing failed.
+	 * @return true if val is valid against schema
+	 *
+	 * @see JValue
+	 * @see JSchema
+	 * @see JErrorHandler
+	 */
+	static bool apply(const JValue &jVal, const JSchema &schema, JResolver *jResolver = NULL, JErrorHandler *errors = NULL);
 };
 
 }
