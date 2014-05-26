@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -116,6 +116,24 @@ static void _collect_uri_enter(char const *key, Validator *v, void *ctxt)
 	uri_scope_pop_uri(uri_scope);
 }
 
+static void _collect_schemas(Validator *v, void *ctxt)
+{
+	UriScope *uri_scope = (UriScope *) ctxt;
+
+	// We'll collect this validator as an alias to some other. To avoid
+	// infinite loop we should keep it as indirect instead of trying resolving
+	// target.
+
+	int chars_required = uri_scope_get_document_length(uri_scope);
+	char buffer[chars_required];
+	char const *document = uri_scope_get_document(uri_scope, buffer, chars_required);
+	char const *fragment = uri_scope_get_fragment(uri_scope);
+
+	uri_resolver_add_validator(uri_scope->uri_resolver, document, fragment, v);
+
+	// Note that local refs will be resolved by target schema parsing
+}
+
 static void _collect_uri_exit(char const *key, Validator *v, void *ctxt, Validator **new_v)
 {
 	//Reference *r = (Reference *) v;
@@ -155,6 +173,7 @@ static ValidatorVtable reference_vtable =
 	.reactivate = _reactivate,
 	.check = _check,
 	.collect_uri_enter = _collect_uri_enter,
+	.collect_schemas = _collect_schemas,
 	.collect_uri_exit = _collect_uri_exit,
 	.dump_enter = _dump_enter,
 };

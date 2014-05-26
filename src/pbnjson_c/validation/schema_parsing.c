@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -203,32 +203,30 @@ static void _collect_uri_enter(char const *key, Validator *v, void *ctxt)
 
 	if (s->id)
 		uri_scope_push_uri(uri_scope, s->id);
+}
 
+static void _collect_schemas(Validator *v, void *ctxt)
+{
+	SchemaParsing *s = (SchemaParsing *) v;
+	UriScope *uri_scope = (UriScope *) ctxt;
+
+	// collect root schema
 	int chars_required = uri_scope_get_document_length(uri_scope);
 	char buffer[chars_required];
 	char const *document = uri_scope_get_document(uri_scope, buffer, chars_required);
 	char const *fragment = uri_scope_get_fragment(uri_scope);
 
-	if (key)
-	{
-		uri_scope_push_fragment_leaf(uri_scope, key);
-		fragment = uri_scope_get_fragment(uri_scope);
-	}
+	uri_resolver_add_validator(uri_scope->uri_resolver, document, fragment, s->type_validator);
 
-	// Only root fragment # and definitions of the root fragments should be remembered
-	// in the UriResolver.
-	if (!strcmp(ROOT_FRAGMENT, fragment) ||
-	    (key && g_str_has_prefix(fragment, ROOT_DEFINITIONS)))
-		uri_resolver_add_validator(uri_scope->uri_resolver, document, fragment, s->type_validator);
+	// collect #/definitions/* if present
+	Definitions *defs = s->definitions;
+	if (defs) definitions_collect_schemas(defs, uri_scope);
 }
 
 static void _collect_uri_exit(char const *key, Validator *v, void *ctxt, Validator **v_new)
 {
 	SchemaParsing *s = (SchemaParsing *) v;
 	UriScope *uri_scope = (UriScope *) ctxt;
-
-	if (key)
-		uri_scope_pop_fragment_leaf(uri_scope);
 
 	if (s->id)
 		uri_scope_pop_uri(uri_scope);
@@ -255,6 +253,7 @@ static ValidatorVtable schema_parsing_vtable =
 	.combine_validators = _combine,
 	.finalize_parse = _finalize_parse,
 	.collect_uri_enter = _collect_uri_enter,
+	.collect_schemas = _collect_schemas,
 	.collect_uri_exit = _collect_uri_exit,
 	.dump_enter = _dump_enter,
 	.dump_exit = _dump_exit,

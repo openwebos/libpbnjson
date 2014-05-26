@@ -120,10 +120,13 @@ INSTANTIATE_TEST_CASE_P(Samples, SchemaFromJvalue,
 			"{\"type\":\"array\", \"uniqueItems\":true}",
 			"{\"properties\":{\"foo\":{\"default\":false}}}",
 			"{\"properties\":{\"foo\":{\"type\":\"integer\"}}}",
+			"{\"oneOf\":[{\"type\":\"string\"},{\"type\":\"integer\"}]}",
+			"{\"definitions\":{\"foo\":{\"$ref\":\"#/definitions/bar\"},\"bar\":{\"type\":\"integer\"}},\"oneOf\":[{\"$ref\":\"#/definitions/foo\"}]}",
 			"{\"additionalProperties\":{\"type\":\"integer\"}}"
 		),
 		Values(
 			"1",
+			"3.14",
 			"true",
 			"null",
 			"[1,2,3]",

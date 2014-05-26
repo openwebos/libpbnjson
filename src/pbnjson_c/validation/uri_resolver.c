@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -84,7 +84,9 @@ char const *uri_resolver_add_validator(UriResolver *u,
 	}
 	assert(fragments && "The table must be added earlier with uri_resolver_add_document()");
 
-	if (g_hash_table_lookup(fragments, fragment))
+	bool already_present = g_hash_table_lookup(fragments, fragment);
+	assert(!already_present);
+	if (already_present)
 		fprintf(stderr, "The same fragment %s is added second time!\n", fragment); // Look for bugs!
 
 	char *new_fragment = g_strdup(fragment);

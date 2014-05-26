@@ -263,6 +263,14 @@ void _validator_collect_uri_enter(char const *key, Validator *v, void *ctxt)
 	return v->vtable->collect_uri_enter(key, v, ctxt);
 }
 
+void _validator_collect_schemas(Validator *v, void *ctxt)
+{
+	assert(v && v->vtable);
+	if (!v->vtable->collect_schemas)
+		return;
+	return v->vtable->collect_schemas(v, ctxt);
+}
+
 void _validator_collect_uri_exit(char const *key, Validator *v, void *ctxt, Validator **new_v)
 {
 	if (!v)
@@ -280,6 +288,7 @@ void validator_collect_uri(Validator *v, char const *document, UriResolver *u)
 	uri_scope_push_uri(uri_scope, document);
 
 	_validator_collect_uri_enter(NULL, v, uri_scope);
+	_validator_collect_schemas(v, uri_scope);
 	validator_visit(v, _validator_collect_uri_enter, _validator_collect_uri_exit, uri_scope);
 	_validator_collect_uri_exit(NULL, v, uri_scope, NULL);
 
