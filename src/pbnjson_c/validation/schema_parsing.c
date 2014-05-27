@@ -216,7 +216,8 @@ static void _collect_schemas(Validator *v, void *ctxt)
 	char const *document = uri_scope_get_document(uri_scope, buffer, chars_required);
 	char const *fragment = uri_scope_get_fragment(uri_scope);
 
-	uri_resolver_add_validator(uri_scope->uri_resolver, document, fragment, s->type_validator);
+	if (!uri_resolver_add_validator(uri_scope->uri_resolver, document, fragment, s->type_validator))
+		fprintf(stderr, "The same fragment %s is added second time!\n", fragment);
 
 	// collect #/definitions/* if present
 	Definitions *defs = s->definitions;

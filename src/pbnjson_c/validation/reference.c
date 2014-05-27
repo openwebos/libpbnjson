@@ -41,6 +41,7 @@ static void unref(Validator *v)
 		return;
 	j_release(&r->def_value);
 	g_free(r->target);
+	g_free(r->document);
 	g_free(r->fragment);
 	g_free(r);
 }
@@ -107,8 +108,7 @@ static void _collect_uri_enter(char const *key, Validator *v, void *ctxt)
 	char const *document = uri_scope_get_document(uri_scope, buffer, chars_required);
 
 	assert(!r->document && !r->fragment && "Reference URI should be collected only once");
-	// Remember document, which will be owned by the uri_resolver
-	r->document = uri_resolver_add_document(uri_scope->uri_resolver, document);
+	r->document = g_strdup(uri_resolver_add_document(uri_scope->uri_resolver, document));
 	// The fragment will be our property
 	r->fragment = strdup(uri_scope_get_fragment(uri_scope));
 

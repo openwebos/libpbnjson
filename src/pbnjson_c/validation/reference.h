@@ -35,7 +35,7 @@ typedef struct _Reference
 
 	char *target;          /**< @brief Original parsed value like "other.json#/definitions/a" */
 
-	char const *document;  /**< @brief Document part of the reference "other.json", owned by UriResolver */
+	char *document;        /**< @brief Document part of the reference "other.json", owned by UriResolver */
 	char *fragment;        /**< @brief Fragment part of the reference "#/definitions/a" */
 	Validator *validator;  /**< @brief Resolved validator, owned by UriResolver */
 } Reference;

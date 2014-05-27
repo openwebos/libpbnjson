@@ -141,6 +141,7 @@ PJSON_API jschema_ref jschema_parse_file(const char *file, JErrorCallbacksRef er
  * Javascript-style comments are allowed within schemas.
  *
  * @param file - The file path to the schema to use for validation.
+ * @param rootScope - Base URI for relative references.
  * @param errorHandler - The error handlers to use when parsing the schema dom.
  * @param resolver - External URI resolver.
  * @return A reference to a schema that can be used, or NULL if there was an error.
@@ -148,7 +149,7 @@ PJSON_API jschema_ref jschema_parse_file(const char *file, JErrorCallbacksRef er
  * @note Be carefully while using x-references in files
  * @see jschema_parse_ex
  */
-PJSON_API jschema_ref jschema_parse_file_resolve(const char *file, JErrorCallbacksRef errorHandler, JSchemaResolverRef resolver);
+PJSON_API jschema_ref jschema_parse_file_resolve(const char *file, const char *rootScope, JErrorCallbacksRef errorHandler, JSchemaResolverRef resolver);
 
 /**
  * Returns the "DOM" structure of the schema that is ready for validation

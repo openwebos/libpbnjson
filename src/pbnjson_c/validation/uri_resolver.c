@@ -84,10 +84,8 @@ char const *uri_resolver_add_validator(UriResolver *u,
 	}
 	assert(fragments && "The table must be added earlier with uri_resolver_add_document()");
 
-	bool already_present = g_hash_table_lookup(fragments, fragment);
-	assert(!already_present);
-	if (already_present)
-		fprintf(stderr, "The same fragment %s is added second time!\n", fragment); // Look for bugs!
+	if (g_hash_table_lookup(fragments, fragment))
+		return NULL; // fragment already in the document
 
 	char *new_fragment = g_strdup(fragment);
 	g_hash_table_insert(fragments, new_fragment, validator_ref(v));
@@ -145,15 +143,17 @@ bool uri_resolver_steal_documents(UriResolver *u, UriResolver *source)
 			continue;
 
 		gpointer old_fragments = g_hash_table_lookup(u->documents, document);
-		if (old_fragments)
+
+		if (old_fragments && g_hash_table_size(old_fragments))
 		{
 			// FIXME: The document has been already resolved?
 			return false;
 		}
 
 		g_hash_table_iter_steal(&it);
-		g_hash_table_insert(u->documents, document, fragments);
+		g_hash_table_replace(u->documents, document, fragments);
 	}
+
 	return true;
 }
 

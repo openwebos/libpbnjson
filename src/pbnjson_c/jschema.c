@@ -35,7 +35,7 @@
 #include <inttypes.h>
 #include <glib.h>
 #include <stdio.h>
-
+#include <uriparser/Uri.h>
 
 
 jschema_ref jschema_new(void)
@@ -113,9 +113,12 @@ static bool resolve_document(jschema_ref schema,
 	if (!resolved_schema)
 		return false;
 
+	// We can lose link to the document while stealing, let's create a copy
+	char doc_name[strlen(document) + 1];
+	memcpy(doc_name, document, sizeof(doc_name));
 	uri_resolver_steal_documents(schema->uri_resolver, resolved_schema->uri_resolver);
 	// The validator may have been requested with a different document, than its path.
-	uri_resolver_add_validator(schema->uri_resolver, document, "#", resolved_schema->validator);
+	uri_resolver_add_validator(schema->uri_resolver, doc_name, "#", resolved_schema->validator);
 	jschema_release(&resolved_schema);
 	return true;
 }
@@ -190,15 +193,16 @@ jschema_ref jschema_parse(raw_buffer input,
 
 jschema_ref jschema_parse_file(const char *file, JErrorCallbacksRef errorHandler)
 {
-	return jschema_parse_file_resolve(file, errorHandler, NULL);
+	return jschema_parse_file_resolve(file, file, errorHandler, NULL);
 }
 
-jschema_ref jschema_parse_file_resolve(const char *file, JErrorCallbacksRef errorHandler, JSchemaResolverRef resolver)
+jschema_ref jschema_parse_file_resolve(const char *file, const char *rootScope, JErrorCallbacksRef errorHandler, JSchemaResolverRef resolver)
 {
 	// mmap the file
 	const char *mapContents = NULL;
 	size_t mapSize = 0;
 	struct stat fileInfo;
+	char fileUri[3 * strlen(file) + 8]; //Recommend size by uriparser for unix
 
 	int fd = open(file, O_RDONLY);
 	if (-1 == fd)
@@ -227,8 +231,14 @@ jschema_ref jschema_parse_file_resolve(const char *file, JErrorCallbacksRef erro
 
 	close(fd), fd = -1;
 
+	if (!rootScope)
+	{
+		uriUnixFilenameToUriStringA(file, fileUri);
+		rootScope = fileUri;
+	}
+
 	jschema_ref parsedSchema = jschema_parse_internal(j_str_to_buffer(mapContents, mapSize),
-	                                                  file,
+	                                                  rootScope,
 	                                                  DOMOPT_INPUT_OUTLIVES_WITH_NOCHANGE,
 	                                                  errorHandler,
 	                                                  resolver);

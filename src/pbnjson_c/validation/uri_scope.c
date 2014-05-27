@@ -186,6 +186,7 @@ bool uri_scope_push_uri(UriScope *u, char const *uri)
 	UriUriA *base = uri_scope_get_uri(u);
 	if (!base)
 	{
+		//TODO check that URI is absolute
 		memcpy(result, &a, sizeof(a));
 
 		u->uri_stack = g_slist_prepend(u->uri_stack, result);

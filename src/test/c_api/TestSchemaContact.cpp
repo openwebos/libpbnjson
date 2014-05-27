@@ -19,25 +19,29 @@
 #include <gtest/gtest.h>
 #include <pbnjson.h>
 #include <string>
+#include <uriparser/Uri.h>
 
 using namespace std;
 
 namespace {
 
 static const string resolution_dir = string{SCHEMA_DIR} + "contact/";
+static const string localref_dir = string{SCHEMA_DIR} + "localref/";
 
 class TestSchemaContact : public ::testing::Test
 {
 protected:
 	static jschema_ref schema;
 	static JSchemaResolver resolver;
+	static JSchemaResolver xResolver;
 	static JSchemaInfo schema_info;
 	jvalue_ref parsed;
 
 	static void SetUpTestCase()
 	{
 		resolver.m_resolve = &SimpleResolver;
-		schema = jschema_parse_file_resolve((resolution_dir + "Contact.schema").c_str(), NULL, &resolver);
+		schema = jschema_parse_file_resolve((resolution_dir + "Contact.schema").c_str(),
+		                                    (resolution_dir + "Contact.schema").c_str(), NULL, &resolver);
 		ASSERT_TRUE(schema != NULL);
 
 
@@ -58,6 +62,28 @@ protected:
 	virtual void TearDown()
 	{
 		j_release(&parsed);
+	}
+
+	static JSchemaResolutionResult XResolver(JSchemaResolverRef resolver,
+	                                         jschema_ref *resolved)
+	{
+		string resource(resolver->m_resourceToResolve.m_str,
+		                resolver->m_resourceToResolve.m_len);
+		char unixUri[1024];
+		uriUriStringToUnixFilenameA(resource.c_str(), unixUri);
+
+		if (-1 == ::access(unixUri, F_OK)) {
+			std::cerr << "SCHEMA_NOT_FOUND " << unixUri << std::endl;
+			return SCHEMA_NOT_FOUND;
+		}
+
+		*resolved = jschema_parse_file_resolve(unixUri, NULL, NULL, resolver);
+		if (*resolved == NULL) {
+			std::cerr << "SCHEMA_INVALID" << std::endl;
+			return SCHEMA_INVALID;
+		}
+
+		return SCHEMA_RESOLVED;
 	}
 
 	static JSchemaResolutionResult SimpleResolver(JSchemaResolverRef resolver,
@@ -81,6 +107,7 @@ protected:
 
 jschema_ref TestSchemaContact::schema = NULL;
 JSchemaResolver TestSchemaContact::resolver;
+JSchemaResolver TestSchemaContact::xResolver;
 JSchemaInfo TestSchemaContact::schema_info;
 
 } // namespace
@@ -137,6 +164,39 @@ TEST_F(TestSchemaContact, Valid3)
 	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &schema_info);
 	EXPECT_TRUE(jis_object(parsed));
 	EXPECT_TRUE(jvalue_check_schema(parsed, &schema_info));
+}
+
+TEST_F(TestSchemaContact, localReferences)
+{
+	xResolver.m_resolve = &TestSchemaContact::XResolver;
+	jschema_ref xschema = jschema_parse_file_resolve((localref_dir + "rA.schema").c_str(),
+	                                                 NULL, NULL, &xResolver);
+	ASSERT_TRUE(xschema != NULL);
+
+	JSchemaInfo sinfo;
+	jschema_info_init(&sinfo, xschema, NULL, NULL);
+
+	const raw_buffer INPUT = j_cstr_to_buffer( R"schema(
+		{
+			"name": "Alisha",
+			"flag": true,
+			"field": {
+				"familyName": "Lalala",
+				"flagB": true
+			}
+		}
+	)schema");
+
+	EXPECT_TRUE(jsax_parse_ex(NULL, INPUT, &sinfo, NULL));
+	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &sinfo);
+	EXPECT_TRUE(jis_object(parsed));
+
+	jschema_release(&xschema);
+}
+
+TEST_F(TestSchemaContact, crossReferences)
+{
+
 }
 
 // vim: set noet ts=4 sw=4 tw=80:

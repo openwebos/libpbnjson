@@ -20,6 +20,7 @@
 #include "parser_context.h"
 #include "uri_scope.h"
 #include <assert.h>
+#include <stdlib.h>
 
 
 typedef struct _NameValidator
