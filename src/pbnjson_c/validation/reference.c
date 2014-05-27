@@ -110,7 +110,7 @@ static void _collect_uri_enter(char const *key, Validator *v, void *ctxt)
 	// Remember document, which will be owned by the uri_resolver
 	r->document = uri_resolver_add_document(uri_scope->uri_resolver, document);
 	// The fragment will be our property
-	r->fragment = uri_scope_steal_fragment(uri_scope);
+	r->fragment = strdup(uri_scope_get_fragment(uri_scope));
 
 	// Return to the previous URI context
 	uri_scope_pop_uri(uri_scope);

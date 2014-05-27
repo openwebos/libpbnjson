@@ -84,30 +84,11 @@ static void _visit(Validator *v,
 	exit_func("definitions", v, ctxt, NULL);
 }
 
-static void _collect_uri_enter(char const *key, Validator *v, void *ctxt)
-{
-	//Definitions *d = (Definitions *) v;
-	UriScope *uri_scope = (UriScope *) ctxt;
-
-	char escaped_key[strlen(key)*2 + 1];
-	uri_scope_push_fragment_leaf(uri_scope, escape_json_pointer(key, escaped_key));
-}
-
-static void _collect_uri_exit(char const *key, Validator *v, void *ctxt, Validator **new_v)
-{
-	//Definitions *d = (Definitions *) v;
-	UriScope *uri_scope = (UriScope *) ctxt;
-
-	uri_scope_pop_fragment_leaf(uri_scope);
-}
-
 static ValidatorVtable definitions_vtable =
 {
 	.ref = ref,
 	.unref = unref,
 	.visit = _visit,
-	.collect_uri_enter = _collect_uri_enter,
-	.collect_uri_exit = _collect_uri_exit,
 };
 
 Definitions* definitions_new(void)
@@ -130,8 +111,20 @@ void definitions_set_name(Definitions *d, StringSpan *name)
 
 void definitions_add(Definitions *d, StringSpan *name, Validator *v)
 {
+	const size_t prefix_len = strlen(ROOT_DEFINITIONS);
+
 	NameValidator *nv = g_new0(NameValidator, 1);
-	nv->name = g_strndup(name->str, name->str_len);
+
+	// we'll need a space for prefix, slash, key with potenital escapes and ending zero
+	size_t buffer_len = prefix_len + 1 + name->str_len * 2 + 1;
+	char *buffer = (char*)malloc(buffer_len);
+	char *p = buffer;
+	(void) memcpy(p, ROOT_DEFINITIONS, prefix_len);
+	p += prefix_len;
+	*p++ = '/';
+	(void) escape_json_pointer(name->str, name->str_len, p);
+
+	nv->name = buffer;
 	nv->validator = v;
 	d->validators = g_slist_prepend(d->validators, nv);
 }
@@ -144,17 +137,15 @@ void definitions_collect_schemas(Definitions *d, UriScope *uri_scope)
 		return;
 
 	GSList *next = d->validators;
-	uri_scope_push_fragment_leaf(uri_scope, "definitions");
 	while (next)
 	{
 		NameValidator *nv = (NameValidator *) next->data;
 		Validator *v = nv->validator;
 		assert(v->vtable->collect_schemas); // we know thata all top validators under definitions should be SchemaParsing
-		uri_scope_push_fragment_leaf(uri_scope, nv->name);
+		uri_scope_push_uri(uri_scope, nv->name);
 		_validator_collect_schemas(v, uri_scope);
-		uri_scope_pop_fragment_leaf(uri_scope);
+		uri_scope_pop_uri(uri_scope);
 
 		next = g_slist_next(next);
 	}
-	uri_scope_pop_fragment_leaf(uri_scope);
 }

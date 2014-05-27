@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -85,15 +85,15 @@ TEST(TestUriScope, EmptyBase)
 TEST(TestUriScope, EscapeJsonPointer)
 {
 	char buffer[64];
-	EXPECT_STREQ("", escape_json_pointer("", buffer));
-	EXPECT_STREQ("a~1b", escape_json_pointer("a/b", buffer));
-	EXPECT_STREQ("c%%d", escape_json_pointer("c%%d", buffer));
-	EXPECT_STREQ("e^f", escape_json_pointer("e^f", buffer));
-	EXPECT_STREQ("g|h", escape_json_pointer("g|h", buffer));
-	EXPECT_STREQ("i\\j", escape_json_pointer("i\\j", buffer));
-	EXPECT_STREQ("k\"l", escape_json_pointer("k\"l", buffer));
-	EXPECT_STREQ(" ", escape_json_pointer(" ", buffer));
-	EXPECT_STREQ("m~0n", escape_json_pointer("m~n", buffer));
+	EXPECT_STREQ("", escape_json_pointer("", 0, buffer));
+	EXPECT_STREQ("a~1b", escape_json_pointer("a/b", 3, buffer));
+	EXPECT_STREQ("c%%d", escape_json_pointer("c%%d", 4, buffer));
+	EXPECT_STREQ("e^f", escape_json_pointer("e^f", 3, buffer));
+	EXPECT_STREQ("g|h", escape_json_pointer("g|h", 3, buffer));
+	EXPECT_STREQ("i\\j", escape_json_pointer("i\\j", 3, buffer));
+	EXPECT_STREQ("k\"l", escape_json_pointer("k\"l", 3, buffer));
+	EXPECT_STREQ(" ", escape_json_pointer(" ", 1, buffer));
+	EXPECT_STREQ("m~0n", escape_json_pointer("m~n", 3, buffer));
 }
 
 TEST(TestUriScope, UnescapeJsonPointer)
@@ -109,20 +109,4 @@ TEST(TestUriScope, UnescapeJsonPointer)
 	EXPECT_STREQ("/k\"l", unescape_json_pointer("/k\"l", buffer));
 	EXPECT_STREQ("/ ", unescape_json_pointer("/ ", buffer));
 	EXPECT_STREQ("/m~n", unescape_json_pointer("/m~0n", buffer));
-}
-
-TEST(TestUriScope, FragmentLeaf)
-{
-	UriScope *u = uri_scope_new();
-	ASSERT_TRUE(u != NULL);
-
-	uri_scope_push_uri(u, "#");
-	EXPECT_STREQ("#/definitions", uri_scope_push_fragment_leaf(u, "definitions"));
-	EXPECT_STREQ("#/definitions/a", uri_scope_push_fragment_leaf(u, "a"));
-
-	EXPECT_STREQ("#/definitions", uri_scope_pop_fragment_leaf(u));
-	EXPECT_STREQ("#", uri_scope_pop_fragment_leaf(u));
-
-	uri_scope_pop_uri(u);
-	uri_scope_free(u);
 }

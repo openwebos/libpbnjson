@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,9 +34,6 @@ typedef struct _UriScope
 
 	/** @brief Stack contains pointers to document URI. */
 	GSList *uri_stack;
-	/** Fragment is char *, keeping NULL-terminated string
-	 of current fragment. */
-	GSList *fragment_stack;
 } UriScope;
 
 /** @brief Constructor */
@@ -60,31 +57,20 @@ char const *uri_scope_get_document(UriScope const *u, char *buffer, int chars_re
 /** @brief Get current fragment from the top of the stack. */
 char const *uri_scope_get_fragment(UriScope const *u);
 
-/** @brief Get current fragment from the top of the stack with ownership.
- *
- * The pointer in the stack is null'ed, but the fragment stack isn't decreased.
- */
-char *uri_scope_steal_fragment(UriScope *u);
-
 /** @brief Push new uri == (document, fragment), resolve it against the top of the stack. */
 bool uri_scope_push_uri(UriScope *u, char const *uri);
 
 /** @brief Pop (document, fragment) from the stacks. */
 void uri_scope_pop_uri(UriScope *u);
 
-/** @brief Push another fragment leaf, for instance, definition under #/definitions */
-char const *uri_scope_push_fragment_leaf(UriScope *u, char const *leaf);
-
-/** @brief Return to the previous fragment leaf */
-char const *uri_scope_pop_fragment_leaf(UriScope *u);
-
 /** @brief Escape special characters (like '/') in JSON pointer.
  *
  * @param[in] fragment Input string (for instance, "#/definitions/a)
+ * @param[in] fragment_len Length of input string
  * @param[in] buffer Where to place the result, must be twice as large as the fragment
  * @return Pointer that is equal to buffer.
  */
-char const *escape_json_pointer(char const *fragment, char *buffer);
+char const *escape_json_pointer(char const *fragment, size_t fragment_len, char *buffer);
 
 /** @brief Unescape special characters (like '/') in JSON pointer.
  *

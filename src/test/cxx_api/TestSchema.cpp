@@ -58,6 +58,27 @@ TEST(TestSchema, LocalRef)
 	EXPECT_TRUE(parser.parse("{\"foo\":\"bar\"}", schema));
 }
 
+TEST(TestSchema, LocalRefEscaped)
+{
+	auto schema = JSchemaFragment("{"
+		"\"definitions\":{"
+			"\"foo~1\":{\"additionalProperties\":{\"type\":\"string\"}},"
+			"\"bar/schema\":{\"additionalProperties\":{\"type\":\"integer\"}}"
+		"},"
+		"\"oneOf\":["
+			"{\"$ref\":\"#/definitions/foo~01\"},"
+			"{\"$ref\":\"#/definitions/bar~1schema\"}"
+		"]"
+	"}");
+	ASSERT_TRUE(schema.isInitialized());
+
+	JDomParser parser;
+	EXPECT_FALSE(parser.parse("{}", schema));
+	EXPECT_FALSE(parser.parse("{\"foo\":null}", schema));
+	EXPECT_TRUE(parser.parse("{\"foo\":42}", schema));
+	EXPECT_TRUE(parser.parse("{\"foo\":\"bar\"}", schema));
+}
+
 TEST(TestSchema, LocalRefRef)
 {
 	auto schema = JSchemaFragment("{"
