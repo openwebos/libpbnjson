@@ -24,7 +24,7 @@
 #include "jtraverse.h"
 #include "gen_stream.h"
 
-static bool to_string_append_jnull(void *ctxt)
+static bool to_string_append_jnull(void *ctxt, jvalue_ref jref)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
 	bool res = (generating->null_value(generating) != NULL);
@@ -35,17 +35,19 @@ static bool to_string_append_jnull(void *ctxt)
 }
 
 //Helper function for jobject_to_string_append()
-static bool to_string_append_jkeyvalue(void *ctxt, const unsigned char *str, size_t len)
+static bool to_string_append_jkeyvalue(void *ctxt, jvalue_ref jref)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
-	bool res = generating->o_key(generating, (raw_buffer){(const char*)str, len});
+	raw_buffer raw = jstring_deref(jref)->m_data;
+	bool res = generating->o_key(generating, raw);
 	if (!res) {
-		PJ_LOG_ERR("PBNJSON_SCHEMA_VALIDATION_ERR", 1, PMLOGKS("KEY", str), "Schema validation error with key: '%s'", str);
+		PJ_LOG_ERR("PBNJSON_SCHEMA_VALIDATION_ERR", 1, PMLOGKS("KEY", raw.m_str),
+		           "Schema validation error with key: '%s'", raw.m_str);
 	}
 	return res;
 }
 
-static bool to_string_append_jobject_start(void *ctxt)
+static bool to_string_append_jobject_start(void *ctxt, jvalue_ref jref)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
 	if (!generating->o_begin(generating)) {
@@ -55,7 +57,7 @@ static bool to_string_append_jobject_start(void *ctxt)
 	return true;
 }
 
-static bool to_string_append_jobject_end(void *ctxt)
+static bool to_string_append_jobject_end(void *ctxt, jvalue_ref jref)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
 
@@ -66,7 +68,7 @@ static bool to_string_append_jobject_end(void *ctxt)
 	return true;
 }
 
-static bool to_string_append_jarray_start(void *ctxt)
+static bool to_string_append_jarray_start(void *ctxt, jvalue_ref jref)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
 	if (!generating->a_begin(generating)) {
@@ -76,7 +78,7 @@ static bool to_string_append_jarray_start(void *ctxt)
 	return true;
 }
 
-static bool to_string_append_jarray_end(void *ctxt)
+static bool to_string_append_jarray_end(void *ctxt, jvalue_ref jref)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
 	if (!generating->a_end(generating)) {
@@ -86,45 +88,45 @@ static bool to_string_append_jarray_end(void *ctxt)
 	return true;
 }
 
-static bool to_string_append_jnumber_raw(void *ctxt, const char *num, size_t len)
+static bool to_string_append_jnumber_raw(void *ctxt, jvalue_ref jref)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
-	return generating->number(generating, (raw_buffer){num, len}) != NULL;
+	return generating->number(generating, jnum_deref(jref)->value.raw) != NULL;
 }
 
-static bool to_string_append_jnumber_double(void *ctxt, double num)
+static bool to_string_append_jnumber_double(void *ctxt, jvalue_ref jref)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
-	return generating->floating(generating, num) != NULL;
+	return generating->floating(generating, jnum_deref(jref)->value.floating) != NULL;
 }
 
-static bool to_string_append_jnumber_int(void *ctxt, int64_t num)
+static bool to_string_append_jnumber_int(void *ctxt, jvalue_ref jref)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
-	return generating->integer(generating, num) != NULL;
+	return generating->integer(generating, jnum_deref(jref)->value.integer) != NULL;
 }
 
-static inline bool to_string_append_jstring(void *ctxt, const unsigned char *str, size_t len)
+static inline bool to_string_append_jstring(void *ctxt, jvalue_ref jref)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
-	bool result = (generating->string(generating, (raw_buffer){(const char*)str, len}) != NULL);
+	raw_buffer raw = jstring_deref(jref)->m_data;
+	bool result = (generating->string(generating, raw) != NULL);
 	if (!result) {
-		PJ_LOG_ERR("PBNJSON_STR_INVALID", 1, PMLOGKS("STRING", str), "Schema validation error, string '%s' did not validate against schema", str);
+		PJ_LOG_ERR("PBNJSON_STR_INVALID", 1, PMLOGKS("STRING", raw.m_str),
+		           "Schema validation error, string '%s' did not validate against schema", raw.m_str);
 	}
 	return result;
 }
 
-static inline bool to_string_append_jbool(void *ctxt, bool value)
+static inline bool to_string_append_jbool(void *ctxt, jvalue_ref jref)
 {
 	JStreamRef generating = (JStreamRef)ctxt;
-	bool result = (generating->boolean(generating, value) != NULL);
+	bool result = (generating->boolean(generating, jboolean_deref(jref)->value) != NULL);
 	if (!result) {
 		PJ_LOG_ERR("PBNJSON_BOOL_INVALID", 0, "Schema validation error, bool did not validate against schema");
 	}
 	return result;
 }
-
-static void dummy_jarray(void *ctxt, jvalue_ref jref){}
 
 static struct TraverseCallbacks traverse = {
 	to_string_append_jnull,
@@ -138,7 +140,6 @@ static struct TraverseCallbacks traverse = {
 	to_string_append_jobject_end,
 	to_string_append_jarray_start,
 	to_string_append_jarray_end,
-	dummy_jarray
 };
 
 //TODO inline this function to layer1

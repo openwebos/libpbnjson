@@ -31,54 +31,61 @@
 #include "jtraverse.h"
 #include "jschema_types_internal.h"
 #include "validation/schema_builder.h"
+#include "jobject_internal.h"
 
-static bool schema_null(void *ctx)
+static bool schema_null(void *ctx, jvalue_ref ref)
 { return jschema_builder_token((jschema_builder *)ctx, TOKEN_NULL); }
 
-static bool schema_start_map(void *ctx)
+static bool schema_start_map(void *ctx, jvalue_ref ref)
 { return jschema_builder_token((jschema_builder *)ctx, TOKEN_OBJ_START); }
 
-static bool schema_end_map(void *ctx)
+static bool schema_end_map(void *ctx, jvalue_ref ref)
 { return jschema_builder_token((jschema_builder *)ctx, TOKEN_OBJ_END); }
 
-static bool schema_start_arr(void *ctx)
+static bool schema_start_arr(void *ctx, jvalue_ref ref)
 { return jschema_builder_token((jschema_builder *)ctx, TOKEN_ARR_START); }
 
-static bool schema_end_arr(void *ctx)
+static bool schema_end_arr(void *ctx, jvalue_ref ref)
 { return jschema_builder_token((jschema_builder *)ctx, TOKEN_ARR_END); }
 
-static bool schema_bool(void *ctx, bool value)
-{ return jschema_builder_bool((jschema_builder *)ctx, value); }
+static bool schema_bool(void *ctx, jvalue_ref ref)
+{ return jschema_builder_bool((jschema_builder *)ctx, jboolean_deref(ref)->value); }
 
-static bool schema_str(void *ctx, const unsigned char *str, size_t len)
-{ return jschema_builder_str((jschema_builder *)ctx, (const char *)str, len); }
+static bool schema_str(void *ctx, jvalue_ref ref)
+{
+	raw_buffer raw = jstring_deref(ref)->m_data;
+	return jschema_builder_str((jschema_builder *)ctx, raw.m_str, raw.m_len);
+}
 
-static bool schema_key(void *ctx, const unsigned char *str, size_t len)
-{ return jschema_builder_key((jschema_builder *)ctx, (const char *)str, len); }
+static bool schema_key(void *ctx, jvalue_ref ref)
+{
+	raw_buffer raw = jstring_deref(ref)->m_data;
+	return jschema_builder_key((jschema_builder *)ctx, raw.m_str, raw.m_len);
+}
 
-static bool schema_number(void *ctx, const char *buf, size_t len )
-{ return jschema_builder_number((jschema_builder *)ctx, buf, len); }
+static bool schema_number(void *ctx, jvalue_ref ref)
+{
+	raw_buffer raw = jnum_deref(ref)->value.raw;
+	return jschema_builder_number((jschema_builder *)ctx, raw.m_str, raw.m_len);
+}
 
-static bool schema_int(void *ctx, int64_t num)
+static bool schema_int(void *ctx, jvalue_ref ref)
 {
 	/* we know exactly what we convert */
 	char buf[24];
-	int len = sprintf(buf, "%" PRIi64, num);
+	int len = sprintf(buf, "%" PRIi64, jnum_deref(ref)->value.integer);
 	assert( 0 < len && len < sizeof(buf) ); /* if len > sizeof(buf) stack already overwritten */
-	return schema_number(ctx, buf, (size_t)len);
+	return jschema_builder_number((jschema_builder *)ctx, buf, (size_t)len);
 }
 
-static bool schema_double(void *ctx, double num)
+static bool schema_double(void *ctx, jvalue_ref ref)
 {
 	/* we know exactly what we convert */
 	char buf[32]; /* hope we'll fit everything */
-	int len = sprintf(buf, "%e", num);
+	int len = sprintf(buf, "%e", jnum_deref(ref)->value.floating);
 	assert( 0 < len && len < sizeof(buf) ); /* if len > sizeof(buf) stack already overwritten */
-	return schema_number(ctx, buf, (size_t)len);
+	return jschema_builder_number((jschema_builder *)ctx, buf, (size_t)len);
 }
-
-static void dummy_jarray(void *ctxt, jvalue_ref jref)
-{}
 
 jschema_ref jschema_parse_jvalue(jvalue_ref value, JErrorCallbacksRef errorHandler, const char *root_scope)
 {
@@ -101,7 +108,6 @@ jschema_ref jschema_parse_jvalue(jvalue_ref value, JErrorCallbacksRef errorHandl
 		.jobj_end = schema_end_map,
 		.jarr_start = schema_start_arr,
 		.jarr_end = schema_end_arr,
-		.jarray = dummy_jarray,
 	};
 
 	if (!jvalue_traverse(value, &traverse, &builder))

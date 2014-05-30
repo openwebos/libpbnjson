@@ -135,6 +135,9 @@ typedef struct _ValidatorVtable
 	 */
 	void (*collect_uri_enter)(char const *key, Validator *v, void *ctxt);
 
+	/** @brief Collect all addresable schemas */
+	void (*collect_schemas)(Validator *v, void *ctxt);
+
 	/** @brief Return to previous URI scope. */
 	void (*collect_uri_exit)(char const *key, Validator *v, void *ctxt, Validator **new_v);
 
@@ -250,6 +253,7 @@ void _validator_finalize_parse(char const *key, Validator *v, void *ctxt, Valida
 Validator* validator_finalize_parse(Validator *v);
 
 void _validator_collect_uri_enter(char const *key, Validator *v, void *ctxt);
+void _validator_collect_schemas(Validator *v, void *ctxt);
 void _validator_collect_uri_exit(char const *key, Validator *v, void *ctxt, Validator **new_v);
 void validator_collect_uri(Validator *v, char const *document, UriResolver *u);
 

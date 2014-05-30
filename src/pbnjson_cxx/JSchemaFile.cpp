@@ -59,7 +59,7 @@ bool OnErrorUnknown(void *ctxt, JSAXContextRef parseCtxt)
 } //namespace;
 
 JSchema::Resource*
-JSchemaFile::createSchemaMap(const std::string &path, JErrorHandler *errorHandler, JSchemaResolverRef resolver)
+JSchemaFile::createSchemaMap(const std::string &path, const std::string& rootScope, JErrorHandler *errorHandler, JSchemaResolverRef resolver)
 {
 	JErrorCallbacks error_callbacks = { 0 };
 	error_callbacks.m_parser = OnErrorParser;
@@ -67,7 +67,7 @@ JSchemaFile::createSchemaMap(const std::string &path, JErrorHandler *errorHandle
 	error_callbacks.m_unknown = OnErrorUnknown;
 	error_callbacks.m_ctxt = errorHandler;
 
-	jschema_ref schema = jschema_parse_file_resolve(path.c_str(), &error_callbacks, resolver);
+	jschema_ref schema = jschema_parse_file_resolve(path.c_str(), rootScope.c_str(), &error_callbacks, resolver);
 	if (schema == NULL)
 		return NULL;
 
@@ -75,18 +75,18 @@ JSchemaFile::createSchemaMap(const std::string &path, JErrorHandler *errorHandle
 }
 
 JSchemaFile::JSchemaFile(const std::string& path)
-	: JSchema(createSchemaMap(path, NULL, NULL))
+	: JSchema(createSchemaMap(path, path, NULL, NULL))
 {
 }
 
-JSchemaFile::JSchemaFile(const std::string& path, JErrorHandler *errorHandler, JResolver *resolver)
+JSchemaFile::JSchemaFile(const std::string& path, const std::string& rootScope, JErrorHandler *errorHandler, JResolver *resolver)
 {
 	JSchemaResolverWrapper resolverWrapper(resolver);
 	JSchemaResolver schemaresolver;
 	schemaresolver.m_resolve = &(resolverWrapper.sax_schema_resolver);
 	schemaresolver.m_userCtxt = &resolverWrapper;
 
-	m_resource = createSchemaMap(path, errorHandler, &schemaresolver);
+	m_resource = createSchemaMap(path, rootScope, errorHandler, &schemaresolver);
 }
 
 JSchemaFile::JSchemaFile(const JSchemaFile& other)

@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
 			schema.reset(new JSchemaFragment("{}"));
 		else
 		{
-			schema.reset(new JSchemaFile(schema_file, &error_handler, NULL));
+			schema.reset(new JSchemaFile(schema_file, NULL, &error_handler, NULL));
 			if (!schema->isInitialized())
 			{
 				cerr << "Failed to open JSON schema " << schema_file << endl;

@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 	string schema_name = argv[2];
 
 	MyResolver resolver;
-	JSchemaFile schema{directory + "/" + schema_name, NULL, &resolver};
+	JSchemaFile schema{directory + "/" + schema_name, directory + "/" + schema_name, NULL, &resolver};
 	if (!schema.isInitialized())
 	{
 		cerr << "Failed to initialize schema" << endl;

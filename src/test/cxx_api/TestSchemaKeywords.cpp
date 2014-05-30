@@ -50,7 +50,8 @@ public:
 TEST(Schemakeywords, extends)
 {
 	myJResolver resolver;
-	pj::JSchemaFile schema(DATA_DIR "TestSchemaKeywords/extends/extended.json", NULL, &resolver);
+	pj::JSchemaFile schema(DATA_DIR "TestSchemaKeywords/extends/extended.json",
+	                       DATA_DIR "TestSchemaKeywords/extends/extended.json", NULL, &resolver);
 	ASSERT_TRUE(schema.isInitialized());
 
 	{
@@ -92,7 +93,8 @@ private:
 TEST(Schemakeywords, reuse_schema_in_resolver)
 {
 	ChildResolver resolver;
-	pj::JSchemaFile schema(DATA_DIR "TestSchemaKeywords/reuse_schema_in_resolver/parent.schema", NULL, &resolver);
+	pj::JSchemaFile schema(DATA_DIR "TestSchemaKeywords/reuse_schema_in_resolver/parent.schema",
+	                       DATA_DIR "TestSchemaKeywords/reuse_schema_in_resolver/parent.schema", NULL, &resolver);
 	ASSERT_TRUE(schema.isInitialized());
 
 
@@ -344,13 +346,20 @@ TEST(JValidator, DefaultProperties)
 				"\"a\": {\"type\": \"string\", \"default\": \"hello\"},"
 				"\"b\": {\"type\": \"number\", \"default\": 3.14},"
 				"\"c\": {\"type\": \"boolean\", \"default\": true},"
-				"\"d\": {\"default\": null}"
+				"\"d\": {\"default\": null},"
+				"\"e\": {"
+					"\"type\": \"object\","
+					"\"properties\": {"
+						"\"e1\": {\"type\": \"string\", \"default\": \"asd\"},"
+						"\"e2\": {\"type\": \"number\", \"default\": 2}"
+					"}"
+				"}"
 			"}"
 		"}"
 		};
 
 	JDomParser parser;
-	ASSERT_TRUE(parser.parse("{\"a\": \"qwer\"}", schema, NULL));
+	ASSERT_TRUE(parser.parse("{\"a\": \"qwer\"}", schema, NULL)) << parser.getError();
 	auto val = parser.getDom();
 	ASSERT_TRUE(val.isObject());
 	ASSERT_TRUE(val.hasKey("a"));
@@ -361,6 +370,27 @@ TEST(JValidator, DefaultProperties)
 	EXPECT_EQ(val["c"], true);
 	ASSERT_TRUE(val.hasKey("d"));
 	EXPECT_TRUE(val["d"].isNull());
+
+	ASSERT_TRUE(parser.parse("{\"a\": \"qwer\", \"e\":{}}", JSchema::AllSchema(), NULL));
+	JValue val_all_schema = parser.getDom();
+	ASSERT_TRUE(val_all_schema.isObject());
+	ASSERT_TRUE(val_all_schema.hasKey("a"));
+	ASSERT_FALSE(val_all_schema.hasKey("b"));
+	ASSERT_FALSE(val_all_schema.hasKey("c"));
+	ASSERT_FALSE(val_all_schema.hasKey("d"));
+
+	ASSERT_TRUE(JValidator::apply(val_all_schema, schema));
+	ASSERT_TRUE(val_all_schema.hasKey("a"));
+	EXPECT_EQ(val_all_schema["a"], "qwer");
+	ASSERT_TRUE(val_all_schema.hasKey("b"));
+	EXPECT_EQ(val_all_schema["b"], 3.14);
+	ASSERT_TRUE(val_all_schema.hasKey("c"));
+	EXPECT_EQ(val_all_schema["c"], true);
+	ASSERT_TRUE(val_all_schema.hasKey("d"));
+	EXPECT_TRUE(val_all_schema["d"].isNull());
+	ASSERT_TRUE(val_all_schema.hasKey("e"));
+	ASSERT_TRUE(val_all_schema["e"].hasKey("e1"));
+	ASSERT_TRUE(val_all_schema["e"].hasKey("e2"));
 }
 
 } // namespace testcxx

@@ -1,0 +1,11 @@
+{
+	"id" : "rB.schema",
+	"definitions": {
+		"b": {"type": "boolean"}
+	},
+	"type" : "object",
+	"properties" : {
+		"familyName" : {"type": "string"},
+		"flagB"      : {"$ref": "#/definitions/b"}
+	}
+}

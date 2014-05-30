@@ -164,6 +164,19 @@ PJSON_API bool jis_null(jvalue_ref val);
 PJSON_API bool jvalue_check_schema(jvalue_ref val, const JSchemaInfoRef schema) NON_NULL(1, 2);
 
 /**
+ * jvalue_apply_schema is similar to jvalue_check_schema.
+ * The difference is in behaviour with default values.
+ * jvalue_apply_schema modifies jref by inserting default values(specified by schema).
+ *
+ * @param val A reference to the JSON object to check
+ * @param schema A schema with resolver
+ * @return true if val is valid against schema
+ *
+ * @see jvalue_check_schema
+ */
+PJSON_API bool jvalue_apply_schema(jvalue_ref jref, const JSchemaInfoRef schema_info) NON_NULL(1, 2);
+
+/**
  * Equivalent to JSON.stringify within Javascript.  Converts the JSON value to it's equivalent
  * string representation that is ready to be transferred across the wire (with all appropriate escaping and quoting performed).
  * The c-string returned has a lifetime equivalent at least to the lifetime of the reference provided.

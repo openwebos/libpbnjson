@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ extern "C" {
 typedef struct _StringSpan StringSpan;
 typedef struct _Validator Validator;
 typedef struct _UriResolver UriResolver;
+typedef struct _UriScope UriScope;
 
 /** @brief Definitions is standard place for subschemas */
 typedef struct _Definitions
@@ -56,6 +57,13 @@ void definitions_set_name(Definitions *d, StringSpan *name);
  * @param[in] v Validator for the subschema in {"definitions": {"name": {...}}}
  */
 void definitions_add(Definitions *d, StringSpan *name, Validator *v);
+
+/** @brief collect schemas for all definitions
+ *
+ * @param[in] d This object
+ * @param[inout] uri_scope Information about current scope and associated resolver
+ */
+void definitions_collect_schemas(Definitions *d, UriScope *uri_scope);
 
 #ifdef __cplusplus
 }

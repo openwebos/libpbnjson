@@ -48,3 +48,29 @@ TEST(TestReference, First)
 	validator_unref(v);
 	uri_resolver_free(u);
 }
+
+TEST(TestReference, selfReference)
+{
+	auto u = uri_resolver_new();
+	ASSERT_TRUE(u != NULL);
+	auto v = parse_schema( R"schema(
+		{
+			"type": "object",
+			"properties": {
+				"name"  : {"type": "string" },
+				"self"  : {"$ref": "#"}
+			}
+		})schema",
+		u, "file:///test3.json",
+		NULL, NULL
+		);
+	ASSERT_TRUE(v != NULL);
+
+	EXPECT_TRUE(validate_json(R"({"name": "b"})", v, u, NULL));
+	EXPECT_FALSE(validate_json("{\"name\": true}", v, u, NULL));
+	EXPECT_TRUE(validate_json(R"({"self" : {"name": "b"}})", v, u, NULL));
+	EXPECT_FALSE(validate_json(R"({"self" : {"name": null}})", v, u, NULL));
+
+	validator_unref(v);
+	uri_resolver_free(u);
+}

@@ -1,6 +1,6 @@
 // @@@LICENSE
 //
-//      Copyright (c) 2009-2013 LG Electronics, Inc.
+//      Copyright (c) 2009-2014 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 // limitations under the License.
 //
 // LICENSE@@@
+
+#include "../detection.h"
 
 #if !__cplusplus
 	#define COMPILER_CHOOSE_EXPR(condition, expr1, expr2) __builtin_choose_expr(condition, expr1, expr2)

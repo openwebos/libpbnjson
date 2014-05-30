@@ -34,9 +34,7 @@ if(APPLE)
 endif()
 
 # Google Test setup
-add_subdirectory(${WITH_GTEST_SRC} ${CMAKE_BINARY_DIR}/gtest)
-include_directories(${WITH_GTEST_SRC}/include)
-
+webos_use_gtest()
 
 add_subdirectory(c_api)
 add_subdirectory(cxx_api)

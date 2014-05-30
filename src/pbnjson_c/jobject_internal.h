@@ -22,6 +22,7 @@
 #include <japi.h>
 #include <jtypes.h>
 #include <glib.h>
+#include "jconversion.h"
 
 #define ARRAY_BUCKET_SIZE (1 << 4)
 #define OUTSIDE_ARR_BUCKET_RANGE(value) ((value) & (~(ARRAY_BUCKET_SIZE - 1)))

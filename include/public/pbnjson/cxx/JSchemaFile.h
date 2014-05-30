@@ -52,6 +52,7 @@ class PJSONCXX_API JSchemaFile
 {
 private:
 	static JSchema::Resource* createSchemaMap(const std::string &path,
+	                                          const std::string &rootScope,
 	                                          JErrorHandler *errorHandler,
 	                                          JSchemaResolverRef resolver);
 
@@ -69,12 +70,14 @@ public:
 	 * @brief Create a schema representation from the file with external references.
 	 *
 	 * @param path     Path to the file
+	 * @param rootScope Base URI for relative references
+	 * @param errorHandler The error handlers to use when parsing the schema
 	 * @param resolver The resolver to use for the schema
 	 *                 (necessary if it contains external references).
 	 *
 	 * @see JResolver
 	 */
-	JSchemaFile(const std::string& path, JErrorHandler *errorHandler, JResolver *resolver);
+	JSchemaFile(const std::string& path, const std::string& rootScope, JErrorHandler *errorHandler, JResolver *resolver);
 
 	/**
 	 * Copy the schema file.

@@ -25,15 +25,14 @@
 
 static bool jkeyvalue_traverse(jobject_key_value jref, TraverseCallbacksRef tc, void *context)
 {
-	raw_buffer raw = jstring_deref(jref.key)->m_data;
-	if (!tc->jobj_key(context, (const unsigned char*)raw.m_str, raw.m_len))
+	if (!tc->jobj_key(context, jref.key))
 		return false;
 	return jvalue_traverse(jref.value, tc, context);
 }
 
 static bool jobject_traverse(jvalue_ref jref, TraverseCallbacksRef tc, void *context)
 {
-	if (!tc->jobj_start(context))
+	if (!tc->jobj_start(context, jref))
 		return false;
 
 	jobject_iter it;
@@ -45,12 +44,12 @@ static bool jobject_traverse(jvalue_ref jref, TraverseCallbacksRef tc, void *con
 			return false;
 	}
 
-	return tc->jobj_end(context);
+	return tc->jobj_end(context, jref);
 }
 
 static bool jarray_traverse(jvalue_ref jref, TraverseCallbacksRef tc, void *context)
 {
-	if (!tc->jarr_start(context))
+	if (!tc->jarr_start(context, jref))
 		return false;
 
 	for (int i = 0; i < jarray_size(jref); i++)
@@ -59,8 +58,8 @@ static bool jarray_traverse(jvalue_ref jref, TraverseCallbacksRef tc, void *cont
 		if (!jvalue_traverse(element, tc, context))
 			return false;
 	}
-	tc->jarray(context, jref);
-	return tc->jarr_end(context);
+
+	return tc->jarr_end(context, jref);
 }
 
 static bool jnumber_traverse(jvalue_ref jref, TraverseCallbacksRef tc, void *context)
@@ -68,14 +67,11 @@ static bool jnumber_traverse(jvalue_ref jref, TraverseCallbacksRef tc, void *con
 	switch (jnum_deref(jref)->m_type)
 	{
 		case NUM_RAW:
-		{
-			raw_buffer raw = jnum_deref(jref)->value.raw;
-			return tc->jnumber_raw(context, raw.m_str, raw.m_len);
-		}
+			return tc->jnumber_raw(context, jref);
 		case NUM_FLOAT:
-			return tc->jnumber_double(context, jnum_deref(jref)->value.floating);
+			return tc->jnumber_double(context, jref);
 		case NUM_INT:
-			return tc->jnumber_int(context, jnum_deref(jref)->value.integer);
+			return tc->jnumber_int(context, jref);
 		default:
 			return false;
 	}
@@ -87,16 +83,12 @@ bool jvalue_traverse(jvalue_ref jref, TraverseCallbacksRef tc, void *context)
 
 	switch (jref->m_type)
 	{
-	case JV_NULL   : return tc->jnull(context);
+	case JV_NULL   : return tc->jnull(context, jref);
 	case JV_OBJECT : return jobject_traverse(jref, tc, context);
 	case JV_ARRAY  : return jarray_traverse(jref, tc, context);
 	case JV_NUM    : return jnumber_traverse(jref, tc, context);
-	case JV_STR    :
-	{
-		raw_buffer raw = jstring_deref(jref)->m_data;
-		return tc->jstring(context, (const unsigned char*)raw.m_str, raw.m_len);
-	}
-	case JV_BOOL   : return tc->jbool(context, jboolean_deref(jref)->value);
+	case JV_STR    : return tc->jstring(context, jref);
+	case JV_BOOL   : return tc->jbool(context, jref);
 	}
 
 	return false;

@@ -41,63 +41,76 @@ void uri_scope_free(UriScope *u)
 	if (!u)
 		return;
 	g_slist_free_full(u->uri_stack, _free_uri);
-	g_slist_free_full(u->fragment_stack, g_free);
 	g_free(u);
 }
 
-UriUriA *uri_scope_get_uri(UriScope const *u)
+static UriUriA *uri_scope_get_uri_unsafe(UriScope const *u)
+{
+	assert(u->uri_stack);
+	return (UriUriA *) u->uri_stack->data;
+}
+
+static UriUriA *uri_scope_get_uri(UriScope const *u)
 {
 	if (!u->uri_stack)
 		return NULL;
-	return (UriUriA *) u->uri_stack->data;
+	return uri_scope_get_uri_unsafe(u);
 }
 
 char const *uri_scope_get_fragment(UriScope const *u)
 {
-	if (!u->fragment_stack)
-		return NULL;
-	return (char const *) u->fragment_stack->data;
-}
-
-char *uri_scope_steal_fragment(UriScope *u)
-{
-	if (!u->fragment_stack)
-		return NULL;
-	char *result = (char *) u->fragment_stack->data;
-	u->fragment_stack->data = NULL;
-	return result;
+	UriUriA *uri = uri_scope_get_uri_unsafe(u);
+	return uri->fragment.first ? uri->fragment.first - 1 : ROOT_FRAGMENT;
 }
 
 int uri_scope_get_document_length(UriScope const *u)
 {
-	UriUriA *uri = uri_scope_get_uri(u);
+	UriUriA *uri = uri_scope_get_uri_unsafe(u);
 	int result = 0;
+
+	UriTextRangeA fragment = uri->fragment;
+	uri->fragment = (UriTextRangeA){};
+
 	if (URI_SUCCESS != uriToStringCharsRequiredA(uri, &result))
+	{
+		uri->fragment = fragment;
 		return -1;
+	}
+	uri->fragment = fragment;
 	return result + 1;
 }
 
 char const *uri_scope_get_document(UriScope const *u, char *buffer, int chars_required)
 {
-	UriUriA *uri = uri_scope_get_uri(u);
+	UriUriA *uri = uri_scope_get_uri_unsafe(u);
+
+	// we need to re-construct uri without fragment
+	// to do that we temporary nullify its pointers
+	UriTextRangeA fragment = uri->fragment;
+	uri->fragment = (UriTextRangeA){};
+
 	if (URI_SUCCESS != uriToStringA(buffer, uri, chars_required, NULL))
+	{
+		uri->fragment = fragment;
 		return NULL;
+	}
+	uri->fragment = fragment; // restore fragment
 	return buffer;
 }
 
-char const *escape_json_pointer(char const *fragment, char *buffer)
+char const *escape_json_pointer(char const *fragment, size_t fragment_len, char *buffer)
 {
 	assert(fragment);
 
 	char *cur_pos = buffer;
-	while (true)
+	const char *in_pos = fragment;
+	const char *in_end = in_pos + fragment_len;
+	for (; in_pos != in_end; ++in_pos)
 	{
-		char ch = *fragment++;
+		char ch = *in_pos;
+		assert(ch != '\0');
 		switch (ch)
 		{
-		case 0:
-			*cur_pos = 0;
-			return buffer;
 		case '~':
 			*cur_pos++ = '~';
 			*cur_pos++ = '0';
@@ -111,6 +124,8 @@ char const *escape_json_pointer(char const *fragment, char *buffer)
 			break;
 		}
 	}
+	*cur_pos = '\0';
+	return buffer;
 }
 
 char const *unescape_json_pointer(char const *fragment, char *buffer)
@@ -155,26 +170,6 @@ char const *unescape_json_pointer(char const *fragment, char *buffer)
 	}
 }
 
-static char const *uri_scope_push_fragment(UriScope *u, char const *fragment)
-{
-	char const *hash = strchr(fragment, '#');
-	fragment = hash ? hash : "#";
-
-	u->fragment_stack = g_slist_prepend(u->fragment_stack, g_strdup(fragment));
-	return uri_scope_get_fragment(u);
-}
-
-static char const *uri_scope_pop_fragment(UriScope *u)
-{
-	if (!u->fragment_stack)
-		return NULL;
-	g_free(u->fragment_stack->data);
-	GSList *head = u->fragment_stack;
-	u->fragment_stack = g_slist_next(u->fragment_stack);
-	g_slist_free_1(head);
-	return uri_scope_get_fragment(u);
-}
-
 bool uri_scope_push_uri(UriScope *u, char const *uri)
 {
 	UriParserStateA state;
@@ -191,11 +186,8 @@ bool uri_scope_push_uri(UriScope *u, char const *uri)
 	UriUriA *base = uri_scope_get_uri(u);
 	if (!base)
 	{
+		//TODO check that URI is absolute
 		memcpy(result, &a, sizeof(a));
-
-		uri_scope_push_fragment(u, result->fragment.first ? result->fragment.first - 1 : ROOT_FRAGMENT);
-		result->fragment.first = NULL;
-		result->fragment.afterLast = NULL;
 
 		u->uri_stack = g_slist_prepend(u->uri_stack, result);
 		return true;
@@ -205,17 +197,9 @@ bool uri_scope_push_uri(UriScope *u, char const *uri)
 	{
 		memcpy(result, &a, sizeof(a));
 
-		uri_scope_push_fragment(u, result->fragment.first ? result->fragment.first - 1 : ROOT_FRAGMENT);
-		result->fragment.first = NULL;
-		result->fragment.afterLast = NULL;
-
 		u->uri_stack = g_slist_prepend(u->uri_stack, result);
 		return true;
 	}
-
-	uri_scope_push_fragment(u, result->fragment.first ? result->fragment.first - 1 : ROOT_FRAGMENT);
-	result->fragment.first = NULL;
-	result->fragment.afterLast = NULL;
 
 	u->uri_stack = g_slist_prepend(u->uri_stack, result);
 	uriFreeUriMembersA(&a);
@@ -230,30 +214,4 @@ void uri_scope_pop_uri(UriScope *u)
 	_free_uri(head->data);
 	u->uri_stack = g_slist_next(u->uri_stack);
 	g_slist_free_1(head);
-	uri_scope_pop_fragment(u);
-}
-
-char const *uri_scope_push_fragment_leaf(UriScope *u, char const *leaf)
-{
-	assert(u->fragment_stack && u->fragment_stack->data);
-	char *f = (char *) u->fragment_stack->data;
-	assert(f);
-
-	while (leaf[0] == '/')
-		++leaf;
-
-	char *new_f = g_strconcat(f, "/", leaf, NULL);
-	u->fragment_stack->data = new_f;
-	g_free(f);
-	return uri_scope_get_fragment(u);
-}
-
-char const *uri_scope_pop_fragment_leaf(UriScope *u)
-{
-	assert(u->fragment_stack && u->fragment_stack->data);
-	char const *fragment = uri_scope_get_fragment(u);
-	char *slash = strrchr(fragment, '/');
-	assert(slash);
-	*slash = 0;
-	return uri_scope_get_fragment(u);
 }
