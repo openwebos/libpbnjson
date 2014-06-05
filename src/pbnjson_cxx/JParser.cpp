@@ -209,6 +209,7 @@ JSchemaResolver JParser::prepareResolver() const
 	JSchemaResolver resolver;
 	resolver.m_resolve = &(m_resolverWrapper->sax_schema_resolver);
 	resolver.m_userCtxt = m_resolverWrapper.get();
+	resolver.m_inRecursion = 0;
 	return resolver;
 }
 

@@ -45,6 +45,7 @@ bool JGenerator::toString(const JValue &obj, const JSchema& schema, std::string 
 		JSchemaResolver schemaresolver;
 		schemaresolver.m_resolve = &(resolverWrapper.sax_schema_resolver);
 		schemaresolver.m_userCtxt = &resolverWrapper;
+		schemaresolver.m_inRecursion = 0;
 		if (!jschema_resolve_ex(schema.peek(), &schemaresolver)) {
 			asStr = "";
 			return false;

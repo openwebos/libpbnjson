@@ -85,6 +85,7 @@ JSchemaFile::JSchemaFile(const std::string& path, const std::string& rootScope, 
 	JSchemaResolver schemaresolver;
 	schemaresolver.m_resolve = &(resolverWrapper.sax_schema_resolver);
 	schemaresolver.m_userCtxt = &resolverWrapper;
+	schemaresolver.m_inRecursion = 0;
 
 	m_resource = createSchemaMap(path, rootScope, errorHandler, &schemaresolver);
 }
