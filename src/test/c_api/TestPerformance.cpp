@@ -31,7 +31,7 @@ class JSchemaC : public pbnjson::JSchema
 {
 public:
 	JSchemaC(jschema_ref schema) :
-		JSchema(new JSchema::Resource(schema, JSchema::Resource::CopySchema))
+		JSchema(schema ? jschema_copy(schema) : NULL)
 	{}
 };
 

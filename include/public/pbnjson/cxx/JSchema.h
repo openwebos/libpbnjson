@@ -39,86 +39,30 @@ namespace pbnjson {
 class PJSONCXX_API JSchema
 {
 protected:
-	/**
-	 * Represents a resource that can be shared by multiple
-	 * JSchema instances so that there's as little overhead as possible
-	 * for sharing JSchemas.
-	 *
-	 * This represents the data backing the schema representation.  Right now,
-	 * it represents the string backing the schema so a number of memory-saving & space-saving
-	 * techniques can be used, although nothing really makes requirements about what needs to
-	 * back the schema.
-	 *
-	 * The primary user is JSchemaFile which uses this for memory-mapping
-	 * the file & using the memory-mapped file to back the schema.
-	 */
-	class Resource {
-	public:
-		enum SchemaOwnership {
-			TakeSchema,
-			CopySchema,
-		};
-
-		Resource();
-		/**
-		  * \p schema The schema this resource wraps.  Lifetime of the schema
-		  *    is tied to the lifetime of this resource
-		  * \p ownership Indicates that the schema is owned
-		  *    outside of this resource and it needs to grab a copy
-		  */
-		Resource(jschema_ref schema, SchemaOwnership ownership);
-		/**
-		  * \p data Some arbitrary pointer to a data structure.  Meant for
-		  *    subclass use.
-		  * \p schema The schema this resource wraps.  Lifetime of the schema
-		  *    is tied to the lifetime of this resource
-		  * \p ownership Indicates that the schema is owned
-		  *    outside of this resource and it needs to grab a copy
-		  */
-		Resource(void *data, jschema_ref schema, SchemaOwnership ownersehip);
-
-		virtual ~Resource();
-
-		jschema_ref schema();
-	protected:
-		void *data() const;
-
-	private:
-		void ref();
-		bool unref();
-
-		int m_refCnt;
-		void *m_data;
-		jschema_ref m_schema;
-
-		friend class JSchema;
-	};
-
-protected:
-	Resource *m_resource;
-	jschema_ref peek() const {
-		if (m_resource == NULL)
-			return NULL;
-		return m_resource->schema();
-	}
-
 	JSchema();
 	/**
-	 * Construct a schema wrapper from the backing resource.
+	 * Construct a schema wrapper for jschema.
 	 */
-	JSchema(Resource *resource);
+	JSchema(jschema_ref schema);
+
+	jschema_ref peek() const;
+	void set(jschema_ref);
+
+private:
+	jschema_ref schema;
+
 public:
 	/**
 	 * A schema that is guaranteed to never accept any input
 	 * as valid.
 	 */
-	static JSchema NullSchema();
+	static const JSchema& NullSchema();
 
 	/**
 	 * A schema that is guaranteed to accept any input
 	 * as valid.
 	 */
-	static JSchema AllSchema();
+	static const JSchema& AllSchema();
 
 	/**
 	 * Create a copy of the schema object.

@@ -58,7 +58,7 @@ bool OnErrorUnknown(void *ctxt, JSAXContextRef parseCtxt)
 
 } //namespace;
 
-JSchema::Resource*
+jschema_ref
 JSchemaFile::createSchemaMap(const std::string &path, const std::string& rootScope, JErrorHandler *errorHandler, JSchemaResolverRef resolver)
 {
 	JErrorCallbacks error_callbacks = { 0 };
@@ -67,11 +67,7 @@ JSchemaFile::createSchemaMap(const std::string &path, const std::string& rootSco
 	error_callbacks.m_unknown = OnErrorUnknown;
 	error_callbacks.m_ctxt = errorHandler;
 
-	jschema_ref schema = jschema_parse_file_resolve(path.c_str(), rootScope.c_str(), &error_callbacks, resolver);
-	if (schema == NULL)
-		return NULL;
-
-	return new Resource(schema, Resource::TakeSchema);
+	return jschema_parse_file_resolve(path.c_str(), rootScope.c_str(), &error_callbacks, resolver);
 }
 
 JSchemaFile::JSchemaFile(const std::string& path)
@@ -87,7 +83,7 @@ JSchemaFile::JSchemaFile(const std::string& path, const std::string& rootScope, 
 	schemaresolver.m_userCtxt = &resolverWrapper;
 	schemaresolver.m_inRecursion = 0;
 
-	m_resource = createSchemaMap(path, rootScope, errorHandler, &schemaresolver);
+	set(createSchemaMap(path, rootScope, errorHandler, &schemaresolver));
 }
 
 JSchemaFile::JSchemaFile(const JSchemaFile& other)

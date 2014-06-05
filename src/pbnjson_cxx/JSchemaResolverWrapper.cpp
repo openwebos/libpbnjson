@@ -53,8 +53,7 @@ JSchemaResolutionResult JSchemaResolverWrapper::resolve(JSchemaResolverRef resol
 		return SCHEMA_GENERIC_ERROR;
 	}
 
-	JSchema::Resource *simpleResource = new JSchema::Resource(resolver->m_ctxt, JSchema::Resource::CopySchema);
-	JSchema parent(simpleResource);
+	JSchema parent(resolver->m_ctxt ? jschema_copy(resolver->m_ctxt) : NULL);
 
 	std::string resource(resolver->m_resourceToResolve.m_str, resolver->m_resourceToResolve.m_len);
 
@@ -62,7 +61,7 @@ JSchemaResolutionResult JSchemaResolverWrapper::resolve(JSchemaResolverRef resol
 	JSchemaResolutionResult result;
 	JSchema resolvedWrapper(m_resolver->resolve(request, result));
 
-	if (result == SCHEMA_RESOLVED) {
+	if (result == SCHEMA_RESOLVED && resolvedWrapper.peek() != NULL) {
 		*resolvedSchema = jschema_copy(resolvedWrapper.peek());
 	} else
 		*resolvedSchema = NULL;

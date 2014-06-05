@@ -30,107 +30,68 @@ namespace pbnjson {
 #define SK_DISALLOWED "disallowed"
 #endif
 
-JSchema JSchema::NullSchema()
+const JSchema& JSchema::NullSchema()
 {
-	static JSchemaFragment NO_VALID_INPUT_SCHEMA(
+	static const JSchemaFragment NO_VALID_INPUT_SCHEMA(
 		"{\"" SK_DISALLOWED "\":\"any\"}"
 	);
 	return NO_VALID_INPUT_SCHEMA;
 }
 
-JSchema JSchema::AllSchema()
+const JSchema& JSchema::AllSchema()
 {
-	static auto_ptr<Resource> all_resource(
-		new Resource(jschema_all(), Resource::CopySchema)
-		);
-	static JSchema all_schema(all_resource.release());
+	static const JSchema all_schema(jschema_all());
 	return all_schema;
 }
 
 JSchema::JSchema(const JSchema& other)
-	: m_resource(other.m_resource)
+	: schema(other.schema ? jschema_copy(other.schema) : NULL)
 {
-	if (m_resource)
-		m_resource->ref();
 }
 
 JSchema::~JSchema()
 {
-	if (m_resource && m_resource->unref())
-		delete m_resource;
+	jschema_release(&schema);
 }
 
 JSchema& JSchema::operator=(const JSchema& other)
 {
-	if (m_resource != other.m_resource) {
-		if (m_resource && m_resource->unref()) delete m_resource;
-		if (other.m_resource) other.m_resource->ref();
-		m_resource = other.m_resource;
+	if (other.schema == NULL)
+	{
+		schema = NULL;
 	}
+	else if (schema != other.schema)
+	{
+		jschema_release(&schema);
+		schema = jschema_copy(other.schema);
+	}
+
 	return *this;
 }
 
 JSchema::JSchema()
-	: m_resource(NULL)
+	: schema(NULL)
 {
 }
 
-JSchema::JSchema(Resource *resource)
-	: m_resource(resource)
+JSchema::JSchema(jschema_ref aSchema)
+	: schema(aSchema)
 {
 }
 
 bool JSchema::isInitialized() const
 {
-	return m_resource != NULL;
+	return schema != NULL;
 }
 
-JSchema::Resource::Resource()
-	: m_refCnt(1), m_data(NULL), m_schema(NULL)
+jschema_ref JSchema::peek() const
 {
+	return schema;
 }
 
-JSchema::Resource::Resource(jschema_ref schema, SchemaOwnership ownership)
-	: m_refCnt(1), m_data(NULL), m_schema(schema)
+void JSchema::set(jschema_ref aSchema)
 {
-	if (ownership == CopySchema)
-		m_schema = jschema_copy(m_schema);
-}
-
-JSchema::Resource::Resource(void *data, jschema_ref schema, SchemaOwnership ownership)
-	: m_refCnt(1), m_data(data), m_schema(schema)
-{
-	if (ownership == CopySchema)
-		m_schema = jschema_copy(m_schema);
-}
-
-JSchema::Resource::~Resource()
-{
-	jschema_release(&m_schema);
-}
-
-void* JSchema::Resource::data() const
-{
-	return m_data;
-}
-
-jschema_ref JSchema::Resource::schema()
-{
-	return m_schema;
-}
-
-void JSchema::Resource::ref()
-{
-	m_refCnt++;
-}
-
-bool JSchema::Resource::unref()
-{
-	if (--m_refCnt == 0) {
-		return true;
-	}
-	return false;
+	schema = aSchema;
 }
 
 }
-

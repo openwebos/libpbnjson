@@ -41,7 +41,7 @@ namespace pbnjson {
 class PJSONCXX_API JSchemaFragment : public JSchema
 {
 private:
-	JSchema::Resource *createResource(const std::string &fragment);
+	jschema_ref createSchema(const std::string &fragment);
 
 public:
 	JSchemaFragment(const std::string& fragment);

@@ -55,10 +55,9 @@ jschema_ref jschema_new(void)
 
 jschema_ref jschema_copy(jschema_ref schema)
 {
-	if (schema == jschema_all())
-		return schema;
-	if (schema)
+	if (schema != jschema_all())
 		++schema->ref_count;
+
 	return schema;
 }
 
