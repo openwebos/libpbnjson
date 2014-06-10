@@ -55,10 +55,9 @@ jschema_ref jschema_new(void)
 
 jschema_ref jschema_copy(jschema_ref schema)
 {
-	if (schema == jschema_all())
-		return schema;
-	if (schema)
+	if (schema != jschema_all())
 		++schema->ref_count;
+
 	return schema;
 }
 
@@ -161,17 +160,20 @@ bool jschema_resolve_ex(jschema_ref schema, JSchemaResolverRef resolver)
 	char const *document_to_resolve = NULL;
 	char const *prev_document_to_resolve = NULL;
 
-	while ((document_to_resolve = uri_resolver_get_unresolved(schema->uri_resolver)))
-	{
-		// It may happen, that the schema can't be parsed, so don't try to process
-		// the same broken schema forever.
-		if (document_to_resolve == prev_document_to_resolve)
-			return false;
-		prev_document_to_resolve = document_to_resolve;
+	if (!resolver->m_inRecursion) {
+		resolver->m_inRecursion++;
+		while ((document_to_resolve = uri_resolver_get_unresolved(schema->uri_resolver)))
+		{
+			// It may happen, that the schema can't be parsed, so don't try to process
+			// the same broken schema forever.
+			if (document_to_resolve == prev_document_to_resolve)
+				return false;
+			prev_document_to_resolve = document_to_resolve;
 
-		if (!resolve_document(schema, document_to_resolve, resolver))
-			// We weren't able to resolve referenced document either way.
-			return false;
+			if (!resolve_document(schema, document_to_resolve, resolver))
+				// We weren't able to resolve referenced document either way.
+				return false;
+		}
 	}
 
 	return true;

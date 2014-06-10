@@ -1,0 +1,9 @@
+{
+	"id" : "xB.schema",
+	"type" : "object",
+	"properties" : {
+		"familyName" : {"type": "string"},
+		"fieldA"     : {"$ref": "xA.schema"},
+		"fieldC"     : {"$ref": "xC.schema"}
+	}
+}

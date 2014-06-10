@@ -68,6 +68,7 @@ struct JSchemaResolver {
 	void *m_userCtxt;	/// some arbitrary user data (e.g. pointer to the C++ class to use)
 	jschema_ref m_ctxt;	/// supplied by the schema parser (no point in initializing)
 	raw_buffer m_resourceToResolve; /// supplied by the schema parser (no point in initializing). NULL-terminated string
+	int m_inRecursion;	/// flag, that helps to resolve cross references, SHOULD be 0 at begin
 };
 
 typedef struct JSchemaInfo {

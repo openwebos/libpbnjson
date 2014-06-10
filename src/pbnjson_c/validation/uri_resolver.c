@@ -144,10 +144,16 @@ bool uri_resolver_steal_documents(UriResolver *u, UriResolver *source)
 
 		gpointer old_fragments = g_hash_table_lookup(u->documents, document);
 
+		// If the document has already been resolved,
 		if (old_fragments && g_hash_table_size(old_fragments))
 		{
-			// FIXME: The document has been already resolved?
-			return false;
+			// If we've got two bunches of fragments of the same document,
+			// there's no way to merge them in (currently?).
+			if (fragments && g_hash_table_size(fragments))
+				return false;
+			// Otherwise, the document has already been resolved, and we
+			// can safely skip it now.
+			continue;
 		}
 
 		g_hash_table_iter_steal(&it);

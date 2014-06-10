@@ -27,6 +27,7 @@ namespace {
 
 static const string resolution_dir = string{SCHEMA_DIR} + "contact/";
 static const string localref_dir = string{SCHEMA_DIR} + "localref/";
+static const string xref_dir = string{SCHEMA_DIR} + "xref/";
 
 class TestSchemaContact : public ::testing::Test
 {
@@ -79,7 +80,7 @@ protected:
 
 		*resolved = jschema_parse_file_resolve(unixUri, NULL, NULL, resolver);
 		if (*resolved == NULL) {
-			std::cerr << "SCHEMA_INVALID" << std::endl;
+			std::cerr << "SCHEMA_INVALID " << resource.c_str() << std::endl;
 			return SCHEMA_INVALID;
 		}
 
@@ -191,12 +192,74 @@ TEST_F(TestSchemaContact, localReferences)
 	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &sinfo);
 	EXPECT_TRUE(jis_object(parsed));
 
+	const raw_buffer FAIL_INPUT = j_cstr_to_buffer( R"schema(
+		{
+			"name": "Alisha",
+			"flag": true,
+			"field": {
+				"familyName": false,
+				"flagB": true
+			}
+		}
+	)schema");
+
+	EXPECT_FALSE(jsax_parse_ex(NULL, FAIL_INPUT, &sinfo, NULL));
+
 	jschema_release(&xschema);
 }
 
 TEST_F(TestSchemaContact, crossReferences)
 {
+	memset(&xResolver, 0, sizeof(xResolver));
+	xResolver.m_resolve = &TestSchemaContact::XResolver;
+	jschema_ref xschema = jschema_parse_file_resolve((xref_dir + "xA.schema").c_str(),
+	                                                 NULL, NULL, &xResolver);
+	ASSERT_TRUE(xschema != NULL);
 
+	JSchemaInfo sinfo;
+	jschema_info_init(&sinfo, xschema, NULL, NULL);
+
+	const raw_buffer INPUT = j_cstr_to_buffer( R"schema(
+		{
+			"name": "Alisha",
+			"flag": true,
+			"field": {
+				"familyName": "Simpson",
+				"fieldA": {
+					"name": "Andrii",
+					"flag": false
+				},
+				"fieldC": {
+					"stringC": "Hi",
+					"fieldB": {
+						"familyName": "Griffin"
+					}
+				}
+			}
+		}
+	)schema");
+
+	EXPECT_TRUE(jsax_parse_ex(NULL, INPUT, &sinfo, NULL));
+	parsed = jdom_parse(INPUT, DOMOPT_NOOPT, &sinfo);
+	EXPECT_TRUE(jis_object(parsed));
+
+	const raw_buffer FAIL_INPUT = j_cstr_to_buffer( R"schema(
+		{
+			"name": "Alisha",
+			"flag": true,
+			"field": {
+				"familyName": "Simpson",
+				"fieldA": {
+					"name": "Andrii",
+					"flag": "O NO STRING!"
+				}
+			}
+		}
+	)schema");
+
+	EXPECT_FALSE(jsax_parse_ex(NULL, FAIL_INPUT, &sinfo, NULL));
+
+	jschema_release(&xschema);
 }
 
 // vim: set noet ts=4 sw=4 tw=80:

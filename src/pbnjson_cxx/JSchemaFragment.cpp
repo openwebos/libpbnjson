@@ -22,22 +22,17 @@
 
 namespace pbnjson {
 
-JSchema::Resource *JSchemaFragment::createResource(const std::string &fragment)
+jschema_ref JSchemaFragment::createSchema(const std::string &fragment)
 {
 	raw_buffer schemaStr;
 	schemaStr.m_str = fragment.c_str();
 	schemaStr.m_len = fragment.length();
 
-	// XXX: This is not optimal on purpose on the assumption that this class
-	// disappears anyways
-	jschema_ref parsed = jschema_parse(schemaStr, JSCHEMA_DOM_NOOPT, NULL);
-	if (parsed == NULL)
-		return NULL;
-	return new JSchema::Resource(parsed, JSchema::Resource::TakeSchema);
+	return jschema_parse(schemaStr, JSCHEMA_DOM_NOOPT, NULL);
 }
 
 JSchemaFragment::JSchemaFragment(const std::string& fragment)
-	: JSchema(createResource(fragment))
+	: JSchema(createSchema(fragment))
 {
 }
 

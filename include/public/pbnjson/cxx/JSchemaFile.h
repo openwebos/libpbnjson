@@ -51,10 +51,10 @@ class PJSONCXX_API JSchemaFile
 	: public JSchema
 {
 private:
-	static JSchema::Resource* createSchemaMap(const std::string &path,
-	                                          const std::string &rootScope,
-	                                          JErrorHandler *errorHandler,
-	                                          JSchemaResolverRef resolver);
+	static jschema_ref createSchemaMap(const std::string &path,
+	                                   const std::string &rootScope,
+	                                   JErrorHandler *errorHandler,
+	                                   JSchemaResolverRef resolver);
 
 public:
 	/**

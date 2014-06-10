@@ -56,6 +56,7 @@ bool JValidator::isValid(const JValue &jVal, const JSchema &schema, JResolver &r
 	JSchemaResolver schemaresolver;
 	schemaresolver.m_resolve = &(resolverWrapper.sax_schema_resolver);
 	schemaresolver.m_userCtxt = &resolverWrapper;
+	schemaresolver.m_inRecursion = 0;
 
 	JErrorCallbacks errorHandler;
 	errorHandler.m_parser = err_parser;
@@ -99,6 +100,7 @@ bool JValidator::apply(const JValue &jVal, const JSchema &schema, JResolver *jRe
 		JSchemaResolver schemaresolver;
 		schemaresolver.m_resolve = &(resolverWrapper.sax_schema_resolver);
 		schemaresolver.m_userCtxt = &resolverWrapper;
+		schemaresolver.m_inRecursion = 0;
 
 		JSchemaInfo schemainfo;
 		jschema_info_init(&schemainfo, schema.peek(), &schemaresolver, &errorHandler);
