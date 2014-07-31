@@ -46,11 +46,13 @@ extern "C" {
  *                              decimalPortion * 10^(exponent - decimalLeadingZeros) gives the fractional part of the number.  If exponent is NULL,
  *                              then an attempt is made to incorporate it into decimalLeadingZeros
  *                              NOTE: Behaviour is undefined if this is NULL but decimalPortion isn't
+ * @param signMultiplier - either 1 or -1, to apply sign to the fractional part.
  * @return Any conversion errors.  Best effort made to catch all errors, but no guarantees are made about how a failure to convert will fail.
  *         CONV_NOT_A_NUM, CONV_GENERIC_ERROR, & CONV_BAD_ARGS are mutually exclusive values from any other flags (== can be used).
  */
 PJSON_LOCAL ConversionResultFlags parseJSONNumber(raw_buffer *str, int64_t *integerPortion,
-		int64_t *exponentPortion, int64_t *decimalPortion, int64_t *decimalLeadingZeros) NON_NULL(1, 2);
+		int64_t *exponentPortion, int64_t *decimalPortion, int64_t *decimalLeadingZeros,
+		int *signMultiplier) NON_NULL(1, 2);
 
 PJSON_LOCAL ConversionResultFlags jstr_to_i32(raw_buffer *str, int32_t *result);
 PJSON_LOCAL ConversionResultFlags jstr_to_i64(raw_buffer *str, int64_t *result);

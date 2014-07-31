@@ -376,3 +376,12 @@ TEST(TestJValue, GetType)
 	EXPECT_EQ(JV_OBJECT, Object().getType());
 	EXPECT_EQ(JV_ARRAY, Array().getType());
 }
+
+TEST(TestJValue, AsNumber)
+{
+	JDomParser parser(nullptr);
+	parser.parse(R"({"value": -1.5})", JSchema::AllSchema(), nullptr);
+	EXPECT_EQ(-1.5, parser.getDom()["value"].asNumber<double>());
+	parser.parse(R"({"value": -0.3})", JSchema::AllSchema(), nullptr);
+	EXPECT_EQ(-0.3, parser.getDom()["value"].asNumber<double>());
+}

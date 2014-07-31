@@ -70,7 +70,8 @@ static ConversionResult jdouble_noop(double value, double *result)
 #endif /* PJSON_SAFE_NOOP_CONVERSION */
 
 ConversionResultFlags parseJSONNumber(raw_buffer *str, int64_t *integerPortion,
-		int64_t *exponentPortion, int64_t *decimalPortion, int64_t *decimalLeadingZeros)
+		int64_t *exponentPortion, int64_t *decimalPortion, int64_t *decimalLeadingZeros,
+		int *signMultiplier)
 {
 	size_t i = 0;
 	int integerMultiplier = 1;
@@ -395,6 +396,9 @@ lost_precision:
 		*decimalLeadingZeros = fractionFactor;
 	}
 
+	if (signMultiplier)
+		*signMultiplier = integerMultiplier;
+
 	return result;
 
 not_a_number:
@@ -404,6 +408,7 @@ fast_stop:
 	if (exponentPortion) *exponentPortion = exponent;
 	if (decimalPortion) *decimalPortion = fraction;
 	if (decimalLeadingZeros) *decimalLeadingZeros = fractionFactor;
+	if (signMultiplier) *signMultiplier = integerMultiplier;
 	return result;
 }
 
@@ -447,7 +452,7 @@ ConversionResultFlags jstr_to_i64(raw_buffer *str, int64_t *result)
 	CHECK_POINTER_RETURN_VALUE(str->m_str, CONV_BAD_ARGS);
 	CHECK_POINTER_RETURN_VALUE(result, CONV_BAD_ARGS);
 
-	conv_result = parseJSONNumber(str, result, NULL, NULL, NULL);
+	conv_result = parseJSONNumber(str, result, NULL, NULL, NULL, NULL);
 	if (CONV_HAS_POSITIVE_OVERFLOW(conv_result))
 		*result = INT64_MAX;
 	else if (CONV_HAS_NEGATIVE_OVERFLOW(conv_result))
@@ -463,10 +468,11 @@ ConversionResultFlags jstr_to_double(raw_buffer *str, double *result)
 	int64_t fraction = 0;
 	int64_t fractionLeadingZeros = 0;
 	int64_t exponent = 0;
+	int signMultiplier = 0;
 
 	CHECK_POINTER_RETURN_VALUE(result, CONV_BAD_ARGS);
 
-	conv_result = parseJSONNumber(str, &wholeComponent, &exponent, &fraction, &fractionLeadingZeros);
+	conv_result = parseJSONNumber(str, &wholeComponent, &exponent, &fraction, &fractionLeadingZeros, &signMultiplier);
 
 	if (UNLIKELY(CONV_IS_BAD_ARGS(conv_result) || CONV_IS_GENERIC_ERROR(conv_result))) {
 		PJ_LOG_ERR("PBNJSON_STR_TO_NUM_ERR", 1, PMLOGKS("STRING", str->m_str), "Some weird problem converting %.*s to a number: %x", (int)str->m_len, str->m_str, conv_result);
@@ -482,8 +488,9 @@ ConversionResultFlags jstr_to_double(raw_buffer *str, double *result)
 			assert (CONV_HAS_PRECISION_LOSS(conv_result));
 		}
 
+		// Whole part is already signed.
 		double calculatedWhole = expBase10(wholeComponent, exponent);
-		double calculatedFraction = copysign(expBase10(fraction, exponent - fractionLeadingZeros), calculatedWhole);
+		double calculatedFraction = signMultiplier * expBase10(fraction, exponent - fractionLeadingZeros);
 		*result = calculatedWhole + calculatedFraction;
 		if (isinf(*result))
 			conv_result |= CONV_POSITIVE_OVERFLOW;
